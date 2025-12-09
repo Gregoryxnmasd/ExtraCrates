@@ -1,0 +1,25 @@
+crates:
+  legendary:
+    display-name: "&6Legendaria"
+    type: "keyed"
+    key-model: "legendary_key"
+    cooldown-seconds: 120
+    cost: 0
+    animation:
+      path: "legendary_path"
+      reward-anchor: { x: 0.5, y: 1.2, z: 0.5 }
+      reward-model: "legendary_reward"
+      hologram-format: "&6%reward_name%"
+      sounds:
+        start: "entity.ender_dragon.growl"
+        end: "ui.toast.challenge_complete"
+    rewards-pool: "legendary_pool"
+  seasonal:
+    display-name: "&dTemporada"
+    type: "event"
+    cooldown-seconds: 30
+    animation:
+      path: "seasonal_line"
+      reward-anchor: { x: -0.2, y: 1.0, z: 0.2 }
+      hologram-format: "&d%reward_name%"
+    rewards-pool: "seasonal_pool"
