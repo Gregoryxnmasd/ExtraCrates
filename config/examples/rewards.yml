@@ -1,0 +1,42 @@
+pools:
+  legendary_pool:
+    roll-count: 1
+    rewards:
+      dragon_sword:
+        chance: 0.5
+        display-name: "&cEspada Dragón"
+        item: "diamond_sword"
+        custom-model: "dragon_sword"
+        enchantments:
+          sharpness: 6
+          looting: 5
+        commands:
+          - "lp user %player% permission set crates.legendary.donor"
+        messages:
+          title: "&c&l¡Leyenda!"
+          subtitle: "&7Has ganado la Espada Dragón"
+        effects:
+          particles: "dragon_breath"
+          sound: "entity.ender_dragon.flap"
+      coins_big:
+        chance: 12.5
+        commands:
+          - "eco give %player% 50000"
+        display-name: "&6Coins x50k"
+        hologram: "&6$50,000"
+  seasonal_pool:
+    roll-count: 1
+    rewards:
+      candy_bow:
+        chance: 2.5
+        item: "bow"
+        custom-model: "candy_bow"
+        display-name: "&dArco Dulce"
+        effects:
+          particles: "heart"
+          animation: "spin"
+      xp_bottle:
+        chance: 25
+        item: "experience_bottle"
+        amount: 64
+        display-name: "&aExperiencia"
