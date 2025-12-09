@@ -1,0 +1,13 @@
+# Opciones globales
+language: es_es
+particles-default: "crit"
+hologram-font: "resourcepack:cutscene_font"
+cutscene:
+  default-speed: 0.35
+  smooth-tick: 2
+  pumpkin-model: "cutscene_mask"
+  slowdown-modifier: -10.0
+  hide-others: true
+sessions:
+  max-duration-ticks: 600
+  cleanup-on-quit: true
