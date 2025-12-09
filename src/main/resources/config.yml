@@ -1,0 +1,14 @@
+# ExtraCrates configuration
+#
+# This file only contains starter options. The plugin is intentionally minimal
+# to provide a solid foundation for a complex crates system. Future updates will
+# introduce crate definitions, reward pools, animations, and proxy syncing.
+
+locale: es_es
+
+preview-settings:
+  enabled: true
+  default-duration: 3s
+
+metrics:
+  enabled: true

@@ -1,0 +1,15 @@
+name: ExtraCrates
+main: me.savaduki.extracrates.ExtraCratesPlugin
+version: ${project.version}
+description: Base scaffolding for a complex crates plugin.
+author: Savaduki
+api-version: '1.21'
+commands:
+  extracrates:
+    description: Muestra el estado base del plugin ExtraCrates.
+    usage: /<command>
+    permission: extracrates.command
+permissions:
+  extracrates.command:
+    description: Permite a los jugadores usar /extracrates.
+    default: true
