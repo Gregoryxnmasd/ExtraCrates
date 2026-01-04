@@ -8,6 +8,7 @@ Este documento describe cómo implementar el plugin solicitado: un sistema de cr
 - Soporte completo para resourcepacks: modelos, texturas, animaciones e imágenes personalizadas.
 - Recompensas flotantes con holograma coloreado y aislamiento entre jugadores concurrentes.
 - Comandos y permisos exhaustivos para cada acción.
+- Apertura sin “caja física”: solo se muestra la recompensa flotando y su cinemática.
 
 ## Arquitectura propuesta
 - **Módulo Core**: carga configs, gestiona crates, recompensa y pool de animaciones.
@@ -16,11 +17,13 @@ Este documento describe cómo implementar el plugin solicitado: un sistema de cr
 - **Módulo ResourcePack**: API para mapear modelos personalizados a items y para cargar metadatos de animación/partículas.
 - **Módulo Runtime Session**: aísla la sesión de apertura de cada jugador para evitar fugas entre usuarios concurrentes.
 - **Módulo Comandos/Permisos**: registra comandos con subcomandos y auto-completado, junto a permisos específicos.
+- **Módulo Hologramas**: interfaz para proveedores (decides si usas displays nativos o integra HolographicDisplays).
+- **Módulo Render de Recompensa**: item display/armor stand con rotación y animación del ítem.
 
 ### Modelos de datos
-- `CrateDefinition`: id, nombre, tipo (normal, llave, evento), requisitos, animación, tabla de recompensas, ubicaciones de aparición.
-- `Reward`: id, nombre visible, peso, comandos, items, modelos personalizados, probabilidades, mensajes, partículas, sonidos, duración flotando.
-- `CutscenePath`: puntos de control (XYZ + yaw/pitch + tiempo opcional), easing lineal uniforme, partículas de guía y previsualización en GUI.
+- `CrateDefinition`: id, nombre, tipo (normal, llave, evento, temporada, caja misteriosa), requisitos, animación, tabla de recompensas, ubicaciones de aparición.
+- `Reward`: id, nombre visible, peso, comandos, items, modelos personalizados, probabilidades, mensajes, partículas, sonidos, duración flotando, animaciones locales.
+- `CutscenePath`: puntos de control (XYZ + yaw/pitch), duración total, interpolación lineal uniforme (misma velocidad), suavizado (catmull-rom), partículas de guía y previsualización en GUI.
 - `SessionContext`: jugador, crate, ruta, armor stand de cámara, holograma, item flotante, estado (progreso, cancelaciones, timeouts).
 
 ## Flujo de apertura de crate (sin caja física)
@@ -35,12 +38,15 @@ Este documento describe cómo implementar el plugin solicitado: un sistema de cr
 ## GUI propuesta
 - **/crate gui**: menú principal para listar crates, crear nuevas, clonar o borrar.
 - **Editor de crate**
-  - Nombre, tipo, llave requerida, cooldown, coste, requerimientos de permisos.
+  - Nombre, tipo, llave requerida, cooldown, coste, requerimientos de permisos, límites por jugador y por día.
   - Configuración de animación: selección de ruta, velocidad, partículas, modelo del casco (resourcepack), sonido.
-  - Ubicaciones de aparición y posición de recompensa.
+  - Ubicaciones de aparición y posición de recompensa: coordenadas exactas, offset relativo, mundo y orientación.
+  - Flags avanzadas: bloqueo de movimiento, ocultar HUD, ocultar otros jugadores, pausa en desconexión.
+  - Previsualización en vivo de la cutscene y de la recompensa final.
 - **Editor de recompensas**
   - Tabla de pesos (chance), vista previa de item/modelo, comandos, mensajes, cantidad, títulos, partículas personalizadas.
   - Botón de "añadir animación local" (por ejemplo, giro del ítem flotante o pulsos de escala).
+  - Soporte a imágenes en mapas o displays (resourcepack) y partículas propias.
 - **Editor de rutas**
   - Modo de puntos: clic en bloques para añadir puntos de control; cada punto almacena posición y orientación.
   - Velocidad uniforme con indicador de duración total; vista previa fantasma con armor stand y partículas.
@@ -63,6 +69,7 @@ Se incluyen ejemplos mínimos en `config/examples/`.
 - El armor stand se crea con marcador y sin colisión. El jugador se pone en espectador apuntando al armor stand.
 - Fake equip: aplicar `EquipmentSlot.HEAD` vía paquetes, guardando el casco anterior y restituyéndolo al terminar; si no tenía, no se altera.
 - Modificador de velocidad: `Attribute.GENERIC_MOVEMENT_SPEED` con UUID propio para poder quitarlo al finalizar o al desconectar.
+- Sincronización de cámara: la ruta usa distancia total y un step fijo para garantizar velocidad constante sin aceleraciones.
 
 ## Comandos y permisos (sugerencia)
 - `/crate gui` – `extracrates.gui`
@@ -73,17 +80,21 @@ Se incluyen ejemplos mínimos en `config/examples/`.
 - `/crate route editor` – `extracrates.route.editor`
 - `/crate reward editor` – `extracrates.reward.editor`
 - `/crate open <crate>` – `extracrates.open`
-- Permisos granulares para editar, borrar, clonar, ajustar rutas, etc.
+- `/crate setlocation <crate> <anchor|reward|start>` – `extracrates.location`
+- `/crate cutscene test <path>` – `extracrates.cutscene.test`
+- Permisos granulares para editar, borrar, clonar, ajustar rutas, cooldowns, economía, etc.
 
 ## Compatibilidad con resourcepack
 - Mapear modelos personalizados mediante CustomModelData y animaciones definidas en el pack.
 - Soporte para texturas dinámicas: ítems, imágenes en mapas, texturas de holograma (font glyphs).
 - Configurable por crate: modelo de llave, modelo de casco de cutscene, modelo de recompensa flotante.
+- Imagen/animación para “overlay” de cutscene (calabaza tallada con líneas de trayectoria).
 
 ## Optimización
 - Reutilizar armor stands e item displays con pools de objetos para evitar picos de entidades.
 - Uso de interpolaciones programadas y tareas asíncronas para cargas de configuración.
 - Filtrado de espectadores por paquete para que cada jugador vea solo su animación y holograma.
+- Caché de rutas interpoladas para reducir cálculos cuando múltiples jugadores usan la misma cutscene.
 
 ## Extensiones futuras
 - Soporte de "battle pass" o temporadas de crates.
