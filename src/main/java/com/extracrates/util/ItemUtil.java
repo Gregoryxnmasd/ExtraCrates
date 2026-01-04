@@ -2,6 +2,7 @@ package com.extracrates.util;
 
 import com.extracrates.model.Reward;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -38,7 +39,10 @@ public final class ItemUtil {
                 }
             }
             if (reward.isGlow()) {
-                meta.addEnchant(Enchantment.LUCK_OF_THE_SEA, 1, true);
+                Enchantment glowEnchant = Enchantment.getByKey(NamespacedKey.minecraft("luck_of_the_sea"));
+                if (glowEnchant != null) {
+                    meta.addEnchant(glowEnchant, 1, true);
+                }
                 meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
             }
             item.setItemMeta(meta);
