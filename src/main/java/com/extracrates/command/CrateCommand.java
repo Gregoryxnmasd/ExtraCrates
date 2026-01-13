@@ -58,12 +58,16 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Component.text("Solo jugadores."));
                     return true;
                 }
-                if (!sender.hasPermission("extracrates.open")) {
+                if (args.length < 2) {
+                    sender.sendMessage(Component.text("Uso: /crate " + sub + " <id>"));
+                    return true;
+                }
+                if (sub.equals("open") && !sender.hasPermission("extracrates.open")) {
                     sender.sendMessage(Component.text("Sin permiso."));
                     return true;
                 }
-                if (args.length < 2) {
-                    sender.sendMessage(Component.text("Uso: /crate open <id>"));
+                if (sub.equals("preview") && !sender.hasPermission("extracrates.preview")) {
+                    sender.sendMessage(Component.text("Sin permiso."));
                     return true;
                 }
                 CrateDefinition crate = configLoader.getCrates().get(args[1]);
@@ -71,7 +75,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Component.text("Crate no encontrada."));
                     return true;
                 }
-                sessionManager.openCrate(player, crate);
+                sessionManager.openCrate(player, crate, sub.equals("preview"));
                 return true;
             }
             case "reload" -> {

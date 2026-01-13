@@ -37,6 +37,10 @@ public class SessionManager {
     }
 
     public boolean openCrate(Player player, CrateDefinition crate) {
+        return openCrate(player, crate, false);
+    }
+
+    public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
             return false;
@@ -61,7 +65,7 @@ public class SessionManager {
         }
         Reward reward = rewards.get(0);
         CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
-        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this);
+        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this, preview);
         sessions.put(player.getUniqueId(), session);
         if (crate.getType() == com.extracrates.model.CrateType.KEYED) {
             consumeKey(player, crate);
