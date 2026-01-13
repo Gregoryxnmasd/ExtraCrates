@@ -8,6 +8,8 @@ import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.util.RewardSelector;
 import net.kyori.adventure.text.Component;
+import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.attribute.Attribute;
@@ -23,12 +25,14 @@ import java.util.*;
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private final Economy economy;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
 
-    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
+    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, Economy economy) {
         this.plugin = plugin;
         this.configLoader = configLoader;
+        this.economy = economy;
     }
 
     public void shutdown() {
@@ -59,6 +63,9 @@ public class SessionManager {
             player.sendMessage(Component.text("No hay recompensas configuradas."));
             return false;
         }
+        if (!chargePlayer(player, crate)) {
+            return false;
+        }
         Reward reward = rewards.get(0);
         CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
         CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this);
@@ -68,6 +75,23 @@ public class SessionManager {
         }
         session.start();
         applyCooldown(player, crate);
+        return true;
+    }
+
+    private boolean chargePlayer(Player player, CrateDefinition crate) {
+        double cost = crate.getCost();
+        if (cost <= 0 || economy == null) {
+            return true;
+        }
+        if (!economy.has(player, cost)) {
+            player.sendMessage(Component.text("No tienes saldo suficiente para abrir esta crate."));
+            return false;
+        }
+        EconomyResponse response = economy.withdrawPlayer(player, cost);
+        if (!response.transactionSuccess()) {
+            player.sendMessage(Component.text("No se pudo descontar el costo de la crate."));
+            return false;
+        }
         return true;
     }
 
