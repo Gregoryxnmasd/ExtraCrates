@@ -26,6 +26,7 @@ public class CrateSession {
     private final CrateDefinition crate;
     private final Reward reward;
     private final CutscenePath path;
+    private final boolean grantReward;
     private final SessionManager sessionManager;
 
     private ArmorStand cameraStand;
@@ -44,6 +45,7 @@ public class CrateSession {
             CrateDefinition crate,
             Reward reward,
             CutscenePath path,
+            boolean grantReward,
             SessionManager sessionManager
     ) {
         this.plugin = plugin;
@@ -52,6 +54,7 @@ public class CrateSession {
         this.crate = crate;
         this.reward = reward;
         this.path = path;
+        this.grantReward = grantReward;
         this.sessionManager = sessionManager;
     }
 
@@ -201,6 +204,10 @@ public class CrateSession {
     }
 
     private void executeReward() {
+        if (!grantReward) {
+            player.sendMessage(Component.text("Vista previa completada. No se entregó recompensa."));
+            return;
+        }
         player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
         ItemStack item = ItemUtil.buildItem(reward);
         player.getInventory().addItem(item);
