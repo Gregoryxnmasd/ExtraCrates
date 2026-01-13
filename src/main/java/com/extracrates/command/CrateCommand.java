@@ -107,10 +107,8 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 if (meta != null) {
                     meta.displayName(TextUtil.color(crate.getDisplayName() + " &7(llave)"));
                     if (crate.getKeyModel() != null && !crate.getKeyModel().isEmpty()) {
-                        try {
-                            meta.setCustomModelData(Integer.parseInt(crate.getKeyModel()));
-                        } catch (NumberFormatException ignored) {
-                        }
+                        configLoader.getResourcePackRegistry().resolveCustomModelData(crate.getKeyModel())
+                                .ifPresent(meta::setCustomModelData);
                     }
                     key.setItemMeta(meta);
                 }

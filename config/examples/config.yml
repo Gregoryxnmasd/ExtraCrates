@@ -12,6 +12,10 @@ resourcepack:
   allow-animated-items: true
   allow-map-images: true
   pumpkin-overlay-model: "cutscene_mask"
+  models:
+    dragon_sword: 1001
+    candy_bow: 1002
+    cutscene_mask: 1003
 cutscene:
   default-speed: 0.35
   constant-speed: true
