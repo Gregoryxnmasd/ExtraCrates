@@ -32,6 +32,7 @@ public class CrateSession {
     private ItemDisplay rewardDisplay;
     private TextDisplay hologram;
     private BukkitRunnable task;
+    private BukkitRunnable timeoutTask;
 
     private GameMode previousGameMode;
     private UUID speedModifierUuid;
@@ -61,6 +62,7 @@ public class CrateSession {
         spawnCamera(start);
         applySpectatorMode();
         spawnRewardDisplay();
+        scheduleTimeout();
         startCutscene();
     }
 
@@ -168,6 +170,20 @@ public class CrateSession {
         task.runTaskTimer(plugin, 0L, period);
     }
 
+    private void scheduleTimeout() {
+        long maxDurationTicks = Math.max(0L, configLoader.getMainConfig().getLong("sessions.max-duration-ticks", 600L));
+        if (maxDurationTicks == 0L) {
+            return;
+        }
+        timeoutTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                end();
+            }
+        };
+        timeoutTask.runTaskLater(plugin, maxDurationTicks);
+    }
+
     private List<Location> buildTimeline(World world, CutscenePath path) {
         List<Location> timeline = new ArrayList<>();
         List<com.extracrates.model.CutscenePoint> points = path.getPoints();
@@ -236,6 +252,9 @@ public class CrateSession {
     public void end() {
         if (task != null) {
             task.cancel();
+        }
+        if (timeoutTask != null) {
+            timeoutTask.cancel();
         }
         if (cameraStand != null && !cameraStand.isDead()) {
             cameraStand.remove();
