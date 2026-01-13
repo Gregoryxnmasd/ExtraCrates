@@ -106,7 +106,7 @@ public class CrateSession {
         Location displayLocation = anchor.clone().add(0, floatSettings.getHeight(), 0);
 
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
-            display.setItemStack(ItemUtil.buildItem(reward));
+            display.setItemStack(ItemUtil.buildItem(reward, anchor.getWorld(), configLoader, plugin.getMapImageCache()));
         });
         hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
             String format = crate.getAnimation().getHologramFormat();
@@ -202,7 +202,7 @@ public class CrateSession {
 
     private void executeReward() {
         player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
-        ItemStack item = ItemUtil.buildItem(reward);
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
         player.getInventory().addItem(item);
 
         for (String command : reward.getCommands()) {
