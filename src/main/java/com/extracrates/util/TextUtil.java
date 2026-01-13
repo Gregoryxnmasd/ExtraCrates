@@ -22,4 +22,11 @@ public final class TextUtil {
         }
         return SERIALIZER.deserialize(text).content();
     }
+
+    public static String serializeLegacy(Component component) {
+        if (component == null) {
+            return "";
+        }
+        return SERIALIZER.serialize(component);
+    }
 }

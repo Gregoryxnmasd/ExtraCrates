@@ -2,6 +2,9 @@ package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.hologram.HologramProvider;
+import com.extracrates.hologram.HologramProviderFactory;
+import com.extracrates.hologram.HologramSettings;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
@@ -23,12 +26,16 @@ import java.util.*;
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private final HologramProvider hologramProvider;
+    private final HologramSettings hologramSettings;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
         this.plugin = plugin;
         this.configLoader = configLoader;
+        this.hologramSettings = HologramSettings.fromConfig(configLoader.getMainConfig());
+        this.hologramProvider = HologramProviderFactory.create(plugin, configLoader.getMainConfig(), hologramSettings);
     }
 
     public void shutdown() {
@@ -80,6 +87,14 @@ public class SessionManager {
 
     public void removeSession(UUID playerId) {
         sessions.remove(playerId);
+    }
+
+    public HologramProvider getHologramProvider() {
+        return hologramProvider;
+    }
+
+    public HologramSettings getHologramSettings() {
+        return hologramSettings;
     }
 
     private boolean isOnCooldown(Player player, CrateDefinition crate) {

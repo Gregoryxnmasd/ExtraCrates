@@ -2,6 +2,8 @@ package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.hologram.HologramInstance;
+import com.extracrates.hologram.HologramSettings;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
@@ -9,7 +11,6 @@ import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
-import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
@@ -27,10 +28,11 @@ public class CrateSession {
     private final Reward reward;
     private final CutscenePath path;
     private final SessionManager sessionManager;
+    private final HologramSettings hologramSettings;
 
     private ArmorStand cameraStand;
     private ItemDisplay rewardDisplay;
-    private TextDisplay hologram;
+    private HologramInstance hologram;
     private BukkitRunnable task;
 
     private GameMode previousGameMode;
@@ -53,6 +55,7 @@ public class CrateSession {
         this.reward = reward;
         this.path = path;
         this.sessionManager = sessionManager;
+        this.hologramSettings = sessionManager.getHologramSettings();
     }
 
     public void start() {
@@ -108,15 +111,13 @@ public class CrateSession {
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
             display.setItemStack(ItemUtil.buildItem(reward));
         });
-        hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
-            String format = crate.getAnimation().getHologramFormat();
-            String name = format.replace("%reward_name%", reward.getDisplayName());
-            display.text(TextUtil.color(name));
-            display.setBillboard(Display.Billboard.CENTER);
-        });
+        Location hologramLocation = displayLocation.clone().add(hologramSettings.getOffset());
+        hologram = sessionManager.getHologramProvider().spawnHologram(hologramLocation, buildHologramText(hologramSettings), player);
 
         hideFromOthers(rewardDisplay);
-        hideFromOthers(hologram);
+        if (hologram != null && hologram.getEntity() != null) {
+            hideFromOthers(hologram.getEntity());
+        }
     }
 
     private void hideFromOthers(Entity entity) {
@@ -158,7 +159,8 @@ public class CrateSession {
                     Location rewardLocation = rewardDisplay.getLocation();
                     rewardDisplay.teleport(rewardLocation.clone().add(0, bob, 0));
                     if (hologram != null) {
-                        hologram.teleport(rewardLocation.clone().add(0, 0.4 + bob, 0));
+                        Location hologramLocation = rewardLocation.clone().add(hologramSettings.getOffset()).add(0, bob, 0);
+                        hologram.teleport(hologramLocation);
                     }
                 }
             }
@@ -243,7 +245,7 @@ public class CrateSession {
         if (rewardDisplay != null && !rewardDisplay.isDead()) {
             rewardDisplay.remove();
         }
-        if (hologram != null && !hologram.isDead()) {
+        if (hologram != null) {
             hologram.remove();
         }
         if (previousGameMode != null) {
@@ -259,5 +261,17 @@ public class CrateSession {
             player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
         }
         sessionManager.removeSession(player.getUniqueId());
+    }
+
+    private Component buildHologramText(HologramSettings settings) {
+        String format = reward.getHologram();
+        if (format == null || format.isEmpty()) {
+            format = crate.getAnimation().getHologramFormat();
+        }
+        if (format == null || format.isEmpty()) {
+            format = settings.getNameFormat();
+        }
+        String name = format.replace("%reward_name%", reward.getDisplayName());
+        return TextUtil.color(name);
     }
 }
