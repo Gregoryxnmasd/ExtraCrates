@@ -5,6 +5,7 @@ import com.extracrates.config.ConfigLoader;
 import com.extracrates.gui.CrateGui;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.runtime.SessionManager;
+import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
@@ -107,9 +108,9 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 if (meta != null) {
                     meta.displayName(TextUtil.color(crate.getDisplayName() + " &7(llave)"));
                     if (crate.getKeyModel() != null && !crate.getKeyModel().isEmpty()) {
-                        try {
-                            meta.setCustomModelData(Integer.parseInt(crate.getKeyModel()));
-                        } catch (NumberFormatException ignored) {
+                        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.getKeyModel());
+                        if (modelData >= 0) {
+                            meta.setCustomModelData(modelData);
                         }
                     }
                     key.setItemMeta(meta);

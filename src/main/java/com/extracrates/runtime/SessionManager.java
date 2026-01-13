@@ -7,6 +7,7 @@ import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.util.RewardSelector;
+import com.extracrates.util.ResourcepackModelResolver;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -109,7 +110,10 @@ public class SessionManager {
         if (crate.getKeyModel() == null || crate.getKeyModel().isEmpty()) {
             return true;
         }
-        int modelData = parseModel(crate.getKeyModel());
+        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.getKeyModel());
+        if (modelData < 0) {
+            return false;
+        }
         return Arrays.stream(player.getInventory().getContents()).anyMatch(item -> {
             if (item == null || item.getItemMeta() == null) {
                 return false;
@@ -121,16 +125,11 @@ public class SessionManager {
         });
     }
 
-    private int parseModel(String value) {
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException ex) {
-            return -1;
-        }
-    }
-
     private void consumeKey(Player player, CrateDefinition crate) {
-        int modelData = parseModel(crate.getKeyModel());
+        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.getKeyModel());
+        if (modelData < 0) {
+            return;
+        }
         ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {
             ItemStack item = contents[i];

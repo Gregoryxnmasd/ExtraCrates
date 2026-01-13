@@ -12,6 +12,9 @@ resourcepack:
   allow-animated-items: true
   allow-map-images: true
   pumpkin-overlay-model: "cutscene_mask"
+  models:
+    legendary_key: 1001
+    legendary_reward: 1002
 cutscene:
   default-speed: 0.35
   constant-speed: true
