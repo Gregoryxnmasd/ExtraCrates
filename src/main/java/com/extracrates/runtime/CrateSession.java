@@ -9,7 +9,6 @@ import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
-import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
@@ -28,7 +27,7 @@ public class CrateSession {
     private final CutscenePath path;
     private final SessionManager sessionManager;
 
-    private ArmorStand cameraStand;
+    private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
     private TextDisplay hologram;
     private BukkitRunnable task;
@@ -65,13 +64,11 @@ public class CrateSession {
     }
 
     private void spawnCamera(Location start) {
-        cameraStand = start.getWorld().spawn(start, ArmorStand.class, stand -> {
-            stand.setInvisible(true);
-            stand.setGravity(false);
-            stand.setMarker(true);
-            stand.setSilent(true);
-        });
-        hideFromOthers(cameraStand);
+        FileConfiguration config = configLoader.getMainConfig();
+        String cameraEntityType = config.getString("cutscene.camera-entity", "armorstand");
+        boolean armorStandInvisible = config.getBoolean("cutscene.armorstand-invisible", true);
+        cameraEntity = CameraEntityFactory.spawn(start, cameraEntityType, armorStandInvisible);
+        hideFromOthers(cameraEntity);
     }
 
     private void applySpectatorMode() {
@@ -84,7 +81,7 @@ public class CrateSession {
         }
         double modifierValue = config.getDouble("cutscene.slowdown-modifier", -10.0);
         sessionManager.applySpectator(player, speedModifierUuid, modifierValue);
-        player.setSpectatorTarget(cameraStand);
+        player.setSpectatorTarget(cameraEntity);
 
         previousHelmet = player.getInventory().getHelmet();
         ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
@@ -132,7 +129,7 @@ public class CrateSession {
             finish();
             return;
         }
-        List<Location> timeline = buildTimeline(cameraStand.getWorld(), path);
+        List<Location> timeline = buildTimeline(cameraEntity.getWorld(), path);
         task = new BukkitRunnable() {
             int index = 0;
             double rotation = 0;
@@ -145,8 +142,8 @@ public class CrateSession {
                     return;
                 }
                 Location point = timeline.get(index++);
-                cameraStand.teleport(point);
-                player.setSpectatorTarget(cameraStand);
+                cameraEntity.teleport(point);
+                player.setSpectatorTarget(cameraEntity);
 
                 CrateDefinition.RewardFloatSettings floatSettings = crate.getAnimation().getRewardFloatSettings();
                 rotation += floatSettings.getSpinSpeed();
@@ -171,6 +168,7 @@ public class CrateSession {
     private List<Location> buildTimeline(World world, CutscenePath path) {
         List<Location> timeline = new ArrayList<>();
         List<com.extracrates.model.CutscenePoint> points = path.getPoints();
+        String smoothing = resolveSmoothing(path);
         for (int i = 0; i < points.size() - 1; i++) {
             com.extracrates.model.CutscenePoint start = points.get(i);
             com.extracrates.model.CutscenePoint end = points.get(i + 1);
@@ -180,19 +178,54 @@ public class CrateSession {
             int steps = Math.max(2, (int) Math.ceil(distance / path.getStepResolution()));
             for (int s = 0; s <= steps; s++) {
                 double t = s / (double) steps;
-                double x = lerp(startLoc.getX(), endLoc.getX(), t);
-                double y = lerp(startLoc.getY(), endLoc.getY(), t);
-                double z = lerp(startLoc.getZ(), endLoc.getZ(), t);
-                float yaw = (float) lerp(startLoc.getYaw(), endLoc.getYaw(), t);
-                float pitch = (float) lerp(startLoc.getPitch(), endLoc.getPitch(), t);
+                double eased = applyEasing(t, smoothing);
+                double x = lerp(startLoc.getX(), endLoc.getX(), eased);
+                double y = lerp(startLoc.getY(), endLoc.getY(), eased);
+                double z = lerp(startLoc.getZ(), endLoc.getZ(), eased);
+                float yaw = lerpAngle(startLoc.getYaw(), endLoc.getYaw(), eased);
+                float pitch = lerpAngle(startLoc.getPitch(), endLoc.getPitch(), eased);
                 timeline.add(new Location(world, x, y, z, yaw, pitch));
             }
         }
         return timeline;
     }
 
+    private String resolveSmoothing(CutscenePath path) {
+        String smoothing = path.getSmoothing();
+        if (smoothing == null || smoothing.isBlank()) {
+            smoothing = "linear";
+        }
+        return smoothing;
+    }
+
+    private double applyEasing(double t, String smoothing) {
+        String mode = smoothing == null ? "linear" : smoothing.trim().toLowerCase(Locale.ROOT);
+        return switch (mode) {
+            case "ease-in", "ease_in", "in" -> t * t;
+            case "ease-out", "ease_out", "out" -> 1 - Math.pow(1 - t, 2);
+            case "ease-in-out", "ease_in_out", "in-out", "smoothstep", "catmull-rom" -> t * t * (3 - 2 * t);
+            default -> t;
+        };
+    }
+
     private double lerp(double start, double end, double t) {
         return start + (end - start) * t;
+    }
+
+    private float lerpAngle(float start, float end, double t) {
+        float delta = wrapDegrees(end - start);
+        return start + (float) (delta * t);
+    }
+
+    private float wrapDegrees(float angle) {
+        float wrapped = angle % 360.0f;
+        if (wrapped >= 180.0f) {
+            wrapped -= 360.0f;
+        }
+        if (wrapped < -180.0f) {
+            wrapped += 360.0f;
+        }
+        return wrapped;
     }
 
     private void finish() {
@@ -237,8 +270,8 @@ public class CrateSession {
         if (task != null) {
             task.cancel();
         }
-        if (cameraStand != null && !cameraStand.isDead()) {
-            cameraStand.remove();
+        if (cameraEntity != null && !cameraEntity.isDead()) {
+            cameraEntity.remove();
         }
         if (rewardDisplay != null && !rewardDisplay.isDead()) {
             rewardDisplay.remove();
