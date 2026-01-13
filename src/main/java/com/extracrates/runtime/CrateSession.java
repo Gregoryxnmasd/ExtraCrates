@@ -171,6 +171,8 @@ public class CrateSession {
     private List<Location> buildTimeline(World world, CutscenePath path) {
         List<Location> timeline = new ArrayList<>();
         List<com.extracrates.model.CutscenePoint> points = path.getPoints();
+        String smoothing = path.getSmoothing() == null ? "linear" : path.getSmoothing().trim().toLowerCase(Locale.ROOT);
+        boolean useCatmullRom = smoothing.equals("catmull-rom") || smoothing.equals("catmullrom");
         for (int i = 0; i < points.size() - 1; i++) {
             com.extracrates.model.CutscenePoint start = points.get(i);
             com.extracrates.model.CutscenePoint end = points.get(i + 1);
@@ -178,13 +180,28 @@ public class CrateSession {
             Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ(), end.getYaw(), end.getPitch());
             double distance = startLoc.distance(endLoc);
             int steps = Math.max(2, (int) Math.ceil(distance / path.getStepResolution()));
+            com.extracrates.model.CutscenePoint prev = i > 0 ? points.get(i - 1) : start;
+            com.extracrates.model.CutscenePoint next = (i + 2) < points.size() ? points.get(i + 2) : end;
             for (int s = 0; s <= steps; s++) {
                 double t = s / (double) steps;
-                double x = lerp(startLoc.getX(), endLoc.getX(), t);
-                double y = lerp(startLoc.getY(), endLoc.getY(), t);
-                double z = lerp(startLoc.getZ(), endLoc.getZ(), t);
-                float yaw = (float) lerp(startLoc.getYaw(), endLoc.getYaw(), t);
-                float pitch = (float) lerp(startLoc.getPitch(), endLoc.getPitch(), t);
+                double x;
+                double y;
+                double z;
+                float yaw;
+                float pitch;
+                if (useCatmullRom) {
+                    x = catmullRom(prev.getX(), start.getX(), end.getX(), next.getX(), t);
+                    y = catmullRom(prev.getY(), start.getY(), end.getY(), next.getY(), t);
+                    z = catmullRom(prev.getZ(), start.getZ(), end.getZ(), next.getZ(), t);
+                    yaw = (float) catmullRom(prev.getYaw(), start.getYaw(), end.getYaw(), next.getYaw(), t);
+                    pitch = (float) catmullRom(prev.getPitch(), start.getPitch(), end.getPitch(), next.getPitch(), t);
+                } else {
+                    x = lerp(startLoc.getX(), endLoc.getX(), t);
+                    y = lerp(startLoc.getY(), endLoc.getY(), t);
+                    z = lerp(startLoc.getZ(), endLoc.getZ(), t);
+                    yaw = (float) lerp(startLoc.getYaw(), endLoc.getYaw(), t);
+                    pitch = (float) lerp(startLoc.getPitch(), endLoc.getPitch(), t);
+                }
                 timeline.add(new Location(world, x, y, z, yaw, pitch));
             }
         }
@@ -193,6 +210,15 @@ public class CrateSession {
 
     private double lerp(double start, double end, double t) {
         return start + (end - start) * t;
+    }
+
+    private double catmullRom(double p0, double p1, double p2, double p3, double t) {
+        double t2 = t * t;
+        double t3 = t2 * t;
+        return 0.5 * ((2.0 * p1)
+                + (-p0 + p2) * t
+                + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
+                + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3);
     }
 
     private void finish() {
