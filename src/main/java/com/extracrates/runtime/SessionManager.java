@@ -18,13 +18,19 @@ import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
+    private final Map<UUID, Random> sessionRandoms = new HashMap<>();
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
         this.plugin = plugin;
@@ -34,6 +40,7 @@ public class SessionManager {
     public void shutdown() {
         sessions.values().forEach(CrateSession::end);
         sessions.clear();
+        sessionRandoms.clear();
     }
 
     public boolean openCrate(Player player, CrateDefinition crate) {
@@ -54,7 +61,8 @@ public class SessionManager {
             return false;
         }
         RewardPool pool = configLoader.getRewardPools().get(crate.getRewardsPool());
-        List<Reward> rewards = RewardSelector.roll(pool);
+        Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
+        List<Reward> rewards = RewardSelector.roll(pool, random, buildRollLogger(player));
         if (rewards.isEmpty()) {
             player.sendMessage(Component.text("No hay recompensas configuradas."));
             return false;
@@ -76,10 +84,26 @@ public class SessionManager {
         if (session != null) {
             session.end();
         }
+        sessionRandoms.remove(playerId);
     }
 
     public void removeSession(UUID playerId) {
         sessions.remove(playerId);
+        sessionRandoms.remove(playerId);
+    }
+
+    private RewardSelector.RewardRollLogger buildRollLogger(Player player) {
+        if (!configLoader.getMainConfig().getBoolean("debug.rolls", false)) {
+            return null;
+        }
+        return (reward, roll, total) -> plugin.getLogger().info(String.format(
+                "Roll debug player=%s rewardId=%s roll=%.4f chance=%.4f total=%.4f",
+                player.getName(),
+                reward.getId(),
+                roll,
+                reward.getChance(),
+                total
+        ));
     }
 
     private boolean isOnCooldown(Player player, CrateDefinition crate) {
