@@ -7,6 +7,7 @@ gui:
   editor-title: "&0Editor de Crates"
   preview-enabled: true
   click-sounds: true
+  click-sound: "UI_BUTTON_CLICK"
 resourcepack:
   use-custom-model-data: true
   allow-animated-items: true
