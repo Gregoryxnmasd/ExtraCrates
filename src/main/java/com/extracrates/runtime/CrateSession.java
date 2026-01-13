@@ -120,6 +120,9 @@ public class CrateSession {
     }
 
     private void hideFromOthers(Entity entity) {
+        if (!configLoader.getMainConfig().getBoolean("cutscene.hide-others", true)) {
+            return;
+        }
         for (Player online : Bukkit.getOnlinePlayers()) {
             if (!online.getUniqueId().equals(player.getUniqueId())) {
                 online.hideEntity(plugin, entity);
