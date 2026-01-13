@@ -16,5 +16,6 @@ public class SessionListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         sessionManager.endSession(event.getPlayer().getUniqueId());
+        sessionManager.endPreview(event.getPlayer().getUniqueId());
     }
 }
