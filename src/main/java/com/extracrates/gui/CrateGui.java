@@ -20,6 +20,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CrateGui implements Listener {
+    private static final int PAGE_SIZE = 27;
+    private static final int INVENTORY_SIZE = 36;
+    private static final int PREVIOUS_PAGE_SLOT = 30;
+    private static final int NEXT_PAGE_SLOT = 32;
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final SessionManager sessionManager;
@@ -32,10 +36,20 @@ public class CrateGui implements Listener {
     }
 
     public void open(Player player) {
+        open(player, 0);
+    }
+
+    public void open(Player player, int pageIndex) {
         String title = configLoader.getMainConfig().getString("gui.title", "&8ExtraCrates");
-        Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color(title));
+        List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
+        int totalPages = Math.max(1, (int) Math.ceil(crates.size() / (double) PAGE_SIZE));
+        int safePageIndex = Math.max(0, Math.min(pageIndex, totalPages - 1));
+        Inventory inventory = Bukkit.createInventory(new CrateGuiHolder(safePageIndex), INVENTORY_SIZE, TextUtil.color(title));
+        int startIndex = safePageIndex * PAGE_SIZE;
+        int endIndex = Math.min(startIndex + PAGE_SIZE, crates.size());
         int slot = 0;
-        for (CrateDefinition crate : configLoader.getCrates().values()) {
+        for (int i = startIndex; i < endIndex; i++) {
+            CrateDefinition crate = crates.get(i);
             ItemStack item = new ItemStack(Material.CHEST);
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
@@ -47,9 +61,12 @@ public class CrateGui implements Listener {
                 item.setItemMeta(meta);
             }
             inventory.setItem(slot++, item);
-            if (slot >= inventory.getSize()) {
-                break;
-            }
+        }
+        if (safePageIndex > 0) {
+            inventory.setItem(PREVIOUS_PAGE_SLOT, buildNavItem(Material.ARROW, "&ePágina anterior"));
+        }
+        if (safePageIndex < totalPages - 1) {
+            inventory.setItem(NEXT_PAGE_SLOT, buildNavItem(Material.ARROW, "&ePágina siguiente"));
         }
         player.openInventory(inventory);
     }
@@ -59,8 +76,7 @@ public class CrateGui implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
-        String title = configLoader.getMainConfig().getString("gui.title", "&8ExtraCrates");
-        if (!event.getView().title().equals(TextUtil.color(title))) {
+        if (!(event.getView().getTopInventory().getHolder() instanceof CrateGuiHolder holder)) {
             return;
         }
         event.setCancelled(true);
@@ -69,12 +85,41 @@ public class CrateGui implements Listener {
             return;
         }
         int slot = event.getSlot();
-        List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
-        if (slot >= crates.size()) {
+        if (slot == PREVIOUS_PAGE_SLOT) {
+            open(player, holder.pageIndex() - 1);
             return;
         }
-        CrateDefinition crate = crates.get(slot);
+        if (slot == NEXT_PAGE_SLOT) {
+            open(player, holder.pageIndex() + 1);
+            return;
+        }
+        if (slot >= PAGE_SIZE) {
+            return;
+        }
+        List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
+        int crateIndex = holder.pageIndex() * PAGE_SIZE + slot;
+        if (crateIndex >= crates.size()) {
+            return;
+        }
+        CrateDefinition crate = crates.get(crateIndex);
         sessionManager.openCrate(player, crate);
         player.closeInventory();
+    }
+
+    private ItemStack buildNavItem(Material material, String name) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(TextUtil.color(name));
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private record CrateGuiHolder(int pageIndex) implements org.bukkit.inventory.InventoryHolder {
+        @Override
+        public Inventory getInventory() {
+            return null;
+        }
     }
 }
