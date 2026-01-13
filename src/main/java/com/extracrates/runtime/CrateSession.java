@@ -133,6 +133,7 @@ public class CrateSession {
             return;
         }
         List<Location> timeline = buildTimeline(cameraStand.getWorld(), path);
+        spawnPathPreview(timeline, path);
         task = new BukkitRunnable() {
             int index = 0;
             double rotation = 0;
@@ -171,24 +172,126 @@ public class CrateSession {
     private List<Location> buildTimeline(World world, CutscenePath path) {
         List<Location> timeline = new ArrayList<>();
         List<com.extracrates.model.CutscenePoint> points = path.getPoints();
+        if (points.size() < 2) {
+            return timeline;
+        }
+
+        boolean useCatmullRom = "catmull-rom".equalsIgnoreCase(path.getSmoothing());
+        List<Double> segmentDistances = new ArrayList<>();
+        double totalDistance = 0.0;
         for (int i = 0; i < points.size() - 1; i++) {
-            com.extracrates.model.CutscenePoint start = points.get(i);
-            com.extracrates.model.CutscenePoint end = points.get(i + 1);
-            Location startLoc = new Location(world, start.getX(), start.getY(), start.getZ(), start.getYaw(), start.getPitch());
-            Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ(), end.getYaw(), end.getPitch());
-            double distance = startLoc.distance(endLoc);
-            int steps = Math.max(2, (int) Math.ceil(distance / path.getStepResolution()));
-            for (int s = 0; s <= steps; s++) {
-                double t = s / (double) steps;
-                double x = lerp(startLoc.getX(), endLoc.getX(), t);
-                double y = lerp(startLoc.getY(), endLoc.getY(), t);
-                double z = lerp(startLoc.getZ(), endLoc.getZ(), t);
-                float yaw = (float) lerp(startLoc.getYaw(), endLoc.getYaw(), t);
-                float pitch = (float) lerp(startLoc.getPitch(), endLoc.getPitch(), t);
-                timeline.add(new Location(world, x, y, z, yaw, pitch));
+            double distance = estimateSegmentDistance(points, i, useCatmullRom);
+            segmentDistances.add(distance);
+            totalDistance += distance;
+        }
+
+        int totalIntervals = 0;
+        if (path.isConstantSpeed() && totalDistance > 0) {
+            totalIntervals = Math.max(1, (int) Math.ceil(totalDistance / path.getStepResolution()));
+        }
+
+        int remainingIntervals = totalIntervals;
+        double remainingDistance = totalDistance;
+        for (int i = 0; i < points.size() - 1; i++) {
+            int intervals;
+            double segmentDistance = segmentDistances.get(i);
+            if (path.isConstantSpeed() && totalDistance > 0) {
+                int remainingSegments = (points.size() - 1) - i;
+                int maxAlloc = remainingIntervals - (remainingSegments - 1);
+                double ratio = remainingDistance > 0 ? (segmentDistance / remainingDistance) : 0.0;
+                intervals = Math.max(1, (int) Math.round(remainingIntervals * ratio));
+                intervals = Math.min(maxAlloc, intervals);
+                remainingIntervals -= intervals;
+                remainingDistance -= segmentDistance;
+            } else {
+                intervals = Math.max(1, (int) Math.ceil(segmentDistance / path.getStepResolution()));
+            }
+
+            for (int s = 0; s <= intervals; s++) {
+                if (i > 0 && s == 0) {
+                    continue;
+                }
+                double t = s / (double) intervals;
+                com.extracrates.model.CutscenePoint p1 = points.get(i);
+                com.extracrates.model.CutscenePoint p2 = points.get(i + 1);
+                if (useCatmullRom) {
+                    com.extracrates.model.CutscenePoint p0 = points.get(Math.max(0, i - 1));
+                    com.extracrates.model.CutscenePoint p3 = points.get(Math.min(points.size() - 1, i + 2));
+                    double x = catmullRom(p0.getX(), p1.getX(), p2.getX(), p3.getX(), t);
+                    double y = catmullRom(p0.getY(), p1.getY(), p2.getY(), p3.getY(), t);
+                    double z = catmullRom(p0.getZ(), p1.getZ(), p2.getZ(), p3.getZ(), t);
+                    float yaw = (float) catmullRom(p0.getYaw(), p1.getYaw(), p2.getYaw(), p3.getYaw(), t);
+                    float pitch = (float) catmullRom(p0.getPitch(), p1.getPitch(), p2.getPitch(), p3.getPitch(), t);
+                    timeline.add(new Location(world, x, y, z, yaw, pitch));
+                } else {
+                    double x = lerp(p1.getX(), p2.getX(), t);
+                    double y = lerp(p1.getY(), p2.getY(), t);
+                    double z = lerp(p1.getZ(), p2.getZ(), t);
+                    float yaw = (float) lerp(p1.getYaw(), p2.getYaw(), t);
+                    float pitch = (float) lerp(p1.getPitch(), p2.getPitch(), t);
+                    timeline.add(new Location(world, x, y, z, yaw, pitch));
+                }
             }
         }
         return timeline;
+    }
+
+    private double estimateSegmentDistance(List<com.extracrates.model.CutscenePoint> points, int index, boolean useCatmullRom) {
+        com.extracrates.model.CutscenePoint p1 = points.get(index);
+        com.extracrates.model.CutscenePoint p2 = points.get(index + 1);
+        if (!useCatmullRom) {
+            double dx = p2.getX() - p1.getX();
+            double dy = p2.getY() - p1.getY();
+            double dz = p2.getZ() - p1.getZ();
+            return Math.sqrt(dx * dx + dy * dy + dz * dz);
+        }
+        com.extracrates.model.CutscenePoint p0 = points.get(Math.max(0, index - 1));
+        com.extracrates.model.CutscenePoint p3 = points.get(Math.min(points.size() - 1, index + 2));
+        int samples = 12;
+        double distance = 0.0;
+        double lastX = p1.getX();
+        double lastY = p1.getY();
+        double lastZ = p1.getZ();
+        for (int s = 1; s <= samples; s++) {
+            double t = s / (double) samples;
+            double x = catmullRom(p0.getX(), p1.getX(), p2.getX(), p3.getX(), t);
+            double y = catmullRom(p0.getY(), p1.getY(), p2.getY(), p3.getY(), t);
+            double z = catmullRom(p0.getZ(), p1.getZ(), p2.getZ(), p3.getZ(), t);
+            double dx = x - lastX;
+            double dy = y - lastY;
+            double dz = z - lastZ;
+            distance += Math.sqrt(dx * dx + dy * dy + dz * dz);
+            lastX = x;
+            lastY = y;
+            lastZ = z;
+        }
+        return distance;
+    }
+
+    private double catmullRom(double p0, double p1, double p2, double p3, double t) {
+        double t2 = t * t;
+        double t3 = t2 * t;
+        return 0.5 * ((2.0 * p1)
+                + (-p0 + p2) * t
+                + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
+                + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3);
+    }
+
+    private void spawnPathPreview(List<Location> timeline, CutscenePath path) {
+        if (timeline.isEmpty()) {
+            return;
+        }
+        String preview = path.getParticlePreview();
+        if (preview == null || preview.isEmpty()) {
+            return;
+        }
+        try {
+            Particle particle = Particle.valueOf(preview.toUpperCase(Locale.ROOT));
+            for (Location point : timeline) {
+                player.spawnParticle(particle, point, 1, 0.0, 0.0, 0.0, 0.0);
+            }
+        } catch (IllegalArgumentException ignored) {
+        }
     }
 
     private double lerp(double start, double end, double t) {
