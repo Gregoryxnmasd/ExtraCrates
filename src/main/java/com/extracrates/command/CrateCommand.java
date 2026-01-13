@@ -25,18 +25,20 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
     private final ConfigLoader configLoader;
     private final SessionManager sessionManager;
     private final CrateGui crateGui;
+    private final SyncCommand syncCommand;
 
-    public CrateCommand(ExtraCratesPlugin plugin, ConfigLoader configLoader, SessionManager sessionManager, CrateGui crateGui) {
+    public CrateCommand(ExtraCratesPlugin plugin, ConfigLoader configLoader, SessionManager sessionManager, CrateGui crateGui, SyncCommand syncCommand) {
         this.plugin = plugin;
         this.configLoader = configLoader;
         this.sessionManager = sessionManager;
         this.crateGui = crateGui;
+        this.syncCommand = syncCommand;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usa /crate gui|open|preview|reload|givekey"));
+            sender.sendMessage(Component.text("Usa /crate gui|open|preview|reload|sync|givekey"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -83,6 +85,9 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 configLoader.loadAll();
                 sender.sendMessage(Component.text("Configuraciones recargadas."));
                 return true;
+            }
+            case "sync" -> {
+                return syncCommand.handle(sender, args);
             }
             case "givekey" -> {
                 if (!(sender instanceof Player player)) {
@@ -133,7 +138,12 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("open");
             results.add("preview");
             results.add("reload");
+            results.add("sync");
             results.add("givekey");
+            return results;
+        }
+        if (args.length >= 2 && args[0].equalsIgnoreCase("sync")) {
+            results.addAll(syncCommand.tabComplete(args));
             return results;
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview") || args[0].equalsIgnoreCase("givekey"))) {

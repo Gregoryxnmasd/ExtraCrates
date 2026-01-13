@@ -33,3 +33,19 @@ holograms:
   height-offset: 0.8
 permissions:
   use-per-crate: true
+sync:
+  enabled: false
+  mode: "eventual" # eventual|strong
+  server-id: "server-a"
+  redis:
+    host: "127.0.0.1"
+    port: 6379
+    password: ""
+    channel: "extracrates:sync"
+  postgres:
+    host: "127.0.0.1"
+    port: 5432
+    database: "extracrates"
+    user: "postgres"
+    password: ""
+    schema: "public"
