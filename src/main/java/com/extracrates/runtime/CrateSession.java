@@ -28,7 +28,7 @@ public class CrateSession {
     private final CutscenePath path;
     private final SessionManager sessionManager;
 
-    private ArmorStand cameraStand;
+    private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
     private TextDisplay hologram;
     private BukkitRunnable task;
@@ -65,13 +65,9 @@ public class CrateSession {
     }
 
     private void spawnCamera(Location start) {
-        cameraStand = start.getWorld().spawn(start, ArmorStand.class, stand -> {
-            stand.setInvisible(true);
-            stand.setGravity(false);
-            stand.setMarker(true);
-            stand.setSilent(true);
-        });
-        hideFromOthers(cameraStand);
+        CameraEntityFactory factory = new CameraEntityFactory(configLoader);
+        cameraEntity = factory.spawn(start);
+        hideFromOthers(cameraEntity);
     }
 
     private void applySpectatorMode() {
@@ -84,7 +80,7 @@ public class CrateSession {
         }
         double modifierValue = config.getDouble("cutscene.slowdown-modifier", -10.0);
         sessionManager.applySpectator(player, speedModifierUuid, modifierValue);
-        player.setSpectatorTarget(cameraStand);
+        player.setSpectatorTarget(cameraEntity);
 
         previousHelmet = player.getInventory().getHelmet();
         ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
@@ -132,7 +128,7 @@ public class CrateSession {
             finish();
             return;
         }
-        List<Location> timeline = buildTimeline(cameraStand.getWorld(), path);
+        List<Location> timeline = buildTimeline(cameraEntity.getWorld(), path);
         task = new BukkitRunnable() {
             int index = 0;
             double rotation = 0;
@@ -145,8 +141,8 @@ public class CrateSession {
                     return;
                 }
                 Location point = timeline.get(index++);
-                cameraStand.teleport(point);
-                player.setSpectatorTarget(cameraStand);
+                cameraEntity.teleport(point);
+                player.setSpectatorTarget(cameraEntity);
 
                 CrateDefinition.RewardFloatSettings floatSettings = crate.getAnimation().getRewardFloatSettings();
                 rotation += floatSettings.getSpinSpeed();
@@ -237,8 +233,8 @@ public class CrateSession {
         if (task != null) {
             task.cancel();
         }
-        if (cameraStand != null && !cameraStand.isDead()) {
-            cameraStand.remove();
+        if (cameraEntity != null && !cameraEntity.isDead()) {
+            cameraEntity.remove();
         }
         if (rewardDisplay != null && !rewardDisplay.isDead()) {
             rewardDisplay.remove();
