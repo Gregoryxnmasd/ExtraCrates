@@ -3,6 +3,7 @@ package com.extracrates;
 import com.extracrates.command.CrateCommand;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.gui.CrateGui;
+import com.extracrates.logging.RewardLogger;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.runtime.SessionListener;
 import org.bukkit.command.PluginCommand;
@@ -23,7 +24,8 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         configLoader = new ConfigLoader(this);
         configLoader.loadAll();
 
-        sessionManager = new SessionManager(this, configLoader);
+        RewardLogger rewardLogger = new RewardLogger(this);
+        sessionManager = new SessionManager(this, configLoader, rewardLogger);
         new SessionListener(this, sessionManager);
         crateGui = new CrateGui(this, configLoader, sessionManager);
 

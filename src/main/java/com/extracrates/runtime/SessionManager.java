@@ -2,6 +2,7 @@ package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.logging.RewardLogger;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
@@ -19,16 +20,19 @@ import org.bukkit.inventory.ItemStack;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private final RewardLogger rewardLogger;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
 
-    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
+    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, RewardLogger rewardLogger) {
         this.plugin = plugin;
         this.configLoader = configLoader;
+        this.rewardLogger = rewardLogger;
     }
 
     public void shutdown() {
@@ -54,12 +58,16 @@ public class SessionManager {
             return false;
         }
         RewardPool pool = configLoader.getRewardPools().get(crate.getRewardsPool());
-        List<Reward> rewards = RewardSelector.roll(pool);
+        long seed = ThreadLocalRandom.current().nextLong();
+        List<Reward> rewards = RewardSelector.roll(pool, seed);
         if (rewards.isEmpty()) {
             player.sendMessage(Component.text("No hay recompensas configuradas."));
             return false;
         }
         Reward reward = rewards.get(0);
+        if (rewardLogger != null) {
+            rewardLogger.logReward(player, crate, reward, seed, Instant.now());
+        }
         CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
         CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this);
         sessions.put(player.getUniqueId(), session);
