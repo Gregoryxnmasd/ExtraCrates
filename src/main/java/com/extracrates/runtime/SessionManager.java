@@ -49,8 +49,9 @@ public class SessionManager {
             player.sendMessage(Component.text("Necesitas una llave para esta crate."));
             return false;
         }
-        if (isOnCooldown(player, crate)) {
-            player.sendMessage(Component.text("Esta crate está en cooldown."));
+        long remainingSeconds = isOnCooldown(player, crate);
+        if (remainingSeconds > 0) {
+            player.sendMessage(Component.text("Esta crate está en cooldown. Tiempo restante: " + remainingSeconds + "s."));
             return false;
         }
         RewardPool pool = configLoader.getRewardPools().get(crate.getRewardsPool());
@@ -82,20 +83,21 @@ public class SessionManager {
         sessions.remove(playerId);
     }
 
-    private boolean isOnCooldown(Player player, CrateDefinition crate) {
+    private long isOnCooldown(Player player, CrateDefinition crate) {
         if (crate.getCooldownSeconds() <= 0) {
-            return false;
+            return 0;
         }
         Map<String, Instant> userCooldowns = cooldowns.get(player.getUniqueId());
         if (userCooldowns == null) {
-            return false;
+            return 0;
         }
         Instant last = userCooldowns.get(crate.getId());
         if (last == null) {
-            return false;
+            return 0;
         }
         Duration elapsed = Duration.between(last, Instant.now());
-        return elapsed.getSeconds() < crate.getCooldownSeconds();
+        long remaining = crate.getCooldownSeconds() - elapsed.getSeconds();
+        return Math.max(remaining, 0);
     }
 
     private void applyCooldown(Player player, CrateDefinition crate) {
