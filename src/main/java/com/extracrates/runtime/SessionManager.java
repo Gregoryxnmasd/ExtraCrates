@@ -2,12 +2,14 @@ package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.economy.EconomyService;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.util.RewardSelector;
 import net.kyori.adventure.text.Component;
+import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.attribute.Attribute;
@@ -23,12 +25,14 @@ import java.util.*;
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private final EconomyService economyService;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
 
-    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
+    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, EconomyService economyService) {
         this.plugin = plugin;
         this.configLoader = configLoader;
+        this.economyService = economyService;
     }
 
     public void shutdown() {
@@ -52,6 +56,23 @@ public class SessionManager {
         if (isOnCooldown(player, crate)) {
             player.sendMessage(Component.text("Esta crate está en cooldown."));
             return false;
+        }
+        double cost = crate.getCost();
+        if (cost > 0) {
+            if (!economyService.isAvailable()) {
+                player.sendMessage(Component.text("No hay un sistema de economía disponible para cobrar esta crate."));
+                return false;
+            }
+            if (!economyService.hasBalance(player, cost)) {
+                player.sendMessage(Component.text("Saldo insuficiente para abrir esta crate."));
+                player.sendMessage(Component.text("Necesitas " + economyService.format(cost) + "."));
+                return false;
+            }
+            EconomyResponse response = economyService.withdraw(player, cost);
+            if (!response.transactionSuccess()) {
+                player.sendMessage(Component.text("No se pudo cobrar el costo de esta crate."));
+                return false;
+            }
         }
         RewardPool pool = configLoader.getRewardPools().get(crate.getRewardsPool());
         List<Reward> rewards = RewardSelector.roll(pool);

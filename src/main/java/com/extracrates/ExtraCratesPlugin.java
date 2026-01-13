@@ -2,6 +2,7 @@ package com.extracrates;
 
 import com.extracrates.command.CrateCommand;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.economy.EconomyService;
 import com.extracrates.gui.CrateGui;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.runtime.SessionListener;
@@ -12,6 +13,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private ConfigLoader configLoader;
     private SessionManager sessionManager;
     private CrateGui crateGui;
+    private EconomyService economyService;
 
     @Override
     public void onEnable() {
@@ -23,7 +25,8 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         configLoader = new ConfigLoader(this);
         configLoader.loadAll();
 
-        sessionManager = new SessionManager(this, configLoader);
+        economyService = new EconomyService(this);
+        sessionManager = new SessionManager(this, configLoader, economyService);
         new SessionListener(this, sessionManager);
         crateGui = new CrateGui(this, configLoader, sessionManager);
 
