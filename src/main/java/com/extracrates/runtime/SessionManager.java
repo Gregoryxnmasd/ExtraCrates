@@ -25,6 +25,7 @@ public class SessionManager {
     private final ConfigLoader configLoader;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
+    private final DisplayPool displayPool = new DisplayPool();
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
         this.plugin = plugin;
@@ -34,6 +35,11 @@ public class SessionManager {
     public void shutdown() {
         sessions.values().forEach(CrateSession::end);
         sessions.clear();
+        displayPool.clear();
+    }
+
+    public DisplayPool getDisplayPool() {
+        return displayPool;
     }
 
     public boolean openCrate(Player player, CrateDefinition crate) {
