@@ -20,6 +20,6 @@ public final class TextUtil {
         if (text == null) {
             return "";
         }
-        return SERIALIZER.deserialize(text).content();
+        return SERIALIZER.serialize(SERIALIZER.deserialize(text));
     }
 }
