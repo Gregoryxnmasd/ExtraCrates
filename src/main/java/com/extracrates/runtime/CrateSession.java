@@ -106,7 +106,20 @@ public class CrateSession {
         Location displayLocation = anchor.clone().add(0, floatSettings.getHeight(), 0);
 
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
-            display.setItemStack(ItemUtil.buildItem(reward));
+            ItemStack displayItem = ItemUtil.buildItem(reward);
+            String rewardModel = crate.getAnimation().getRewardModel();
+            if (rewardModel != null && !rewardModel.isEmpty()) {
+                // Animation reward-model takes priority over reward custom-model for display only.
+                ItemMeta meta = displayItem.getItemMeta();
+                if (meta != null) {
+                    try {
+                        meta.setCustomModelData(Integer.parseInt(rewardModel));
+                    } catch (NumberFormatException ignored) {
+                    }
+                    displayItem.setItemMeta(meta);
+                }
+            }
+            display.setItemStack(displayItem);
         });
         hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
             String format = crate.getAnimation().getHologramFormat();
