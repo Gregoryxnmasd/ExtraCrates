@@ -2,6 +2,7 @@ package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.api.OpenMode;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
@@ -37,6 +38,10 @@ public class SessionManager {
     }
 
     public boolean openCrate(Player player, CrateDefinition crate) {
+        return openCrate(player, crate, OpenMode.REWARD_ONLY);
+    }
+
+    public boolean openCrate(Player player, CrateDefinition crate, OpenMode openMode) {
         if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
             return false;
@@ -45,11 +50,12 @@ public class SessionManager {
             player.sendMessage(Component.text("No tienes permiso para abrir esta crate."));
             return false;
         }
-        if (crate.getType() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
+        boolean preview = openMode == OpenMode.PREVIEW;
+        if (!preview && crate.getType() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
             player.sendMessage(Component.text("Necesitas una llave para esta crate."));
             return false;
         }
-        if (isOnCooldown(player, crate)) {
+        if (!preview && isOnCooldown(player, crate)) {
             player.sendMessage(Component.text("Esta crate está en cooldown."));
             return false;
         }
@@ -61,13 +67,15 @@ public class SessionManager {
         }
         Reward reward = rewards.get(0);
         CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
-        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this);
+        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this, preview);
         sessions.put(player.getUniqueId(), session);
-        if (crate.getType() == com.extracrates.model.CrateType.KEYED) {
+        if (!preview && crate.getType() == com.extracrates.model.CrateType.KEYED) {
             consumeKey(player, crate);
         }
         session.start();
-        applyCooldown(player, crate);
+        if (!preview) {
+            applyCooldown(player, crate);
+        }
         return true;
     }
 

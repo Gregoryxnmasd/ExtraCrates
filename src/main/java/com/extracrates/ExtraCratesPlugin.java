@@ -1,5 +1,7 @@
 package com.extracrates;
 
+import com.extracrates.api.ExtraCratesApi;
+import com.extracrates.api.ExtraCratesApiImpl;
 import com.extracrates.command.CrateCommand;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.gui.CrateGui;
@@ -12,6 +14,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private ConfigLoader configLoader;
     private SessionManager sessionManager;
     private CrateGui crateGui;
+    private ExtraCratesApi api;
 
     @Override
     public void onEnable() {
@@ -26,6 +29,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         sessionManager = new SessionManager(this, configLoader);
         new SessionListener(this, sessionManager);
         crateGui = new CrateGui(this, configLoader, sessionManager);
+        api = new ExtraCratesApiImpl(configLoader, sessionManager);
 
         PluginCommand crateCommand = getCommand("crate");
         if (crateCommand != null) {
@@ -40,5 +44,9 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         if (sessionManager != null) {
             sessionManager.shutdown();
         }
+    }
+
+    public ExtraCratesApi getApi() {
+        return api;
     }
 }
