@@ -56,6 +56,11 @@ public class CrateSession {
     }
 
     public void start() {
+        if (path == null) {
+            player.sendMessage(Component.text("No se encontró la ruta de la cutscene."));
+            finish();
+            return;
+        }
         Location start = crate.getCameraStart() != null ? crate.getCameraStart() : player.getLocation();
         previousGameMode = player.getGameMode();
         spawnCamera(start);

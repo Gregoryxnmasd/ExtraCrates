@@ -4,12 +4,14 @@ import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
+import com.extracrates.model.CutscenePoint;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.util.RewardSelector;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -61,6 +63,10 @@ public class SessionManager {
         }
         Reward reward = rewards.get(0);
         CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
+        if (path == null) {
+            player.sendMessage(Component.text("No se encontró la ruta de la cutscene. Usando una ruta básica."));
+            path = buildDefaultPath(player);
+        }
         CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this);
         sessions.put(player.getUniqueId(), session);
         if (crate.getType() == com.extracrates.model.CrateType.KEYED) {
@@ -80,6 +86,15 @@ public class SessionManager {
 
     public void removeSession(UUID playerId) {
         sessions.remove(playerId);
+    }
+
+    private CutscenePath buildDefaultPath(Player player) {
+        Location location = player.getLocation();
+        List<CutscenePoint> points = List.of(
+                new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch()),
+                new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch())
+        );
+        return new CutscenePath("default", 3.0, true, 0.15, "linear", "", points);
     }
 
     private boolean isOnCooldown(Player player, CrateDefinition crate) {
