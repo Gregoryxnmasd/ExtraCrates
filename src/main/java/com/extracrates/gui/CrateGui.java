@@ -74,7 +74,7 @@ public class CrateGui implements Listener {
             return;
         }
         CrateDefinition crate = crates.get(slot);
-        sessionManager.openCrate(player, crate);
+        sessionManager.openCrate(player, crate, false);
         player.closeInventory();
     }
 }

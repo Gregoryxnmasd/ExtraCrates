@@ -63,7 +63,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage(Component.text("Uso: /crate open <id>"));
+                    sender.sendMessage(Component.text("Uso: /crate " + sub + " <id>"));
                     return true;
                 }
                 CrateDefinition crate = configLoader.getCrates().get(args[1]);
@@ -71,7 +71,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Component.text("Crate no encontrada."));
                     return true;
                 }
-                sessionManager.openCrate(player, crate);
+                sessionManager.openCrate(player, crate, sub.equals("preview"));
                 return true;
             }
             case "reload" -> {
