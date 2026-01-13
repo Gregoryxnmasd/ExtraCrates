@@ -23,6 +23,17 @@ crates:
       sounds:
         start: "entity.ender_dragon.growl"
         end: "ui.toast.challenge_complete"
+    cutscene:
+      overlay-model: "cutscene_mask"
+      locks:
+        movement: true
+        hud: true
+      music:
+        sound: "music.dragon"
+        volume: 0.8
+        pitch: 1.0
+        fade-in-ticks: 40
+        fade-out-ticks: 40
     rewards-pool: "legendary_pool"
   seasonal:
     display-name: "&dTemporada"
@@ -41,4 +52,11 @@ crates:
         height: 0.7
         spin-speed: 2.0
         bobbing: false
+    cutscene:
+      overlay-model: "cutscene_mask"
+      locks:
+        movement: true
+        hud: false
+      music:
+        sound: ""
     rewards-pool: "seasonal_pool"

@@ -78,6 +78,10 @@ public class SessionManager {
         }
     }
 
+    public CrateSession getSession(UUID playerId) {
+        return sessions.get(playerId);
+    }
+
     public void removeSession(UUID playerId) {
         sessions.remove(playerId);
     }

@@ -48,6 +48,21 @@ public class ConfigLoader {
         return plugin.getConfig();
     }
 
+    public Integer resolveModelData(String modelKey) {
+        if (modelKey == null || modelKey.isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(modelKey);
+        } catch (NumberFormatException ignored) {
+        }
+        ConfigurationSection section = getMainConfig().getConfigurationSection("resourcepack.model-data");
+        if (section != null && section.contains(modelKey)) {
+            return section.getInt(modelKey);
+        }
+        return null;
+    }
+
     private void loadCrates() {
         File file = new File(plugin.getDataFolder(), "crates.yml");
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
@@ -56,7 +71,7 @@ public class ConfigLoader {
             return;
         }
         for (String id : section.getKeys(false)) {
-            CrateDefinition crate = CrateDefinition.fromSection(id, section.getConfigurationSection(id));
+            CrateDefinition crate = CrateDefinition.fromSection(id, section.getConfigurationSection(id), getMainConfig());
             if (crate != null) {
                 crates.put(id, crate);
             }

@@ -3,6 +3,7 @@ package com.extracrates.runtime;
 import com.extracrates.ExtraCratesPlugin;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 public class SessionListener implements Listener {
@@ -16,5 +17,23 @@ public class SessionListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         sessionManager.endSession(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onMove(PlayerMoveEvent event) {
+        CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session == null || !session.isMovementLocked()) {
+            return;
+        }
+        if (event.getTo() == null) {
+            return;
+        }
+        if (event.getFrom().getWorld() != null && event.getTo().getWorld() != null
+                && !event.getFrom().getWorld().equals(event.getTo().getWorld())) {
+            return;
+        }
+        if (event.getFrom().distanceSquared(event.getTo()) > 0.0001) {
+            event.setTo(event.getFrom());
+        }
     }
 }
