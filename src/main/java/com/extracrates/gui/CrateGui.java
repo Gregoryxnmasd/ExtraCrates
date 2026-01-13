@@ -35,7 +35,7 @@ public class CrateGui implements Listener {
         String title = configLoader.getMainConfig().getString("gui.title", "&8ExtraCrates");
         Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color(title));
         int slot = 0;
-        for (CrateDefinition crate : configLoader.getCrates().values()) {
+        for (CrateDefinition crate : getAccessibleCrates(player)) {
             ItemStack item = new ItemStack(Material.CHEST);
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
@@ -69,12 +69,23 @@ public class CrateGui implements Listener {
             return;
         }
         int slot = event.getSlot();
-        List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
+        List<CrateDefinition> crates = getAccessibleCrates(player);
         if (slot >= crates.size()) {
             return;
         }
         CrateDefinition crate = crates.get(slot);
         sessionManager.openCrate(player, crate);
         player.closeInventory();
+    }
+
+    private List<CrateDefinition> getAccessibleCrates(Player player) {
+        List<CrateDefinition> crates = new ArrayList<>();
+        for (CrateDefinition crate : configLoader.getCrates().values()) {
+            String permission = crate.getPermission();
+            if (permission == null || permission.isBlank() || player.hasPermission(permission)) {
+                crates.add(crate);
+            }
+        }
+        return crates;
     }
 }
