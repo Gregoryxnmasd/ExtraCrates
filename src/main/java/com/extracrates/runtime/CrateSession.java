@@ -201,13 +201,17 @@ public class CrateSession {
     }
 
     private void executeReward() {
-        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
-        ItemStack item = ItemUtil.buildItem(reward);
-        player.getInventory().addItem(item);
+        if (isQaMode()) {
+            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
+        } else {
+            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
+            ItemStack item = ItemUtil.buildItem(reward);
+            player.getInventory().addItem(item);
 
-        for (String command : reward.getCommands()) {
-            String parsed = command.replace("%player%", player.getName());
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+            for (String command : reward.getCommands()) {
+                String parsed = command.replace("%player%", player.getName());
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+            }
         }
         if (reward.getMessage() != null && (!reward.getMessage().getTitle().isEmpty() || !reward.getMessage().getSubtitle().isEmpty())) {
             player.showTitle(net.kyori.adventure.title.Title.title(
@@ -231,6 +235,10 @@ public class CrateSession {
                 }
             }
         }
+    }
+
+    private boolean isQaMode() {
+        return configLoader.getMainConfig().getBoolean("qa-mode", false);
     }
 
     public void end() {

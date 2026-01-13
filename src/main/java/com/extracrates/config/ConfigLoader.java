@@ -30,6 +30,12 @@ public class ConfigLoader {
         loadCrates();
         loadRewards();
         loadPaths();
+        plugin.getLogger().info(String.format(
+                "Configuracion cargada: crates=%d, pools=%d, paths=%d",
+                crates.size(),
+                rewardPools.size(),
+                paths.size()
+        ));
     }
 
     public Map<String, CrateDefinition> getCrates() {
@@ -53,6 +59,7 @@ public class ConfigLoader {
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection section = config.getConfigurationSection("crates");
         if (section == null) {
+            plugin.getLogger().warning("No se encontro la seccion 'crates' en " + file.getAbsolutePath());
             return;
         }
         for (String id : section.getKeys(false)) {
@@ -61,6 +68,11 @@ public class ConfigLoader {
                 crates.put(id, crate);
             }
         }
+        plugin.getLogger().info(String.format(
+                "Validacion crates.yml: ruta=%s, crates=%d",
+                file.getAbsolutePath(),
+                crates.size()
+        ));
     }
 
     private void loadRewards() {
@@ -68,6 +80,7 @@ public class ConfigLoader {
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection section = config.getConfigurationSection("pools");
         if (section == null) {
+            plugin.getLogger().warning("No se encontro la seccion 'pools' en " + file.getAbsolutePath());
             return;
         }
         for (String id : section.getKeys(false)) {
@@ -76,6 +89,11 @@ public class ConfigLoader {
                 rewardPools.put(id, pool);
             }
         }
+        plugin.getLogger().info(String.format(
+                "Validacion rewards.yml: ruta=%s, pools=%d",
+                file.getAbsolutePath(),
+                rewardPools.size()
+        ));
     }
 
     private void loadPaths() {
@@ -83,6 +101,7 @@ public class ConfigLoader {
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection section = config.getConfigurationSection("paths");
         if (section == null) {
+            plugin.getLogger().warning("No se encontro la seccion 'paths' en " + file.getAbsolutePath());
             return;
         }
         for (String id : section.getKeys(false)) {
@@ -91,5 +110,10 @@ public class ConfigLoader {
                 paths.put(id, path);
             }
         }
+        plugin.getLogger().info(String.format(
+                "Validacion paths.yml: ruta=%s, paths=%d",
+                file.getAbsolutePath(),
+                paths.size()
+        ));
     }
 }
