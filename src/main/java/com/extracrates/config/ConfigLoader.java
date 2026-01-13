@@ -18,6 +18,7 @@ public class ConfigLoader {
     private final Map<String, CrateDefinition> crates = new HashMap<>();
     private final Map<String, RewardPool> rewardPools = new HashMap<>();
     private final Map<String, CutscenePath> paths = new HashMap<>();
+    private SettingsSnapshot settings;
 
     public ConfigLoader(ExtraCratesPlugin plugin) {
         this.plugin = plugin;
@@ -27,6 +28,7 @@ public class ConfigLoader {
         crates.clear();
         rewardPools.clear();
         paths.clear();
+        loadSettings();
         loadCrates();
         loadRewards();
         loadPaths();
@@ -46,6 +48,17 @@ public class ConfigLoader {
 
     public FileConfiguration getMainConfig() {
         return plugin.getConfig();
+    }
+
+    public SettingsSnapshot getSettings() {
+        if (settings == null) {
+            loadSettings();
+        }
+        return settings;
+    }
+
+    private void loadSettings() {
+        settings = SettingsSnapshot.fromConfig(plugin.getConfig());
     }
 
     private void loadCrates() {

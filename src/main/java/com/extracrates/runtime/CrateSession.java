@@ -106,12 +106,12 @@ public class CrateSession {
         Location displayLocation = anchor.clone().add(0, floatSettings.getHeight(), 0);
 
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
-            display.setItemStack(ItemUtil.buildItem(reward));
+            display.setItemStack(ItemUtil.buildItem(reward, configLoader.getSettings()));
         });
         hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
             String format = crate.getAnimation().getHologramFormat();
             String name = format.replace("%reward_name%", reward.getDisplayName());
-            display.text(TextUtil.color(name));
+            display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
             display.setBillboard(Display.Billboard.CENTER);
         });
 
@@ -202,7 +202,7 @@ public class CrateSession {
 
     private void executeReward() {
         player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
-        ItemStack item = ItemUtil.buildItem(reward);
+        ItemStack item = ItemUtil.buildItem(reward, configLoader.getSettings());
         player.getInventory().addItem(item);
 
         for (String command : reward.getCommands()) {
@@ -223,9 +223,13 @@ public class CrateSession {
                 } catch (IllegalArgumentException ignored) {
                 }
             }
-            if (!reward.getEffects().getParticles().isEmpty()) {
+            String particleName = reward.getEffects().getParticles();
+            if (particleName.isEmpty()) {
+                particleName = configLoader.getSettings().getParticlesDefault();
+            }
+            if (!particleName.isEmpty()) {
                 try {
-                    Particle particle = Particle.valueOf(reward.getEffects().getParticles().toUpperCase(Locale.ROOT));
+                    Particle particle = Particle.valueOf(particleName.toUpperCase(Locale.ROOT));
                     player.getWorld().spawnParticle(particle, player.getLocation(), 20, 0.2, 0.2, 0.2, 0.01);
                 } catch (IllegalArgumentException ignored) {
                 }
