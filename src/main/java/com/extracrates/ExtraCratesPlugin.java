@@ -3,6 +3,7 @@ package com.extracrates;
 import com.extracrates.command.CrateCommand;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.gui.CrateGui;
+import com.extracrates.runtime.ProtocolEntityHider;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.runtime.SessionListener;
 import org.bukkit.command.PluginCommand;
@@ -12,6 +13,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private ConfigLoader configLoader;
     private SessionManager sessionManager;
     private CrateGui crateGui;
+    private ProtocolEntityHider protocolEntityHider;
 
     @Override
     public void onEnable() {
@@ -22,6 +24,8 @@ public final class ExtraCratesPlugin extends JavaPlugin {
 
         configLoader = new ConfigLoader(this);
         configLoader.loadAll();
+
+        protocolEntityHider = ProtocolEntityHider.createIfPresent(this);
 
         sessionManager = new SessionManager(this, configLoader);
         new SessionListener(this, sessionManager);
@@ -40,5 +44,12 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         if (sessionManager != null) {
             sessionManager.shutdown();
         }
+        if (protocolEntityHider != null) {
+            protocolEntityHider.shutdown();
+        }
+    }
+
+    public ProtocolEntityHider getProtocolEntityHider() {
+        return protocolEntityHider;
     }
 }

@@ -120,6 +120,11 @@ public class CrateSession {
     }
 
     private void hideFromOthers(Entity entity) {
+        ProtocolEntityHider protocolEntityHider = plugin.getProtocolEntityHider();
+        if (protocolEntityHider != null) {
+            protocolEntityHider.trackEntity(player, entity);
+            return;
+        }
         for (Player online : Bukkit.getOnlinePlayers()) {
             if (!online.getUniqueId().equals(player.getUniqueId())) {
                 online.hideEntity(plugin, entity);
@@ -226,7 +231,7 @@ public class CrateSession {
             if (!reward.getEffects().getParticles().isEmpty()) {
                 try {
                     Particle particle = Particle.valueOf(reward.getEffects().getParticles().toUpperCase(Locale.ROOT));
-                    player.getWorld().spawnParticle(particle, player.getLocation(), 20, 0.2, 0.2, 0.2, 0.01);
+                    player.spawnParticle(particle, player.getLocation(), 20, 0.2, 0.2, 0.2, 0.01);
                 } catch (IllegalArgumentException ignored) {
                 }
             }
@@ -245,6 +250,18 @@ public class CrateSession {
         }
         if (hologram != null && !hologram.isDead()) {
             hologram.remove();
+        }
+        ProtocolEntityHider protocolEntityHider = plugin.getProtocolEntityHider();
+        if (protocolEntityHider != null) {
+            if (cameraStand != null) {
+                protocolEntityHider.untrackEntity(cameraStand);
+            }
+            if (rewardDisplay != null) {
+                protocolEntityHider.untrackEntity(rewardDisplay);
+            }
+            if (hologram != null) {
+                protocolEntityHider.untrackEntity(hologram);
+            }
         }
         if (previousGameMode != null) {
             player.setGameMode(previousGameMode);
