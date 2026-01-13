@@ -59,9 +59,8 @@ public class SessionManager {
             player.sendMessage(Component.text("No hay recompensas configuradas."));
             return false;
         }
-        Reward reward = rewards.get(0);
         CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
-        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this);
+        CrateSession session = new CrateSession(plugin, configLoader, player, crate, rewards, path, this);
         sessions.put(player.getUniqueId(), session);
         if (crate.getType() == com.extracrates.model.CrateType.KEYED) {
             consumeKey(player, crate);

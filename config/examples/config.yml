@@ -16,6 +16,7 @@ cutscene:
   default-speed: 0.35
   constant-speed: true
   smooth-tick: 2
+  reward-delay-ticks: 20
   pumpkin-model: "cutscene_mask"
   slowdown-modifier: -10.0
   hide-others: true
