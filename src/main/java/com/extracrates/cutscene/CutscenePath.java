@@ -1,4 +1,4 @@
-package com.extracrates.model;
+package com.extracrates.cutscene;
 
 import org.bukkit.configuration.ConfigurationSection;
 

@@ -1,6 +1,7 @@
 package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
+import com.extracrates.runtime.core.SessionManager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;

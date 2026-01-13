@@ -1,10 +1,10 @@
 package com.extracrates.command;
 
 import com.extracrates.ExtraCratesPlugin;
-import com.extracrates.config.ConfigLoader;
 import com.extracrates.gui.CrateGui;
 import com.extracrates.model.CrateDefinition;
-import com.extracrates.runtime.SessionManager;
+import com.extracrates.runtime.core.ConfigLoader;
+import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;

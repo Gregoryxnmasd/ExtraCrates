@@ -1,9 +1,8 @@
-package com.extracrates.runtime;
+package com.extracrates.runtime.core;
 
 import com.extracrates.ExtraCratesPlugin;
-import com.extracrates.config.ConfigLoader;
+import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.model.CrateDefinition;
-import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
@@ -170,10 +169,10 @@ public class CrateSession {
 
     private List<Location> buildTimeline(World world, CutscenePath path) {
         List<Location> timeline = new ArrayList<>();
-        List<com.extracrates.model.CutscenePoint> points = path.getPoints();
+        List<com.extracrates.cutscene.CutscenePoint> points = path.getPoints();
         for (int i = 0; i < points.size() - 1; i++) {
-            com.extracrates.model.CutscenePoint start = points.get(i);
-            com.extracrates.model.CutscenePoint end = points.get(i + 1);
+            com.extracrates.cutscene.CutscenePoint start = points.get(i);
+            com.extracrates.cutscene.CutscenePoint end = points.get(i + 1);
             Location startLoc = new Location(world, start.getX(), start.getY(), start.getZ(), start.getYaw(), start.getPitch());
             Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ(), end.getYaw(), end.getPitch());
             double distance = startLoc.distance(endLoc);
