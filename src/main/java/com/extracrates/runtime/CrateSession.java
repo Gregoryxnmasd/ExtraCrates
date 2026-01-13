@@ -27,6 +27,7 @@ public class CrateSession {
     private final Reward reward;
     private final CutscenePath path;
     private final SessionManager sessionManager;
+    private final String openMode;
 
     private ArmorStand cameraStand;
     private ItemDisplay rewardDisplay;
@@ -36,6 +37,7 @@ public class CrateSession {
     private GameMode previousGameMode;
     private UUID speedModifierUuid;
     private ItemStack previousHelmet;
+    private boolean spectatorApplied;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -53,11 +55,16 @@ public class CrateSession {
         this.reward = reward;
         this.path = path;
         this.sessionManager = sessionManager;
+        this.openMode = normalizeOpenMode(crate.getOpenMode());
     }
 
     public void start() {
+        if (isRewardOnly()) {
+            executeReward();
+            sessionManager.removeSession(player.getUniqueId());
+            return;
+        }
         Location start = crate.getCameraStart() != null ? crate.getCameraStart() : player.getLocation();
-        previousGameMode = player.getGameMode();
         spawnCamera(start);
         applySpectatorMode();
         spawnRewardDisplay();
@@ -82,6 +89,7 @@ public class CrateSession {
         } catch (IllegalArgumentException ex) {
             speedModifierUuid = UUID.randomUUID();
         }
+        previousGameMode = player.getGameMode();
         double modifierValue = config.getDouble("cutscene.slowdown-modifier", -10.0);
         sessionManager.applySpectator(player, speedModifierUuid, modifierValue);
         player.setSpectatorTarget(cameraStand);
@@ -98,6 +106,7 @@ public class CrateSession {
             pumpkin.setItemMeta(meta);
         }
         player.sendEquipmentChange(player, EquipmentSlot.HEAD, pumpkin);
+        spectatorApplied = true;
     }
 
     private void spawnRewardDisplay() {
@@ -196,7 +205,9 @@ public class CrateSession {
     }
 
     private void finish() {
-        executeReward();
+        if (!isPreviewOnly()) {
+            executeReward();
+        }
         end();
     }
 
@@ -246,18 +257,35 @@ public class CrateSession {
         if (hologram != null && !hologram.isDead()) {
             hologram.remove();
         }
-        if (previousGameMode != null) {
-            player.setGameMode(previousGameMode);
-        }
-        player.setSpectatorTarget(null);
-        if (speedModifierUuid != null) {
-            sessionManager.removeSpectatorModifier(player, speedModifierUuid);
-        }
-        if (previousHelmet != null) {
-            player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet);
-        } else {
-            player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
+        if (spectatorApplied) {
+            if (previousGameMode != null) {
+                player.setGameMode(previousGameMode);
+            }
+            player.setSpectatorTarget(null);
+            if (speedModifierUuid != null) {
+                sessionManager.removeSpectatorModifier(player, speedModifierUuid);
+            }
+            if (previousHelmet != null) {
+                player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet);
+            } else {
+                player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
+            }
         }
         sessionManager.removeSession(player.getUniqueId());
+    }
+
+    private boolean isRewardOnly() {
+        return "reward-only".equals(openMode);
+    }
+
+    private boolean isPreviewOnly() {
+        return "preview-only".equals(openMode);
+    }
+
+    private String normalizeOpenMode(String mode) {
+        if (mode == null || mode.isBlank()) {
+            return "reward-only";
+        }
+        return mode.toLowerCase(Locale.ROOT);
     }
 }
