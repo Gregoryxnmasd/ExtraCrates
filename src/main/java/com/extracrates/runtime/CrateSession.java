@@ -2,12 +2,12 @@ package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
-import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -22,6 +22,7 @@ import java.util.*;
 public class CrateSession {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private final LanguageManager languageManager;
     private final Player player;
     private final CrateDefinition crate;
     private final Reward reward;
@@ -40,6 +41,7 @@ public class CrateSession {
     public CrateSession(
             ExtraCratesPlugin plugin,
             ConfigLoader configLoader,
+            LanguageManager languageManager,
             Player player,
             CrateDefinition crate,
             Reward reward,
@@ -48,6 +50,7 @@ public class CrateSession {
     ) {
         this.plugin = plugin;
         this.configLoader = configLoader;
+        this.languageManager = languageManager;
         this.player = player;
         this.crate = crate;
         this.reward = reward;
@@ -201,7 +204,7 @@ public class CrateSession {
     }
 
     private void executeReward() {
-        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
+        player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.getDisplayName())));
         ItemStack item = ItemUtil.buildItem(reward);
         player.getInventory().addItem(item);
 
