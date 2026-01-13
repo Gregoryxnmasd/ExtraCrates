@@ -9,9 +9,10 @@ import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
-import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.*;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -29,8 +30,7 @@ public class CrateSession {
     private final SessionManager sessionManager;
 
     private ArmorStand cameraStand;
-    private ItemDisplay rewardDisplay;
-    private TextDisplay hologram;
+    private RewardDisplayRenderer rewardRenderer;
     private BukkitRunnable task;
 
     private GameMode previousGameMode;
@@ -102,21 +102,8 @@ public class CrateSession {
 
     private void spawnRewardDisplay() {
         Location anchor = crate.getRewardAnchor() != null ? crate.getRewardAnchor() : player.getLocation().add(0, 1.5, 0);
-        CrateDefinition.RewardFloatSettings floatSettings = crate.getAnimation().getRewardFloatSettings();
-        Location displayLocation = anchor.clone().add(0, floatSettings.getHeight(), 0);
-
-        rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
-            display.setItemStack(ItemUtil.buildItem(reward));
-        });
-        hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
-            String format = crate.getAnimation().getHologramFormat();
-            String name = format.replace("%reward_name%", reward.getDisplayName());
-            display.text(TextUtil.color(name));
-            display.setBillboard(Display.Billboard.CENTER);
-        });
-
-        hideFromOthers(rewardDisplay);
-        hideFromOthers(hologram);
+        rewardRenderer = new RewardDisplayRenderer(plugin, player, crate, reward);
+        rewardRenderer.spawn(anchor);
     }
 
     private void hideFromOthers(Entity entity) {
@@ -135,8 +122,6 @@ public class CrateSession {
         List<Location> timeline = buildTimeline(cameraStand.getWorld(), path);
         task = new BukkitRunnable() {
             int index = 0;
-            double rotation = 0;
-
             @Override
             public void run() {
                 if (index >= timeline.size()) {
@@ -148,18 +133,8 @@ public class CrateSession {
                 cameraStand.teleport(point);
                 player.setSpectatorTarget(cameraStand);
 
-                CrateDefinition.RewardFloatSettings floatSettings = crate.getAnimation().getRewardFloatSettings();
-                rotation += floatSettings.getSpinSpeed();
-                if (rewardDisplay != null) {
-                    rewardDisplay.setRotation((float) rotation, 0);
-                }
-                if (floatSettings.isBobbing() && rewardDisplay != null) {
-                    double bob = Math.sin(index / 6.0) * 0.05;
-                    Location rewardLocation = rewardDisplay.getLocation();
-                    rewardDisplay.teleport(rewardLocation.clone().add(0, bob, 0));
-                    if (hologram != null) {
-                        hologram.teleport(rewardLocation.clone().add(0, 0.4 + bob, 0));
-                    }
+                if (rewardRenderer != null) {
+                    rewardRenderer.tick();
                 }
             }
         };
@@ -240,11 +215,8 @@ public class CrateSession {
         if (cameraStand != null && !cameraStand.isDead()) {
             cameraStand.remove();
         }
-        if (rewardDisplay != null && !rewardDisplay.isDead()) {
-            rewardDisplay.remove();
-        }
-        if (hologram != null && !hologram.isDead()) {
-            hologram.remove();
+        if (rewardRenderer != null) {
+            rewardRenderer.remove();
         }
         if (previousGameMode != null) {
             player.setGameMode(previousGameMode);
