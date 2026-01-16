@@ -88,6 +88,10 @@ public class CrateSession {
             finish();
             return;
         }
+        rewardIndex = 0;
+        elapsedTicks = 0;
+        rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
+        nextRewardSwitchTick = rewardSwitchTicks;
         Location start = crate.getCameraStart() != null ? crate.getCameraStart() : player.getLocation();
         previousGameMode = player.getGameMode();
         previousWalkSpeed = player.getWalkSpeed();
@@ -215,6 +219,14 @@ public class CrateSession {
                 Location point = timeline.get(tick++);
                 cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
+                elapsedTicks++;
+                if (rewards.size() > 1 && rewardSwitchTicks > 0) {
+                    while (elapsedTicks >= nextRewardSwitchTick && rewardIndex < rewards.size() - 1) {
+                        rewardIndex++;
+                        nextRewardSwitchTick += rewardSwitchTicks;
+                        refreshRewardDisplay();
+                    }
+                }
             }
         };
         task.runTaskTimer(plugin, 0L, 1L);
@@ -384,13 +396,6 @@ public class CrateSession {
         }
         if (hologram != null && !hologram.isDead()) {
             hologram.remove();
-        }
-        if (previousGameMode != null) {
-            player.setGameMode(previousGameMode);
-        }
-        player.setSpectatorTarget(null);
-        if (speedModifierUuid != null) {
-            sessionManager.removeSpectatorModifier(player, speedModifierUuid);
         }
         if (previousGameMode != null) {
             player.setGameMode(previousGameMode);
