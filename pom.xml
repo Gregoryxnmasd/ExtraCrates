@@ -28,6 +28,10 @@
             <id>jitpack-repo</id>
             <url>https://jitpack.io</url>
         </repository>
+        <repository>
+            <id>dmulloy2-repo</id>
+            <url>https://repo.dmulloy2.net/repository/public/</url>
+        </repository>
     </repositories>
 
     <dependencyManagement>
@@ -56,6 +60,12 @@
             <groupId>com.github.milkbowl</groupId>
             <artifactId>vaultapi</artifactId>
             <version>1.7.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.comphenix.protocol</groupId>
+            <artifactId>ProtocolLib</artifactId>
+            <version>5.2.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
