@@ -46,7 +46,7 @@ public final class RewardSelector {
                 return new RollResult(reward, roll, total);
             }
         }
-        Reward reward = rewards.get(rewards.size() - 1);
+        Reward reward = rewards.getLast();
         return new RollResult(reward, roll, total);
     }
 
