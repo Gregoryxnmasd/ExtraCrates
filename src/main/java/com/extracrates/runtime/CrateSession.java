@@ -32,7 +32,7 @@ public class CrateSession {
     private final CutscenePath path;
     private final boolean grantReward;
     private final SessionManager sessionManager;
-    private final RewardAnimationService rewardAnimationService;
+    private final boolean preview;
 
     private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
@@ -67,7 +67,7 @@ public class CrateSession {
         this.path = path;
         this.grantReward = grantReward;
         this.sessionManager = sessionManager;
-        this.rewardAnimationService = new RewardAnimationService();
+        this.preview = preview;
     }
 
     public void start() {

@@ -59,65 +59,6 @@ public class SessionManager {
 
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
-            player.sendMessage(languageManager.getMessage("session.already-in-progress"));
-            return false;
-        }
-        if (!player.hasPermission(crate.getPermission())) {
-            player.sendMessage(languageManager.getMessage("session.no-permission"));
-            return false;
-        }
-        boolean preview = openMode == OpenMode.PREVIEW;
-        if (!preview && crate.getType() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
-            player.sendMessage(Component.text("Necesitas una llave para esta crate."));
-            return false;
-        }
-        long remainingSeconds = isOnCooldown(player, crate);
-        if (remainingSeconds > 0) {
-            player.sendMessage(Component.text("Esta crate está en cooldown. Tiempo restante: " + remainingSeconds + "s."));
-            return false;
-        }
-        RewardPool pool = configLoader.getRewardPools().get(crate.getRewardsPool());
-        long seed = ThreadLocalRandom.current().nextLong();
-        List<Reward> rewards = RewardSelector.roll(pool, seed);
-        if (rewards.isEmpty()) {
-            player.sendMessage(languageManager.getMessage("session.no-rewards"));
-            return false;
-        }
-        if (!chargePlayer(player, crate)) {
-            return false;
-        }
-        CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
-        CrateSession session = new CrateSession(plugin, configLoader, player, crate, rewards, path, this);
-        sessions.put(player.getUniqueId(), session);
-        if (!preview && crate.getType() == com.extracrates.model.CrateType.KEYED) {
-            consumeKey(player, crate);
-        }
-        session.start();
-        if (!preview) {
-            applyCooldown(player, crate);
-        }
-        return true;
-    }
-
-    private boolean chargePlayer(Player player, CrateDefinition crate) {
-        double cost = crate.getCost();
-        if (cost <= 0 || economy == null) {
-            return true;
-        }
-        if (!economy.has(player, cost)) {
-            player.sendMessage(Component.text("No tienes saldo suficiente para abrir esta crate."));
-            return false;
-        }
-        EconomyResponse response = economy.withdrawPlayer(player, cost);
-        if (!response.transactionSuccess()) {
-            player.sendMessage(Component.text("No se pudo descontar el costo de la crate."));
-            return false;
-        }
-        return true;
-    }
-
-    public boolean previewCutscene(Player player, CutscenePath path) {
-        if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
             return false;
         }
@@ -125,13 +66,12 @@ public class SessionManager {
             player.sendMessage(Component.text("Ruta de cutscene no encontrada."));
             return false;
         }
-        if (path.getPoints().size() < 2) {
-            player.sendMessage(Component.text("La ruta necesita al menos 2 puntos para el preview."));
+        if (!preview && crate.getType() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
+            player.sendMessage(Component.text("Necesitas una llave para esta crate."));
             return false;
         }
-        String previewName = path.getParticlePreview();
-        if (previewName == null || previewName.isBlank()) {
-            player.sendMessage(Component.text("La ruta no tiene particle-preview configurado."));
+        if (!preview && isOnCooldown(player, crate)) {
+            player.sendMessage(Component.text("Esta crate está en cooldown."));
             return false;
         }
         double cost = crate.getCost();
@@ -157,17 +97,17 @@ public class SessionManager {
             player.sendMessage(Component.text("No hay recompensas configuradas."));
             return false;
         }
-        endPreview(player.getUniqueId());
-        CutscenePreviewSession preview = new CutscenePreviewSession(
-                plugin,
-                player,
-                path,
-                particle,
-                () -> previews.remove(player.getUniqueId())
-        );
-        previews.put(player.getUniqueId(), preview);
-        preview.start();
-        player.sendMessage(Component.text("Preview de cutscene iniciada."));
+        Reward reward = rewards.get(0);
+        CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
+        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this, preview);
+        sessions.put(player.getUniqueId(), session);
+        if (!preview && crate.getType() == com.extracrates.model.CrateType.KEYED) {
+            consumeKey(player, crate);
+        }
+        session.start();
+        if (!preview) {
+            applyCooldown(player, crate);
+        }
         return true;
     }
 

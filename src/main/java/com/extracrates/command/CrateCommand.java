@@ -95,32 +95,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
                     return true;
                 }
-                if (sub.equals("preview")) {
-                    sessionManager.previewCutscene(player, configLoader.getPaths().get(crate.getAnimation().getPath()));
-                } else {
-                    sessionManager.openCrate(player, crate);
-                }
-                return true;
-            }
-            case "cutscene" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage(Component.text("Solo jugadores."));
-                    return true;
-                }
-                if (!sender.hasPermission("extracrates.preview")) {
-                    sender.sendMessage(Component.text("Sin permiso."));
-                    return true;
-                }
-                if (args.length < 3 || !args[1].equalsIgnoreCase("test")) {
-                    sender.sendMessage(Component.text("Uso: /crate cutscene test <id>"));
-                    return true;
-                }
-                CutscenePath path = configLoader.getPaths().get(args[2]);
-                if (path == null) {
-                    sender.sendMessage(Component.text("Ruta de cutscene no encontrada."));
-                    return true;
-                }
-                sessionManager.previewCutscene(player, path);
+                sessionManager.openCrate(player, crate, sub.equals("preview"));
                 return true;
             }
             case "reload" -> {
