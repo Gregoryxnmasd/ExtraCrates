@@ -58,7 +58,7 @@ public class ConfigLoader {
 
     public SettingsSnapshot getSettings() {
         if (settings == null) {
-            loadSettings();
+            settings = SettingsSnapshot.fromConfig(getMainConfig());
         }
         return settings;
     }
