@@ -12,14 +12,9 @@ public class HologramProviderFactory {
     }
 
     public static HologramProvider create(ExtraCratesPlugin plugin, FileConfiguration config, HologramSettings settings) {
-        String providerName = config.getString("holograms.provider", "display");
+        String providerName = config.getString("holograms.provider", "display")
+                .toLowerCase(Locale.ROOT);
         List<String> order = new ArrayList<>();
-        if (providerName != null) {
-            providerName = providerName.toLowerCase(Locale.ROOT);
-        } else {
-            providerName = "display";
-        }
-
         if ("auto".equals(providerName)) {
             order.add("decentholograms");
             order.add("holographicdisplays");
