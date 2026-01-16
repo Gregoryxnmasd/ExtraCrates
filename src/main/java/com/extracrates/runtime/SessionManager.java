@@ -27,6 +27,7 @@ public class SessionManager {
     private SyncBridge syncBridge;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
+    private final DisplayPool displayPool = new DisplayPool();
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, SyncBridge syncBridge) {
         this.plugin = plugin;
@@ -37,6 +38,11 @@ public class SessionManager {
     public void shutdown() {
         sessions.values().forEach(CrateSession::end);
         sessions.clear();
+        displayPool.clear();
+    }
+
+    public DisplayPool getDisplayPool() {
+        return displayPool;
     }
 
     public void setSyncBridge(SyncBridge syncBridge) {
