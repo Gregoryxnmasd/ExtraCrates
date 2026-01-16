@@ -1,9 +1,9 @@
 command:
-  usage: "&cUse /crate gui|open|preview|reload|givekey"
+  usage: "&cUse /crate gui|open|preview|reload|givekey &7(give key)"
   only-players: "&cPlayers only."
   no-permission: "&cYou don't have permission."
   open-usage: "&cUsage: /crate open <id>"
-  givekey-usage: "&cUsage: /crate givekey <id>"
+  givekey-usage: "&cUsage: /crate givekey <id> &7(give key)"
   crate-not-found: "&cCrate not found."
   reload-success: "&aConfigurations reloaded."
   givekey-success: "&aKey delivered."
