@@ -54,7 +54,7 @@ public class CrateSession {
     private Transformation rewardBaseTransform;
 
     private GameMode previousGameMode;
-    private UUID speedModifierUuid;
+    private NamespacedKey speedModifierKey;
     private ItemStack previousHelmet;
     private boolean hudHiddenApplied;
     private float previousWalkSpeed;
@@ -113,15 +113,14 @@ public class CrateSession {
 
     private void applySpectatorMode() {
         FileConfiguration config = configLoader.getMainConfig();
-        String uuidText = config.getString("cutscene.speed-modifier-uuid", UUID.randomUUID().toString());
-        try {
-            speedModifierUuid = UUID.fromString(uuidText);
-        } catch (IllegalArgumentException ex) {
-            speedModifierUuid = UUID.randomUUID();
+        String keyText = config.getString("cutscene.speed-modifier-uuid", "extracrates:cutscene_speed_modifier");
+        speedModifierKey = NamespacedKey.fromString(keyText);
+        if (speedModifierKey == null) {
+            speedModifierKey = new NamespacedKey(plugin, "cutscene_speed_modifier");
         }
         previousGameMode = player.getGameMode();
         double modifierValue = config.getDouble("cutscene.slowdown-modifier", -10.0);
-        sessionManager.applySpectator(player, speedModifierUuid, modifierValue);
+        sessionManager.applySpectator(player, speedModifierKey, modifierValue);
         player.setSpectatorTarget(cameraEntity);
 
         previousHelmet = player.getInventory().getHelmet();
@@ -401,8 +400,8 @@ public class CrateSession {
             player.setGameMode(previousGameMode);
         }
         player.setSpectatorTarget(null);
-        if (speedModifierUuid != null) {
-            sessionManager.removeSpectatorModifier(player, speedModifierUuid);
+        if (speedModifierKey != null) {
+            sessionManager.removeSpectatorModifier(player, speedModifierKey);
         }
         if (crate.getCutsceneSettings().isLockMovement()) {
             player.setWalkSpeed(previousWalkSpeed);
