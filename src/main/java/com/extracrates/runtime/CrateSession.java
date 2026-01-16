@@ -33,8 +33,9 @@ public class CrateSession {
     private final SessionManager sessionManager;
     private final HologramSettings hologramSettings;
 
-    private ArmorStand cameraStand;
-    private RewardDisplayRenderer rewardRenderer;
+    private Entity cameraEntity;
+    private ItemDisplay rewardDisplay;
+    private TextDisplay hologram;
     private BukkitRunnable task;
     private int rewardIndex;
     private long rewardSwitchTicks;
@@ -83,15 +84,9 @@ public class CrateSession {
     }
 
     private void spawnCamera(Location start) {
-        cameraStand = sessionManager.getDisplayPool().acquireArmorStand(start);
-        if (cameraStand == null) {
-            return;
-        }
-        cameraStand.setInvisible(true);
-        cameraStand.setGravity(false);
-        cameraStand.setMarker(true);
-        cameraStand.setSilent(true);
-        resetVisibility(cameraStand);
+        CameraEntityFactory factory = new CameraEntityFactory(configLoader);
+        cameraEntity = factory.spawn(start);
+        hideFromOthers(cameraEntity);
     }
 
     private void applySpectatorMode() {
@@ -105,7 +100,7 @@ public class CrateSession {
         previousGameMode = player.getGameMode();
         double modifierValue = config.getDouble("cutscene.slowdown-modifier", -10.0);
         sessionManager.applySpectator(player, speedModifierUuid, modifierValue);
-        player.setSpectatorTarget(cameraStand);
+        player.setSpectatorTarget(cameraEntity);
 
         previousHelmet = player.getInventory().getHelmet();
         ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
@@ -179,10 +174,7 @@ public class CrateSession {
             finish();
             return;
         }
-        List<Location> timeline = buildTimeline(cameraStand.getWorld(), path);
-        int totalTicks = (int) Math.max(1, path.getDurationSeconds() * 20);
-        long period = Math.max(1L, totalTicks / Math.max(1, timeline.size()));
-        configureRewardSequence(totalTicks);
+        List<Location> timeline = buildTimeline(cameraEntity.getWorld(), path);
         task = new BukkitRunnable() {
             int index = 0;
             double rotation = 0;
@@ -196,10 +188,8 @@ public class CrateSession {
                     return;
                 }
                 Location point = timeline.get(index++);
-                cameraStand.teleport(point);
-                player.setSpectatorTarget(cameraStand);
-                elapsedTicks += period;
-                updateRewardSequence(elapsedTicks);
+                cameraEntity.teleport(point);
+                player.setSpectatorTarget(cameraEntity);
 
                 if (rewardRenderer != null) {
                     rewardRenderer.tick();
@@ -446,11 +436,8 @@ public class CrateSession {
         if (task != null) {
             task.cancel();
         }
-        if (rewardTask != null) {
-            rewardTask.cancel();
-        }
-        if (cameraStand != null && !cameraStand.isDead()) {
-            sessionManager.getDisplayPool().releaseArmorStand(cameraStand);
+        if (cameraEntity != null && !cameraEntity.isDead()) {
+            cameraEntity.remove();
         }
         if (rewardRenderer != null) {
             rewardRenderer.remove();
