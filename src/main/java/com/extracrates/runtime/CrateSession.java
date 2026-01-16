@@ -2,7 +2,8 @@ package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
-import com.extracrates.config.LanguageManager;
+import com.extracrates.hologram.HologramInstance;
+import com.extracrates.hologram.HologramSettings;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
@@ -28,11 +29,11 @@ public class CrateSession {
     private final CutscenePath path;
     private final boolean grantReward;
     private final SessionManager sessionManager;
-    private final boolean preview;
+    private final HologramSettings hologramSettings;
 
     private ArmorStand cameraStand;
     private ItemDisplay rewardDisplay;
-    private TextDisplay hologram;
+    private HologramInstance hologram;
     private BukkitRunnable task;
     private BukkitRunnable rewardTask;
     private int rewardIndex;
@@ -62,7 +63,7 @@ public class CrateSession {
         this.path = path;
         this.grantReward = grantReward;
         this.sessionManager = sessionManager;
-        this.preview = preview;
+        this.hologramSettings = sessionManager.getHologramSettings();
     }
 
     public void start() {
@@ -131,15 +132,13 @@ public class CrateSession {
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
             display.setItemStack(ItemUtil.buildItem(reward, configLoader.getResourcePackRegistry()));
         });
-        hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
-            String format = crate.getAnimation().getHologramFormat();
-            String name = format.replace("%reward_name%", reward.getDisplayName());
-            hologram.text(TextUtil.color(name));
-            hologram.setBillboard(Display.Billboard.CENTER);
-        }
+        Location hologramLocation = displayLocation.clone().add(hologramSettings.getOffset());
+        hologram = sessionManager.getHologramProvider().spawnHologram(hologramLocation, buildHologramText(hologramSettings), player);
 
-        resetVisibility(rewardDisplay);
-        resetVisibility(hologram);
+        hideFromOthers(rewardDisplay);
+        if (hologram != null && hologram.getEntity() != null) {
+            hideFromOthers(hologram.getEntity());
+        }
     }
 
     private void hideFromOthers(Entity entity) {
@@ -186,7 +185,8 @@ public class CrateSession {
                     Location rewardLocation = rewardDisplay.getLocation();
                     rewardDisplay.teleport(rewardLocation.clone().add(0, bob, 0));
                     if (hologram != null) {
-                        hologram.teleport(rewardLocation.clone().add(0, 0.4 + bob, 0));
+                        Location hologramLocation = rewardLocation.clone().add(hologramSettings.getOffset()).add(0, bob, 0);
+                        hologram.teleport(hologramLocation);
                     }
                 }
             }
@@ -313,20 +313,8 @@ public class CrateSession {
         if (rewardDisplay != null && !rewardDisplay.isDead()) {
             sessionManager.getDisplayPool().releaseItemDisplay(rewardDisplay);
         }
-        if (hologram != null && !hologram.isDead()) {
-            sessionManager.getDisplayPool().releaseTextDisplay(hologram);
-        }
-        ProtocolEntityHider protocolEntityHider = plugin.getProtocolEntityHider();
-        if (protocolEntityHider != null) {
-            if (cameraStand != null) {
-                protocolEntityHider.untrackEntity(cameraStand);
-            }
-            if (rewardDisplay != null) {
-                protocolEntityHider.untrackEntity(rewardDisplay);
-            }
-            if (hologram != null) {
-                protocolEntityHider.untrackEntity(hologram);
-            }
+        if (hologram != null) {
+            hologram.remove();
         }
         if (previousGameMode != null) {
             player.setGameMode(previousGameMode);
@@ -343,18 +331,15 @@ public class CrateSession {
         sessionManager.removeSession(player.getUniqueId());
     }
 
-    private boolean isRewardOnly() {
-        return "reward-only".equals(openMode);
-    }
-
-    private boolean isPreviewOnly() {
-        return "preview-only".equals(openMode);
-    }
-
-    private String normalizeOpenMode(String mode) {
-        if (mode == null || mode.isBlank()) {
-            return "reward-only";
+    private Component buildHologramText(HologramSettings settings) {
+        String format = reward.getHologram();
+        if (format == null || format.isEmpty()) {
+            format = crate.getAnimation().getHologramFormat();
         }
-        return mode.toLowerCase(Locale.ROOT);
+        if (format == null || format.isEmpty()) {
+            format = settings.getNameFormat();
+        }
+        String name = format.replace("%reward_name%", reward.getDisplayName());
+        return TextUtil.color(name);
     }
 }

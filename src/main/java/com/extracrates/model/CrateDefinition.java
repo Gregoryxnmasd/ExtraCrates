@@ -190,11 +190,11 @@ public class CrateDefinition {
 
         public static AnimationSettings fromSection(ConfigurationSection section) {
             if (section == null) {
-                return new AnimationSettings("", "", "&e%reward_name%", new RewardFloatSettings(0.8, 2.0, true));
+                return new AnimationSettings("", "", "", new RewardFloatSettings(0.8, 2.0, true));
             }
             String path = section.getString("path", "");
             String rewardModel = section.getString("reward-model", "");
-            String hologram = section.getString("hologram-format", "&e%reward_name%");
+            String hologram = section.getString("hologram-format", "");
             RewardFloatSettings rewardFloatSettings = RewardFloatSettings.fromSection(section.getConfigurationSection("reward-float"));
             return new AnimationSettings(path, rewardModel, hologram, rewardFloatSettings);
         }

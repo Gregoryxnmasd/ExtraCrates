@@ -52,6 +52,13 @@ holograms:
   provider: "display"
   name-format: "&e%reward_name%"
   height-offset: 0.8
+  x-offset: 0.0
+  z-offset: 0.0
+  text-animations:
+    enabled: true
+    interpolation-delay: 0
+    interpolation-duration: 2
+    teleport-duration: 2
 permissions:
   use-per-crate: true
 logging:
