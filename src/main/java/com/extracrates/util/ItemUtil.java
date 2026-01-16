@@ -6,6 +6,7 @@ import com.extracrates.model.Reward;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.World;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
@@ -23,7 +24,10 @@ public final class ItemUtil {
     }
 
     public static ItemStack buildItem(Reward reward, World world, ConfigLoader configLoader, MapImageCache mapImageCache) {
-        Material material = Material.matchMaterial(reward.getItem().toUpperCase(Locale.ROOT));
+        String itemName = reward.getItem();
+        Material material = itemName != null
+                ? Material.matchMaterial(itemName.toUpperCase(Locale.ROOT))
+                : null;
         if (material == null) {
             material = Material.STONE;
         }
@@ -31,16 +35,17 @@ public final class ItemUtil {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             SettingsSnapshot settings = configLoader != null ? configLoader.getSettings() : null;
-            meta.displayName(TextUtil.color(reward.getDisplayName()));
+            String displayName = reward.getDisplayName();
+            meta.displayName(TextUtil.color(displayName != null ? displayName : ""));
             applyResourcepackModel(reward, meta, settings, configLoader);
             for (Map.Entry<String, Integer> entry : reward.getEnchantments().entrySet()) {
-                Enchantment enchantment = Enchantment.getByKey(org.bukkit.NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT)));
+                Enchantment enchantment = Registry.ENCHANTMENT.get(NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT)));
                 if (enchantment != null) {
                     meta.addEnchant(enchantment, entry.getValue(), true);
                 }
             }
             if (reward.isGlow()) {
-                Enchantment glowEnchant = Enchantment.getByKey(NamespacedKey.minecraft("luck_of_the_sea"));
+                Enchantment glowEnchant = Registry.ENCHANTMENT.get(NamespacedKey.minecraft("luck_of_the_sea"));
                 if (glowEnchant != null) {
                     meta.addEnchant(glowEnchant, 1, true);
                 }

@@ -2,7 +2,6 @@ package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.util.TextUtil;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -18,6 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@SuppressWarnings("unused")
 public class ConfirmationMenu implements Listener {
     private final ExtraCratesPlugin plugin;
     private final Map<UUID, ConfirmationRequest> confirmations = new HashMap<>();

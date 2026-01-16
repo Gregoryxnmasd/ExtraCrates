@@ -66,8 +66,8 @@ public class RouteEditorManager {
         session.addPoint(point, playerLocation.getYaw(), playerLocation.getPitch());
     }
 
-    public boolean hasSession(Player player) {
-        return sessions.containsKey(player.getUniqueId());
+    public boolean hasNoSession(Player player) {
+        return !sessions.containsKey(player.getUniqueId());
     }
 
     private void saveSession(Player player, RouteEditorSession session) {

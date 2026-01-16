@@ -8,6 +8,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+@SuppressWarnings("unused")
 public class SessionListener implements Listener {
     private final ExtraCratesPlugin plugin;
     private final SessionManager sessionManager;
@@ -28,9 +29,6 @@ public class SessionListener implements Listener {
     public void onMove(PlayerMoveEvent event) {
         CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
         if (session == null || !session.isMovementLocked()) {
-            return;
-        }
-        if (event.getTo() == null) {
             return;
         }
         if (event.getFrom().getWorld() != null && event.getTo().getWorld() != null
