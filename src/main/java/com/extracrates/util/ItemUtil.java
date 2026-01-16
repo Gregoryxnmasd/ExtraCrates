@@ -30,14 +30,8 @@ public final class ItemUtil {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(TextUtil.color(reward.getDisplayName()));
-            if (reward.getCustomModel() != null && !reward.getCustomModel().isEmpty()) {
-                try {
-                    int modelData = Integer.parseInt(reward.getCustomModel());
-                    meta.setCustomModelData(modelData);
-                } catch (NumberFormatException ignored) {
-                    // Allow string keys for resourcepack mapping handled elsewhere.
-                }
-            }
+            applyResourcepackModel(reward, meta, settings);
+            applyMapImage(reward, meta, settings, material);
             for (Map.Entry<String, Integer> entry : reward.getEnchantments().entrySet()) {
                 Enchantment enchantment = Enchantment.getByKey(org.bukkit.NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT)));
                 if (enchantment != null) {
