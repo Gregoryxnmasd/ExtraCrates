@@ -1,15 +1,14 @@
 package com.extracrates.gui;
 
 import com.extracrates.ExtraCratesPlugin;
-import com.extracrates.model.CrateDefinition;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.model.CrateDefinition;
 import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
-import org.bukkit.NamespacedKey;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.Sound;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -18,11 +17,9 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public class CrateGui implements Listener {
     private static final int PAGE_SIZE = 27;
@@ -64,6 +61,7 @@ public class CrateGui implements Listener {
                 List<Component> lore = new ArrayList<>();
                 lore.add(Component.text("ID: ").append(Component.text(crate.getId())));
                 lore.add(Component.text("Tipo: ").append(Component.text(crate.getType().name())));
+                meta.getPersistentDataContainer().set(crateKey, PersistentDataType.STRING, crate.getId());
                 meta.lore(lore);
                 item.setItemMeta(meta);
             }
@@ -96,7 +94,22 @@ public class CrateGui implements Listener {
             open(player, holder.pageIndex() - 1);
             return;
         }
-        CrateDefinition crate = crates.get(slot);
+        if (slot == NEXT_PAGE_SLOT) {
+            open(player, holder.pageIndex() + 1);
+            return;
+        }
+        ItemMeta meta = clicked.getItemMeta();
+        if (meta == null) {
+            return;
+        }
+        String crateId = meta.getPersistentDataContainer().get(crateKey, PersistentDataType.STRING);
+        if (crateId == null || crateId.isEmpty()) {
+            return;
+        }
+        CrateDefinition crate = configLoader.getCrates().get(crateId);
+        if (crate == null) {
+            return;
+        }
         sessionManager.openCrate(player, crate, false);
         player.closeInventory();
     }
