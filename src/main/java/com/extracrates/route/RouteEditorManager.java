@@ -2,7 +2,7 @@ package com.extracrates.route;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
-import com.extracrates.model.CutscenePoint;
+import com.extracrates.cutscene.CutscenePoint;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.Particle;
