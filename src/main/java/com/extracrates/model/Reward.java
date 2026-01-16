@@ -114,10 +114,15 @@ public class Reward {
         int amount = section.getInt("amount", 1);
         String customModel = section.getString("custom-model", "");
         boolean glow = section.getBoolean("glow", false);
-        Map<String, Integer> enchantments = section.getConfigurationSection("enchantments") != null
-                ? section.getConfigurationSection("enchantments").getValues(false).entrySet().stream()
-                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> toInt(e.getValue())))
-                : Collections.emptyMap();
+        ConfigurationSection enchantmentsSection = section.getConfigurationSection("enchantments");
+        Map<String, Integer> enchantments = Collections.emptyMap();
+        if (enchantmentsSection != null) {
+            Map<String, Object> values = enchantmentsSection.getValues(false);
+            if (values != null && !values.isEmpty()) {
+                enchantments = values.entrySet().stream()
+                        .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> toInt(e.getValue())));
+            }
+        }
         List<String> commands = section.getStringList("commands");
         RewardMessage message = RewardMessage.fromSection(section.getConfigurationSection("messages"));
         RewardEffects effects = RewardEffects.fromSection(section.getConfigurationSection("effects"));
