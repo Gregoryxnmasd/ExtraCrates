@@ -9,7 +9,6 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -17,8 +16,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.configuration.ConfigurationSection;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,16 +40,18 @@ public class CrateGui implements Listener {
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
-    public void open(Player player) {
+    public void open(@NotNull Player player) {
         open(player, 0);
     }
 
-    public void open(Player player, int pageIndex) {
+    public void open(@NotNull Player player, int pageIndex) {
         String title = configLoader.getMainConfig().getString("gui.title", "&8ExtraCrates");
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
         int totalPages = Math.max(1, (int) Math.ceil(crates.size() / (double) PAGE_SIZE));
         int safePageIndex = Math.max(0, Math.min(pageIndex, totalPages - 1));
-        Inventory inventory = Bukkit.createInventory(new CrateGuiHolder(safePageIndex), INVENTORY_SIZE, TextUtil.color(title));
+        CrateGuiHolder holder = new CrateGuiHolder(safePageIndex);
+        Inventory inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, TextUtil.color(title));
+        holder.setInventory(inventory);
         int startIndex = safePageIndex * PAGE_SIZE;
         int endIndex = Math.min(startIndex + PAGE_SIZE, crates.size());
         int slot = 0;
@@ -79,7 +79,7 @@ public class CrateGui implements Listener {
     }
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
+    public void onInventoryClick(@NotNull InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
@@ -96,12 +96,21 @@ public class CrateGui implements Listener {
             open(player, holder.pageIndex() - 1);
             return;
         }
-        CrateDefinition crate = crates.get(slot);
+        if (slot == NEXT_PAGE_SLOT) {
+            open(player, holder.pageIndex() + 1);
+            return;
+        }
+        List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
+        int crateIndex = holder.pageIndex() * PAGE_SIZE + slot;
+        if (crateIndex < 0 || crateIndex >= crates.size()) {
+            return;
+        }
+        CrateDefinition crate = crates.get(crateIndex);
         sessionManager.openCrate(player, crate, false);
         player.closeInventory();
     }
 
-    private ItemStack buildNavItem(Material material, String name) {
+    private @NotNull ItemStack buildNavItem(@NotNull Material material, @NotNull String name) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
@@ -111,10 +120,25 @@ public class CrateGui implements Listener {
         return item;
     }
 
-    private record CrateGuiHolder(int pageIndex) implements org.bukkit.inventory.InventoryHolder {
+    private static final class CrateGuiHolder implements org.bukkit.inventory.InventoryHolder {
+        private final int pageIndex;
+        private Inventory inventory;
+
+        private CrateGuiHolder(int pageIndex) {
+            this.pageIndex = pageIndex;
+        }
+
+        private int pageIndex() {
+            return pageIndex;
+        }
+
+        private void setInventory(@NotNull Inventory inventory) {
+            this.inventory = inventory;
+        }
+
         @Override
-        public Inventory getInventory() {
-            return null;
+        public @NotNull Inventory getInventory() {
+            return inventory;
         }
     }
 }
