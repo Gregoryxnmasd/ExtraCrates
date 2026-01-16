@@ -1,6 +1,7 @@
 package com.extracrates.runtime.core;
 
 import com.extracrates.ExtraCratesPlugin;
+import com.extracrates.config.ConfigLoader;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
