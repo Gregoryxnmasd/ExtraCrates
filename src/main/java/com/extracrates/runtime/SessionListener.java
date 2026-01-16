@@ -8,6 +8,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+@SuppressWarnings("unused")
 public class SessionListener implements Listener {
     private final ExtraCratesPlugin plugin;
     private final SessionManager sessionManager;

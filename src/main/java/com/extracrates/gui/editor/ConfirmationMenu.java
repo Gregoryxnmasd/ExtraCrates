@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@SuppressWarnings("unused")
 public class ConfirmationMenu implements Listener {
     private final ExtraCratesPlugin plugin;
     private final Map<UUID, ConfirmationRequest> confirmations = new HashMap<>();

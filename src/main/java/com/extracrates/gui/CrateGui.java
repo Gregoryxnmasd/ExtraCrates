@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+@SuppressWarnings("unused")
 public class CrateGui implements Listener {
     private static final int PAGE_SIZE = 27;
     private static final int INVENTORY_SIZE = 36;

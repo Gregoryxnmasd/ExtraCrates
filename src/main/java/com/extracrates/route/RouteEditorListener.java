@@ -8,6 +8,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
+@SuppressWarnings("unused")
 public class RouteEditorListener implements Listener {
     private final RouteEditorManager routeEditorManager;
 
