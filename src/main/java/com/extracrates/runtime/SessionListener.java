@@ -6,9 +6,11 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 public class SessionListener implements Listener {
+    private final ExtraCratesPlugin plugin;
     private final SessionManager sessionManager;
 
     public SessionListener(ExtraCratesPlugin plugin, SessionManager sessionManager) {
+        this.plugin = plugin;
         this.sessionManager = sessionManager;
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }

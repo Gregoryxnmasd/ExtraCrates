@@ -2,6 +2,8 @@ name: ExtraCrates
 main: com.extracrates.ExtraCratesPlugin
 version: 1.0.0
 api-version: 1.20
+softdepend:
+  - Vault
 commands:
   crate:
     description: Comandos principales de ExtraCrates
@@ -9,6 +11,8 @@ commands:
 permissions:
   extracrates.gui:
     default: true
+  extracrates.editor:
+    default: op
   extracrates.open:
     default: true
   extracrates.preview:
@@ -16,4 +20,6 @@ permissions:
   extracrates.reload:
     default: op
   extracrates.givekey:
+    default: op
+  extracrates.route.editor:
     default: op
