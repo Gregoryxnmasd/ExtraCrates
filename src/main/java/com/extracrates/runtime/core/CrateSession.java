@@ -35,14 +35,14 @@ public class CrateSession {
     private ItemDisplay rewardDisplay;
     private TextDisplay hologram;
     private BukkitRunnable task;
-    private Location rewardBaseLocation;
-    private Location hologramBaseLocation;
-    private org.bukkit.util.Transformation rewardBaseTransform;
+    private BukkitRunnable musicTask;
 
     private GameMode previousGameMode;
     private UUID speedModifierUuid;
     private ItemStack previousHelmet;
-    private boolean spectatorApplied;
+    private boolean hudHiddenApplied;
+    private float previousWalkSpeed;
+    private float previousFlySpeed;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -74,10 +74,13 @@ public class CrateSession {
             return;
         }
         Location start = crate.getCameraStart() != null ? crate.getCameraStart() : player.getLocation();
+        previousGameMode = player.getGameMode();
+        previousWalkSpeed = player.getWalkSpeed();
+        previousFlySpeed = player.getFlySpeed();
         spawnCamera(start);
         applySpectatorMode();
         spawnRewardDisplay();
-        scheduleTimeout();
+        startMusic();
         startCutscene();
     }
 
@@ -103,18 +106,26 @@ public class CrateSession {
         player.setSpectatorTarget(cameraEntity);
 
         previousHelmet = player.getInventory().getHelmet();
-        ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
-        ItemMeta meta = pumpkin.getItemMeta();
-        String pumpkinModel = config.getString("cutscene.pumpkin-model", "");
-        if (meta != null && pumpkinModel != null && !pumpkinModel.isEmpty()) {
-            try {
-                meta.setCustomModelData(Integer.parseInt(pumpkinModel));
-            } catch (NumberFormatException ignored) {
+        String overlayModel = crate.getCutsceneSettings().getOverlayModel();
+        if (overlayModel != null && !overlayModel.isEmpty()) {
+            ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
+            ItemMeta meta = pumpkin.getItemMeta();
+            if (meta != null) {
+                Integer modelData = configLoader.resolveModelData(overlayModel);
+                if (modelData != null) {
+                    meta.setCustomModelData(modelData);
+                }
+                pumpkin.setItemMeta(meta);
             }
-            pumpkin.setItemMeta(meta);
-        }
-        if (config.getBoolean("cutscene.fake-equip", true)) {
             player.sendEquipmentChange(player, EquipmentSlot.HEAD, pumpkin);
+        }
+
+        if (crate.getCutsceneSettings().isHideHud()) {
+            hudHiddenApplied = toggleHud(true);
+        }
+        if (crate.getCutsceneSettings().isLockMovement()) {
+            player.setWalkSpeed(0.0f);
+            player.setFlySpeed(0.0f);
         }
     }
 
@@ -347,11 +358,12 @@ public class CrateSession {
         if (task != null) {
             task.cancel();
         }
-        if (cameraEntity != null && !cameraEntity.isDead()) {
-            cameraEntity.remove();
+        if (musicTask != null) {
+            musicTask.cancel();
         }
-        if (rewardRenderer != null) {
-            rewardRenderer.remove();
+        stopMusic();
+        if (cameraStand != null && !cameraStand.isDead()) {
+            sessionManager.getDisplayPool().releaseArmorStand(cameraStand);
         }
         if (previousGameMode != null) {
             player.setGameMode(previousGameMode);
@@ -359,6 +371,20 @@ public class CrateSession {
         player.setSpectatorTarget(null);
         if (speedModifierUuid != null) {
             sessionManager.removeSpectatorModifier(player, speedModifierUuid);
+        }
+        if (previousGameMode != null) {
+            player.setGameMode(previousGameMode);
+        }
+        player.setSpectatorTarget(null);
+        if (speedModifierUuid != null) {
+            sessionManager.removeSpectatorModifier(player, speedModifierUuid);
+        }
+        if (crate.getCutsceneSettings().isLockMovement()) {
+            player.setWalkSpeed(previousWalkSpeed);
+            player.setFlySpeed(previousFlySpeed);
+        }
+        if (hudHiddenApplied) {
+            toggleHud(false);
         }
         if (previousHelmet != null) {
             player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet);
@@ -368,15 +394,92 @@ public class CrateSession {
         sessionManager.removeSession(player.getUniqueId());
     }
 
-    private Component buildHologramText(HologramSettings settings) {
-        String format = reward.getHologram();
-        if (format == null || format.isEmpty()) {
-            format = crate.getAnimation().getHologramFormat();
+    public boolean isMovementLocked() {
+        return crate.getCutsceneSettings().isLockMovement();
+    }
+
+    private boolean toggleHud(boolean hidden) {
+        try {
+            String methodName = hidden ? "hideHud" : "showHud";
+            java.lang.reflect.Method method = player.getClass().getMethod(methodName);
+            method.invoke(player);
+            return true;
+        } catch (ReflectiveOperationException ignored) {
+            return false;
         }
-        if (format == null || format.isEmpty()) {
-            format = settings.getNameFormat();
+    }
+
+    private void startMusic() {
+        CrateDefinition.MusicSettings music = crate.getCutsceneSettings().getMusicSettings();
+        if (music == null || music.getSound().isEmpty()) {
+            return;
         }
-        String name = format.replace("%reward_name%", reward.getDisplayName());
-        return TextUtil.color(name);
+        SoundCategory category = parseCategory(music.getCategory());
+        if (music.getFadeInTicks() <= 0) {
+            player.playSound(player.getLocation(), music.getSound(), category, music.getVolume(), music.getPitch());
+            return;
+        }
+        scheduleMusicFade(music, category, true);
+    }
+
+    private void stopMusic() {
+        CrateDefinition.MusicSettings music = crate.getCutsceneSettings().getMusicSettings();
+        if (music == null || music.getSound().isEmpty()) {
+            return;
+        }
+        SoundCategory category = parseCategory(music.getCategory());
+        if (music.getFadeOutTicks() <= 0) {
+            player.stopSound(music.getSound(), category);
+            return;
+        }
+        scheduleMusicFade(music, category, false);
+    }
+
+    private void scheduleMusicFade(CrateDefinition.MusicSettings music, SoundCategory category, boolean fadeIn) {
+        if (musicTask != null) {
+            musicTask.cancel();
+        }
+        int totalTicks = Math.max(1, fadeIn ? music.getFadeInTicks() : music.getFadeOutTicks());
+        int steps = Math.max(1, totalTicks / 4);
+        float startVolume = fadeIn ? 0.0f : music.getVolume();
+        float endVolume = fadeIn ? music.getVolume() : 0.0f;
+        float step = (endVolume - startVolume) / steps;
+        musicTask = new BukkitRunnable() {
+            int stepIndex = 0;
+            float current = startVolume;
+
+            @Override
+            public void run() {
+                if (stepIndex > steps) {
+                    if (!fadeIn) {
+                        player.stopSound(music.getSound(), category);
+                    }
+                    cancel();
+                    return;
+                }
+                current = Math.max(0.0f, Math.min(music.getVolume(), current));
+                if (current <= 0.0f && !fadeIn) {
+                    player.stopSound(music.getSound(), category);
+                } else {
+                    player.stopSound(music.getSound(), category);
+                    float playVolume = Math.max(0.01f, current);
+                    player.playSound(player.getLocation(), music.getSound(), category, playVolume, music.getPitch());
+                }
+                current += step;
+                stepIndex++;
+            }
+        };
+        musicTask.runTaskTimer(plugin, 0L, 4L);
+    }
+
+    private SoundCategory parseCategory(String categoryName) {
+        if (categoryName == null || categoryName.isEmpty()) {
+            return SoundCategory.MUSIC;
+        }
+        try {
+            return SoundCategory.valueOf(categoryName.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            return SoundCategory.MUSIC;
+        }
     }
 }

@@ -106,11 +106,8 @@ public class SessionManager {
         sessionRandoms.remove(playerId);
     }
 
-    public void endPreview(UUID playerId) {
-        CutscenePreviewSession preview = previews.remove(playerId);
-        if (preview != null) {
-            preview.end();
-        }
+    public CrateSession getSession(UUID playerId) {
+        return sessions.get(playerId);
     }
 
     public void removeSession(UUID playerId) {
