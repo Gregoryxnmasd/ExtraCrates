@@ -182,8 +182,13 @@ public class CrateSession {
             return;
         }
         List<Location> timeline = buildTimeline(cameraEntity.getWorld(), path);
+        if (timeline.isEmpty()) {
+            finish();
+            return;
+        }
         task = new BukkitRunnable() {
-            int index = 0;
+            int tick = 0;
+            final int totalTicks = Math.max(0, timeline.size() - 1);
 
             @Override
             public void run() {
@@ -192,58 +197,18 @@ public class CrateSession {
                     finish();
                     return;
                 }
-                Location point = timeline.get(index++);
+                Location point = timeline.get(tick++);
                 cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
-
-    private TimelineData buildTimeline(World world, CutscenePath path) {
-        List<TimelinePoint> timeline = new ArrayList<>();
-        List<com.extracrates.model.CutscenePoint> points = path.getPoints();
-        String smoothing = path.getSmoothing() == null ? "linear" : path.getSmoothing().trim().toLowerCase(Locale.ROOT);
-        boolean useCatmullRom = smoothing.equals("catmull-rom") || smoothing.equals("catmullrom");
-        for (int i = 0; i < points.size() - 1; i++) {
-            com.extracrates.model.CutscenePoint start = points.get(i);
-            com.extracrates.model.CutscenePoint end = points.get(i + 1);
-            Location startLoc = new Location(world, start.getX(), start.getY(), start.getZ(), start.getYaw(), start.getPitch());
-            Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ(), end.getYaw(), end.getPitch());
-            double distance = startLoc.distance(endLoc);
-            int steps = Math.max(2, (int) Math.ceil(distance / path.getStepResolution()));
-            com.extracrates.model.CutscenePoint prev = i > 0 ? points.get(i - 1) : start;
-            com.extracrates.model.CutscenePoint next = (i + 2) < points.size() ? points.get(i + 2) : end;
-            for (int s = 0; s <= steps; s++) {
-                double t = s / (double) steps;
-                double x;
-                double y;
-                double z;
-                float yaw;
-                float pitch;
-                if (useCatmullRom) {
-                    x = catmullRom(prev.getX(), start.getX(), end.getX(), next.getX(), t);
-                    y = catmullRom(prev.getY(), start.getY(), end.getY(), next.getY(), t);
-                    z = catmullRom(prev.getZ(), start.getZ(), end.getZ(), next.getZ(), t);
-                    yaw = (float) catmullRom(prev.getYaw(), start.getYaw(), end.getYaw(), next.getYaw(), t);
-                    pitch = (float) catmullRom(prev.getPitch(), start.getPitch(), end.getPitch(), next.getPitch(), t);
-                } else {
-                    x = lerp(startLoc.getX(), endLoc.getX(), t);
-                    y = lerp(startLoc.getY(), endLoc.getY(), t);
-                    z = lerp(startLoc.getZ(), endLoc.getZ(), t);
-                    yaw = (float) lerp(startLoc.getYaw(), endLoc.getYaw(), t);
-                    pitch = (float) lerp(startLoc.getPitch(), endLoc.getPitch(), t);
-                }
-                timeline.add(new Location(world, x, y, z, yaw, pitch));
             }
-            distanceSoFar += distance;
-        }
-        return new TimelineData(timeline, totalDistance);
-    }
-
-    private double lerp(double start, double end, double t) {
-        return start + (end - start) * t;
+        };
+        task.runTaskTimer(plugin, 0L, 1L);
     }
 
     private List<Location> buildTimeline(World world, CutscenePath path) {
         List<Location> timeline = new ArrayList<>();
         List<com.extracrates.cutscene.CutscenePoint> points = path.getPoints();
+        String smoothing = resolveSmoothing(path);
         for (int i = 0; i < points.size() - 1; i++) {
             com.extracrates.cutscene.CutscenePoint start = points.get(i);
             com.extracrates.cutscene.CutscenePoint end = points.get(i + 1);
