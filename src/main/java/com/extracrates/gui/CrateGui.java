@@ -9,6 +9,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -21,6 +22,7 @@ import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class CrateGui implements Listener {
     private final ExtraCratesPlugin plugin;
@@ -84,18 +86,25 @@ public class CrateGui implements Listener {
         if (slot >= crates.size()) {
             return;
         }
+        CrateDefinition crate = crates.get(slot);
+        playClickSound(player);
         sessionManager.openCrate(player, crate);
         player.closeInventory();
     }
 
-    private List<CrateDefinition> getAccessibleCrates(Player player) {
-        List<CrateDefinition> crates = new ArrayList<>();
-        for (CrateDefinition crate : configLoader.getCrates().values()) {
-            String permission = crate.getPermission();
-            if (permission == null || permission.isBlank() || player.hasPermission(permission)) {
-                crates.add(crate);
+    private void playClickSound(Player player) {
+        if (!configLoader.getMainConfig().getBoolean("gui.click-sounds", true)) {
+            return;
+        }
+        String soundName = configLoader.getMainConfig().getString("gui.click-sound", "UI_BUTTON_CLICK");
+        Sound sound = Sound.UI_BUTTON_CLICK;
+        if (soundName != null) {
+            try {
+                sound = Sound.valueOf(soundName.trim().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ignored) {
+                sound = Sound.UI_BUTTON_CLICK;
             }
         }
-        return crates;
+        player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
     }
 }
