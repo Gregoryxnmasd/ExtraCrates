@@ -60,13 +60,13 @@ public class RewardDisplayRenderer {
         this.player = player;
         this.crate = crate;
         this.reward = reward;
-        this.floatSettings = crate.getAnimation().getRewardFloatSettings();
-        this.displaySettings = crate.getAnimation().getRewardDisplaySettings();
-        this.animations = parseAnimations(reward.getEffects() != null ? reward.getEffects().getAnimation() : "");
+        this.floatSettings = crate.animation().rewardFloatSettings();
+        this.displaySettings = crate.animation().rewardDisplaySettings();
+        this.animations = parseAnimations(reward.effects() != null ? reward.effects().animation() : "");
     }
 
     public void spawn(Location anchor) {
-        baseLocation = anchor.clone().add(0, floatSettings.getHeight(), 0);
+        baseLocation = anchor.clone().add(0, floatSettings.height(), 0);
         World world = anchor.getWorld();
         if (world == null) {
             return;
@@ -93,11 +93,11 @@ public class RewardDisplayRenderer {
         }
 
         List<String> lines = new ArrayList<>();
-        String format = crate.getAnimation().getHologramFormat();
-        String name = format.replace("%reward_name%", reward.getDisplayName());
+        String format = crate.animation().hologramFormat();
+        String name = format.replace("%reward_name%", reward.displayName());
         lines.add(name);
-        if (reward.getHologram() != null && !reward.getHologram().isEmpty()) {
-            lines.add(reward.getHologram());
+        if (reward.hologram() != null && !reward.hologram().isEmpty()) {
+            lines.add(reward.hologram());
         }
 
         for (int i = 0; i < lines.size(); i++) {
@@ -121,7 +121,7 @@ public class RewardDisplayRenderer {
             return;
         }
         tick++;
-        double bob = floatSettings.isBobbing() ? Math.sin(tick / 6.0) * BASE_BOB_AMPLITUDE : 0;
+        double bob = floatSettings.bobbing() ? Math.sin(tick / 6.0) * BASE_BOB_AMPLITUDE : 0;
         double wobbleX = animations.contains("wobble")
                 ? Math.sin(tick * displaySettings.getWobbleSpeed()) * displaySettings.getWobbleAmplitude()
                 : 0;
@@ -143,7 +143,7 @@ public class RewardDisplayRenderer {
         double orbitOffset = animations.contains("orbit") ? tick * displaySettings.getOrbitSpeed() : 0;
 
         if (animations.contains("spin")) {
-            rotation += floatSettings.getSpinSpeed();
+            rotation += floatSettings.spinSpeed();
         }
 
         for (int i = 0; i < itemCount; i++) {
@@ -186,7 +186,7 @@ public class RewardDisplayRenderer {
     }
 
     private ItemStack applyRewardModel(ItemStack item) {
-        String rewardModel = crate.getAnimation().getRewardModel();
+        String rewardModel = crate.animation().rewardModel();
         if (rewardModel == null || rewardModel.isEmpty()) {
             return item;
         }

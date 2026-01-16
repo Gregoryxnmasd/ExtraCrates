@@ -147,13 +147,13 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
                     return true;
                 }
-                ItemStack key = new ItemStack(crate.getKeyMaterial());
+                ItemStack key = new ItemStack(crate.keyMaterial());
                 ItemMeta meta = key.getItemMeta();
                 if (meta != null) {
-                    String keyName = languageManager.getRaw("command.key-item-name", java.util.Map.of("crate_name", crate.getDisplayName()));
+                    String keyName = languageManager.getRaw("command.key-item-name", java.util.Map.of("crate_name", crate.displayName()));
                     meta.displayName(TextUtil.color(keyName));
-                    if (crate.getKeyModel() != null && !crate.getKeyModel().isEmpty()) {
-                        int modelData = resourcepackModelResolver.resolve(configLoader, crate.getKeyModel());
+                    if (crate.keyModel() != null && !crate.keyModel().isEmpty()) {
+                        int modelData = resourcepackModelResolver.resolve(configLoader, crate.keyModel());
                         if (modelData >= 0) {
                             meta.setCustomModelData(modelData);
                         }

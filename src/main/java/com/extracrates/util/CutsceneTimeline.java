@@ -18,8 +18,8 @@ public final class CutsceneTimeline {
         for (int i = 0; i < points.size() - 1; i++) {
             CutscenePoint start = points.get(i);
             CutscenePoint end = points.get(i + 1);
-            Location startLoc = new Location(world, start.getX(), start.getY(), start.getZ(), start.getYaw(), start.getPitch());
-            Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ(), end.getYaw(), end.getPitch());
+            Location startLoc = new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch());
+            Location endLoc = new Location(world, end.x(), end.y(), end.z(), end.yaw(), end.pitch());
             double distance = startLoc.distance(endLoc);
             int steps = Math.max(2, (int) Math.ceil(distance / path.getStepResolution()));
             for (int s = 0; s <= steps; s++) {
