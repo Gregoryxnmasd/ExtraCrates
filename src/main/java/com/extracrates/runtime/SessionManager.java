@@ -2,9 +2,11 @@ package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.economy.EconomyService;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CrateType;
 import com.extracrates.model.CutscenePath;
+import com.extracrates.model.CutscenePoint;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.storage.CrateStorage;
@@ -13,9 +15,12 @@ import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
 import com.extracrates.storage.StorageSettings;
 import com.extracrates.util.RewardSelector;
+import com.extracrates.util.ResourcepackModelResolver;
 import net.kyori.adventure.text.Component;
+import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Particle;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -24,65 +29,67 @@ import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
-    private SyncBridge syncBridge;
+    private final EconomyService economyService;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
-    private final CrateStorage storage;
-    private final boolean storageEnabled;
+    private final Map<UUID, CutscenePreviewSession> previews = new HashMap<>();
+    private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
 
-    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, SyncBridge syncBridge) {
+    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, EconomyService economyService) {
         this.plugin = plugin;
         this.configLoader = configLoader;
-        StorageSettings settings = StorageSettings.fromConfig(configLoader.getMainConfig());
-        this.storageEnabled = settings.enabled();
-        this.storage = initializeStorage(settings);
+        this.economyService = economyService;
     }
 
     public void shutdown() {
         sessions.values().forEach(CrateSession::end);
         sessions.clear();
-        storage.close();
+        previews.values().forEach(CutscenePreviewSession::end);
+        previews.clear();
     }
 
     public boolean openCrate(Player player, CrateDefinition crate) {
+        return openCrate(player, crate, false);
+    }
+
+    public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
             return false;
         }
-        if (!player.hasPermission(crate.getPermission())) {
-            player.sendMessage(Component.text("No tienes permiso para abrir esta crate."));
+        if (path == null) {
+            player.sendMessage(Component.text("Ruta de cutscene no encontrada."));
             return false;
         }
-        String openMode = normalizeOpenMode(crate.getOpenMode());
-        boolean previewOnly = openMode.equals("preview-only");
-        boolean requiresKey = openMode.equals("key-required")
-                || openMode.equals("keyed")
-                || openMode.equals("key-only");
-        boolean requiresEconomy = openMode.equals("economy-required")
-                || openMode.equals("economy")
-                || openMode.equals("economy-only");
-        if (!previewOnly && !requiresKey && !requiresEconomy && crate.getType() == CrateType.KEYED) {
-            requiresKey = true;
-        }
-        if (!previewOnly && requiresKey && !hasKey(player, crate)) {
+        if (!preview && crate.getType() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
             player.sendMessage(Component.text("Necesitas una llave para esta crate."));
             return false;
         }
-        if (!previewOnly && requiresEconomy && !canAffordEconomy(player, crate)) {
-            player.sendMessage(Component.text("Necesitas saldo de economía para abrir esta crate."));
-            return false;
-        }
-        if (isOnCooldown(player, crate)) {
+        if (!preview && isOnCooldown(player, crate)) {
             player.sendMessage(Component.text("Esta crate está en cooldown."));
             return false;
+        }
+        double cost = crate.getCost();
+        if (cost > 0) {
+            if (!economyService.isAvailable()) {
+                player.sendMessage(Component.text("No hay un sistema de economía disponible para cobrar esta crate."));
+                return false;
+            }
+            if (!economyService.hasBalance(player, cost)) {
+                player.sendMessage(Component.text("Saldo insuficiente para abrir esta crate."));
+                player.sendMessage(Component.text("Necesitas " + economyService.format(cost) + "."));
+                return false;
+            }
+            EconomyResponse response = economyService.withdraw(player, cost);
+            if (!response.transactionSuccess()) {
+                player.sendMessage(Component.text("No se pudo cobrar el costo de esta crate."));
+                return false;
+            }
         }
         RewardPool pool = configLoader.getRewardPools().get(crate.getRewardsPool());
         List<Reward> rewards = RewardSelector.roll(pool);
@@ -92,16 +99,15 @@ public class SessionManager {
         }
         Reward reward = rewards.get(0);
         CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
-        boolean grantReward = !previewOnly;
-        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, grantReward, this);
+        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this, preview);
         sessions.put(player.getUniqueId(), session);
-        if (!previewOnly && requiresKey) {
+        if (!preview && crate.getType() == com.extracrates.model.CrateType.KEYED) {
             consumeKey(player, crate);
         }
         session.start();
-        recordCrateOpen(player, crate);
-        applyCooldown(player, crate);
-        storage.logOpen(player.getUniqueId(), crate.getId(), reward.getId(), Bukkit.getServerName(), Instant.now());
+        if (!preview) {
+            applyCooldown(player, crate);
+        }
         return true;
     }
 
@@ -112,20 +118,41 @@ public class SessionManager {
         }
     }
 
+    public void endPreview(UUID playerId) {
+        CutscenePreviewSession preview = previews.remove(playerId);
+        if (preview != null) {
+            preview.end();
+        }
+    }
+
     public void removeSession(UUID playerId) {
         sessions.remove(playerId);
     }
 
+    private CutscenePath buildDefaultPath(Player player) {
+        Location location = player.getLocation();
+        List<CutscenePoint> points = List.of(
+                new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch()),
+                new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch())
+        );
+        return new CutscenePath("default", 3.0, true, 0.15, "linear", "", points);
+    }
+
     private boolean isOnCooldown(Player player, CrateDefinition crate) {
         if (crate.getCooldownSeconds() <= 0) {
-            return false;
+            return 0;
         }
-        Instant last = storage.getCooldown(player.getUniqueId(), crate.getId()).orElse(null);
+        Map<String, Instant> userCooldowns = cooldowns.get(player.getUniqueId());
+        if (userCooldowns == null) {
+            return 0;
+        }
+        Instant last = userCooldowns.get(crate.getId());
         if (last == null) {
-            return false;
+            return 0;
         }
         Duration elapsed = Duration.between(last, Instant.now());
-        return elapsed.getSeconds() < crate.getCooldownSeconds();
+        long remaining = crate.getCooldownSeconds() - elapsed.getSeconds();
+        return Math.max(remaining, 0);
     }
 
     private void applyCooldown(Player player, CrateDefinition crate) {
@@ -146,7 +173,10 @@ public class SessionManager {
         if (crate.getKeyModel() == null || crate.getKeyModel().isEmpty()) {
             return true;
         }
-        int modelData = parseModel(crate.getKeyModel());
+        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.getKeyModel());
+        if (modelData < 0) {
+            return false;
+        }
         return Arrays.stream(player.getInventory().getContents()).anyMatch(item -> {
             if (item == null || item.getItemMeta() == null) {
                 return false;
@@ -158,20 +188,11 @@ public class SessionManager {
         });
     }
 
-    private int parseModel(String value) {
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException ex) {
-            return -1;
-        }
-    }
-
     private void consumeKey(Player player, CrateDefinition crate) {
-        if (storageEnabled) {
-            storage.consumeKey(player.getUniqueId(), crate.getId());
+        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.getKeyModel());
+        if (modelData < 0) {
             return;
         }
-        int modelData = parseModel(crate.getKeyModel());
         ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {
             ItemStack item = contents[i];

@@ -1,61 +1,14 @@
-# Opciones globales
-language: es_es
-particles-default: "crit"
-hologram-font: "resourcepack:cutscene_font"
-gui:
-  title: "&8ExtraCrates"
-  editor-title: "&0Editor de Crates"
-  preview-enabled: true
-  click-sounds: true
-  crates:
-    legendary:
-      slot: 10
-      material: "CHEST"
-      icon: 12001
-      lore:
-        - "&7Nombre: &f%crate_name%"
-        - "&7Cooldown: &f%cooldown%s"
-        - "&7Permiso: &f%permission%"
-    seasonal:
-      slot: 12
-      material: "ENDER_CHEST"
-      icon: 12002
-      lore:
-        - "&7Nombre: &f%crate_name%"
-        - "&7Cooldown: &f%cooldown%s"
-        - "&7Permiso: &f%permission%"
-resourcepack:
-  use-custom-model-data: true
-  allow-animated-items: true
-  allow-map-images: true
-  pumpkin-overlay-model: "cutscene_mask"
-cutscene:
-  default-speed: 0.35
-  constant-speed: true
-  smooth-tick: 2
-  pumpkin-model: "cutscene_mask"
-  slowdown-modifier: -10.0
-  hide-others: true
-  spectator-lock: true
-  fake-equip: true
-  armorstand-invisible: true
-  camera-entity: "armorstand"
-  speed-modifier-uuid: "c0c0a1f2-7a89-4a2c-88a7-9f53b0d6f8b1"
-sessions:
-  max-duration-ticks: 600
-  cleanup-on-quit: true
-holograms:
-  provider: "display"
-  name-format: "&e%reward_name%"
-  height-offset: 0.8
-permissions:
-  use-per-crate: true
-storage:
-  enabled: false
-  type: "mysql"
-  jdbc-url: "jdbc:mysql://localhost:3306/extracrates"
-  username: "root"
-  password: "password"
-  pool:
-    size: 10
-    timeout: 30000
+# ExtraCrates configuration
+#
+# This file only contains starter options. The plugin is intentionally minimal
+# to provide a solid foundation for a complex crates system. Future updates will
+# introduce crate definitions, reward pools, animations, and proxy syncing.
+
+locale: es_es
+
+preview-settings:
+  enabled: true
+  default-duration: 3s
+
+metrics:
+  enabled: true

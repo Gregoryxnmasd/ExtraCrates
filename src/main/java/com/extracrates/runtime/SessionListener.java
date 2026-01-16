@@ -17,17 +17,7 @@ public class SessionListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        boolean cleanupOnQuit = plugin.getConfig().getBoolean("sessions.cleanup-on-quit", true);
-        if (cleanupOnQuit) {
-            sessionManager.endSession(event.getPlayer().getUniqueId());
-            return;
-        }
-        int fallbackTicks = plugin.getConfig().getInt("sessions.max-duration-ticks", 600);
-        long delay = Math.max(1L, fallbackTicks);
-        plugin.getServer().getScheduler().runTaskLater(
-                plugin,
-                () -> sessionManager.endSession(event.getPlayer().getUniqueId()),
-                delay
-        );
+        sessionManager.endSession(event.getPlayer().getUniqueId());
+        sessionManager.endPreview(event.getPlayer().getUniqueId());
     }
 }
