@@ -20,11 +20,13 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.NamespacedKey;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -33,7 +35,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
 
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
@@ -211,19 +212,15 @@ public class SessionManager {
     }
 
     private void applyCooldown(Player player, CrateDefinition crate) {
-        applyCooldown(player, crate, Instant.now(), true);
-    }
-
-    private void applyCooldown(Player player, CrateDefinition crate, Instant timestamp, boolean record) {
         if (crate.getCooldownSeconds() <= 0) {
             return;
         }
-        Instant appliedAt = timestamp != null ? timestamp : Instant.now();
+        Instant appliedAt = Instant.now();
         cooldowns.computeIfAbsent(player.getUniqueId(), key -> new HashMap<>()).put(crate.getId(), appliedAt);
         if (storage != null) {
             storage.setCooldown(player.getUniqueId(), crate.getId(), appliedAt);
         }
-        if (record && syncBridge != null) {
+        if (syncBridge != null) {
             syncBridge.recordCooldown(player.getUniqueId(), crate.getId());
         }
     }
@@ -301,20 +298,20 @@ public class SessionManager {
         }
     }
 
-    public void applySpectator(Player player, UUID modifierUuid, double modifierValue) {
+    public void applySpectator(Player player, NamespacedKey modifierKey, double modifierValue) {
         player.setGameMode(GameMode.SPECTATOR);
         AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
         if (attribute != null) {
-            AttributeModifier modifier = new AttributeModifier(modifierUuid, "crate-cutscene", modifierValue, AttributeModifier.Operation.ADD_NUMBER);
+            AttributeModifier modifier = new AttributeModifier(modifierKey, modifierValue, AttributeModifier.Operation.ADD_NUMBER);
             attribute.addModifier(modifier);
         }
     }
 
-    public void removeSpectatorModifier(Player player, UUID modifierUuid) {
+    public void removeSpectatorModifier(Player player, NamespacedKey modifierKey) {
         AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
         if (attribute != null) {
             attribute.getModifiers().stream()
-                    .filter(mod -> mod.getUniqueId().equals(modifierUuid))
+                    .filter(mod -> mod.getKey().equals(modifierKey))
                     .forEach(attribute::removeModifier);
         }
     }
