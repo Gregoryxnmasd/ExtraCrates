@@ -42,7 +42,5 @@ holograms:
   height-offset: 0.8
 permissions:
   use-per-crate: true
-logging:
-  format: "json"
-  file: "logs/rewards.log"
-  debug: false
+debug:
+  rolls: false
