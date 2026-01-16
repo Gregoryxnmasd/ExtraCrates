@@ -14,6 +14,9 @@ import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
 import com.extracrates.storage.StorageSettings;
 import com.extracrates.util.RewardSelector;
+import net.kyori.adventure.text.Component;
+import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.attribute.Attribute;
@@ -30,15 +33,15 @@ import java.util.concurrent.ThreadLocalRandom;
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
-    private final RewardLogger rewardLogger;
+    private final Economy economy;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final CrateStorage storage;
     private final boolean storageEnabled;
 
-    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, RewardLogger rewardLogger) {
+    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, Economy economy) {
         this.plugin = plugin;
         this.configLoader = configLoader;
-        this.rewardLogger = rewardLogger;
+        this.economy = economy;
     }
 
     public void shutdown() {
@@ -76,6 +79,9 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
+        if (!chargePlayer(player, crate)) {
+            return false;
+        }
         Reward reward = rewards.get(0);
         if (rewardLogger != null) {
             rewardLogger.logReward(player, crate, reward, seed, Instant.now());
@@ -89,6 +95,23 @@ public class SessionManager {
         session.start();
         if (!preview) {
             applyCooldown(player, crate);
+        }
+        return true;
+    }
+
+    private boolean chargePlayer(Player player, CrateDefinition crate) {
+        double cost = crate.getCost();
+        if (cost <= 0 || economy == null) {
+            return true;
+        }
+        if (!economy.has(player, cost)) {
+            player.sendMessage(Component.text("No tienes saldo suficiente para abrir esta crate."));
+            return false;
+        }
+        EconomyResponse response = economy.withdrawPlayer(player, cost);
+        if (!response.transactionSuccess()) {
+            player.sendMessage(Component.text("No se pudo descontar el costo de la crate."));
+            return false;
         }
         return true;
     }

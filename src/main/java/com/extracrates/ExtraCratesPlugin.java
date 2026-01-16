@@ -10,8 +10,9 @@ import com.extracrates.gui.CrateGui;
 import com.extracrates.runtime.ProtocolEntityHider;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.runtime.SessionListener;
-import com.extracrates.sync.SyncBridge;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class ExtraCratesPlugin extends JavaPlugin {
@@ -19,7 +20,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private SessionManager sessionManager;
     private CrateGui crateGui;
-    private ProtocolEntityHider protocolEntityHider;
+    private Economy economy;
 
     @Override
     public void onEnable() {
@@ -37,7 +38,8 @@ public final class ExtraCratesPlugin extends JavaPlugin {
 
         protocolEntityHider = ProtocolEntityHider.createIfPresent(this);
 
-        sessionManager = new SessionManager(this, configLoader);
+        setupEconomy();
+        sessionManager = new SessionManager(this, configLoader, economy);
         new SessionListener(this, sessionManager);
         routeEditorManager = new RouteEditorManager(this, configLoader);
         new RouteEditorListener(this, routeEditorManager);
@@ -64,5 +66,16 @@ public final class ExtraCratesPlugin extends JavaPlugin {
 
     public ProtocolEntityHider getProtocolEntityHider() {
         return protocolEntityHider;
+    }
+
+    private void setupEconomy() {
+        if (getServer().getPluginManager().getPlugin("Vault") == null) {
+            return;
+        }
+        RegisteredServiceProvider<Economy> registration = getServer().getServicesManager().getRegistration(Economy.class);
+        if (registration == null) {
+            return;
+        }
+        economy = registration.getProvider();
     }
 }
