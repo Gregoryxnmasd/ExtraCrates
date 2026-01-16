@@ -1,9 +1,9 @@
 package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
+import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import io.papermc.paper.event.player.AsyncChatEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -39,9 +39,7 @@ public class EditorInputManager implements Listener {
             return;
         }
         event.setCancelled(true);
-        String message = PlainTextComponentSerializer.plainText()
-                .serialize(event.message())
-                .trim();
+        String message = PlainTextComponentSerializer.plainText().serialize(event.message()).trim();
         pendingInputs.remove(event.getPlayer().getUniqueId());
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             if (message.equalsIgnoreCase("cancel")) {
