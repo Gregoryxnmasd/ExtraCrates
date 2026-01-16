@@ -5,6 +5,8 @@ import com.extracrates.command.SyncCommand;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.gui.CrateGui;
+import com.extracrates.route.RouteEditorListener;
+import com.extracrates.route.RouteEditorManager;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.runtime.SessionListener;
 import com.extracrates.sync.SyncBridge;
@@ -16,7 +18,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private SessionManager sessionManager;
     private CrateGui crateGui;
-    private SyncBridge syncBridge;
+    private RouteEditorManager routeEditorManager;
 
     @Override
     public void onEnable() {
@@ -37,11 +39,13 @@ public final class ExtraCratesPlugin extends JavaPlugin {
 
         sessionManager = new SessionManager(this, configLoader, languageManager);
         new SessionListener(this, sessionManager);
+        routeEditorManager = new RouteEditorManager(this, configLoader);
+        new RouteEditorListener(this, routeEditorManager);
         crateGui = new CrateGui(this, configLoader, sessionManager);
 
         PluginCommand crateCommand = getCommand("crate");
         if (crateCommand != null) {
-            CrateCommand executor = new CrateCommand(this, configLoader, sessionManager, crateGui, languageManager);
+            CrateCommand executor = new CrateCommand(this, configLoader, sessionManager, crateGui, routeEditorManager);
             crateCommand.setExecutor(executor);
             crateCommand.setTabCompleter(executor);
         }
