@@ -13,7 +13,7 @@ import com.extracrates.route.RouteEditorListener;
 import com.extracrates.route.RouteEditorManager;
 import com.extracrates.runtime.ProtocolEntityHider;
 import com.extracrates.runtime.SessionListener;
-import com.extracrates.runtime.core.ConfigLoader;
+import com.extracrates.config.ConfigLoader;
 import com.extracrates.runtime.core.ExtraCratesApiService;
 import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.util.MapImageCache;
