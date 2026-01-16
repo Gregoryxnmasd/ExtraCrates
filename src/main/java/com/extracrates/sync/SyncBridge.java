@@ -1,8 +1,8 @@
 package com.extracrates.sync;
 
 import com.extracrates.ExtraCratesPlugin;
-import com.extracrates.config.ConfigLoader;
-import com.extracrates.runtime.SessionManager;
+import com.extracrates.runtime.core.ConfigLoader;
+import com.extracrates.runtime.core.SessionManager;
 
 import java.time.Instant;
 import java.util.ArrayList;
