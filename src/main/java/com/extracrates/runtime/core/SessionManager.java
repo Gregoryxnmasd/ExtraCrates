@@ -1,6 +1,7 @@
 package com.extracrates.runtime.core;
 
 import com.extracrates.ExtraCratesPlugin;
+import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.cutscene.CutscenePoint;
@@ -42,6 +43,7 @@ public class SessionManager {
     private final CrateStorage storage;
     private final SyncBridge syncBridge;
     private final boolean storageEnabled;
+    // Stores both preview and normal crate sessions. Preview sessions are marked in CrateSession.
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Random> sessionRandoms = new HashMap<>();
@@ -78,10 +80,11 @@ public class SessionManager {
             player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
             return false;
         }
-        String pathId = crate.getAnimation() != null ? crate.getAnimation().getPath() : null;
-        CutscenePath path = pathId != null ? configLoader.getPaths().get(pathId) : null;
-        if (path == null) {
-            path = buildDefaultPath(player);
+        CutscenePath path = resolveCutscenePath(crate, player);
+        RewardPool rewardPool = resolveRewardPool(crate);
+        if (rewardPool == null) {
+            player.sendMessage(Component.text("No se encontró el pool de recompensas para esta crate."));
+            return false;
         }
         if (!preview && crate.getType() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
             player.sendMessage(Component.text("Necesitas una llave para esta crate."));
@@ -91,9 +94,8 @@ public class SessionManager {
             player.sendMessage(Component.text("Esta crate está en cooldown."));
             return false;
         }
-        RewardPool pool = configLoader.getRewardPools().get(crate.getRewardsPool());
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
-        List<Reward> rewards = RewardSelector.roll(pool, random, buildRollLogger(player));
+        List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
         if (rewards.isEmpty()) {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
@@ -116,6 +118,13 @@ public class SessionManager {
             session.end();
         }
         sessionRandoms.remove(playerId);
+    }
+
+    public void endPreview(UUID playerId) {
+        CrateSession session = sessions.get(playerId);
+        if (session != null && session.isPreview()) {
+            endSession(playerId);
+        }
     }
 
     public CrateSession getSession(UUID playerId) {
@@ -148,6 +157,22 @@ public class SessionManager {
                 new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch())
         );
         return new CutscenePath("default", 3.0, true, 0.15, "linear", "", points);
+    }
+
+    private CutscenePath resolveCutscenePath(CrateDefinition crate, Player player) {
+        String pathId = crate.getAnimation() != null ? crate.getAnimation().getPath() : null;
+        CutscenePath path = pathId != null ? configLoader.getPaths().get(pathId) : null;
+        if (path == null) {
+            return buildDefaultPath(player);
+        }
+        return path;
+    }
+
+    private RewardPool resolveRewardPool(CrateDefinition crate) {
+        if (crate.getRewardsPool() == null) {
+            return null;
+        }
+        return configLoader.getRewardPools().get(crate.getRewardsPool());
     }
 
     private boolean isOnCooldown(Player player, CrateDefinition crate) {

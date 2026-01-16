@@ -20,6 +20,7 @@ public class SessionListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
+        // Preview sessions share the same storage as normal sessions.
         sessionManager.endSession(event.getPlayer().getUniqueId());
     }
 
