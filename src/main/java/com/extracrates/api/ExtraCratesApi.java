@@ -5,6 +5,10 @@ import org.bukkit.entity.Player;
 
 import java.util.Map;
 
+/**
+ * Public API exposed via the Bukkit services manager for external plugins.
+ */
+@SuppressWarnings("unused")
 public interface ExtraCratesApi {
     Map<String, CrateDefinition> getCrates();
 
