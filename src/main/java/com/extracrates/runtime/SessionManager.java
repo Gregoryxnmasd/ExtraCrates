@@ -2,9 +2,7 @@ package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
-import com.extracrates.hologram.HologramProvider;
-import com.extracrates.hologram.HologramProviderFactory;
-import com.extracrates.hologram.HologramSettings;
+import com.extracrates.economy.EconomyService;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CrateType;
 import com.extracrates.model.CutscenePath;
@@ -19,7 +17,6 @@ import com.extracrates.storage.StorageSettings;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
 import net.kyori.adventure.text.Component;
-import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -38,17 +35,15 @@ import java.util.concurrent.ThreadLocalRandom;
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
-    private final HologramProvider hologramProvider;
-    private final HologramSettings hologramSettings;
+    private final EconomyService economyService;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, CutscenePreviewSession> previews = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
 
-    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, Economy economy) {
+    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, EconomyService economyService) {
         this.plugin = plugin;
         this.configLoader = configLoader;
-        this.hologramSettings = HologramSettings.fromConfig(configLoader.getMainConfig());
-        this.hologramProvider = HologramProviderFactory.create(plugin, configLoader.getMainConfig(), hologramSettings);
+        this.economyService = economyService;
     }
 
     public void shutdown() {
@@ -139,11 +134,27 @@ public class SessionManager {
             player.sendMessage(Component.text("La ruta no tiene particle-preview configurado."));
             return false;
         }
-        Particle particle;
-        try {
-            particle = Particle.valueOf(previewName.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException ex) {
-            player.sendMessage(Component.text("Particle-preview inválido: " + previewName));
+        double cost = crate.getCost();
+        if (cost > 0) {
+            if (!economyService.isAvailable()) {
+                player.sendMessage(Component.text("No hay un sistema de economía disponible para cobrar esta crate."));
+                return false;
+            }
+            if (!economyService.hasBalance(player, cost)) {
+                player.sendMessage(Component.text("Saldo insuficiente para abrir esta crate."));
+                player.sendMessage(Component.text("Necesitas " + economyService.format(cost) + "."));
+                return false;
+            }
+            EconomyResponse response = economyService.withdraw(player, cost);
+            if (!response.transactionSuccess()) {
+                player.sendMessage(Component.text("No se pudo cobrar el costo de esta crate."));
+                return false;
+            }
+        }
+        RewardPool pool = configLoader.getRewardPools().get(crate.getRewardsPool());
+        List<Reward> rewards = RewardSelector.roll(pool);
+        if (rewards.isEmpty()) {
+            player.sendMessage(Component.text("No hay recompensas configuradas."));
             return false;
         }
         endPreview(player.getUniqueId());
