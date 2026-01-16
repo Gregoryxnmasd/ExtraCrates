@@ -8,6 +8,7 @@ import com.extracrates.hologram.HologramSettings;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CrateType;
 import com.extracrates.model.CutscenePath;
+import com.extracrates.model.CutscenePoint;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.storage.CrateStorage;
@@ -21,6 +22,7 @@ import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -92,7 +94,11 @@ public class SessionManager {
             rewardLogger.logReward(player, crate, reward, seed, Instant.now());
         }
         CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
-        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this, preview);
+        if (path == null) {
+            player.sendMessage(Component.text("No se encontró la ruta de la cutscene. Usando una ruta básica."));
+            path = buildDefaultPath(player);
+        }
+        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this);
         sessions.put(player.getUniqueId(), session);
         if (!preview && crate.getType() == com.extracrates.model.CrateType.KEYED) {
             consumeKey(player, crate);
@@ -132,7 +138,16 @@ public class SessionManager {
         sessions.remove(playerId);
     }
 
-    private long isOnCooldown(Player player, CrateDefinition crate) {
+    private CutscenePath buildDefaultPath(Player player) {
+        Location location = player.getLocation();
+        List<CutscenePoint> points = List.of(
+                new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch()),
+                new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch())
+        );
+        return new CutscenePath("default", 3.0, true, 0.15, "linear", "", points);
+    }
+
+    private boolean isOnCooldown(Player player, CrateDefinition crate) {
         if (crate.getCooldownSeconds() <= 0) {
             return 0;
         }

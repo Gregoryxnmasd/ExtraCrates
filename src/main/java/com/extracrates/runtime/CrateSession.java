@@ -68,9 +68,9 @@ public class CrateSession {
     }
 
     public void start() {
-        if (isRewardOnly()) {
-            executeReward();
-            sessionManager.removeSession(player.getUniqueId());
+        if (path == null) {
+            player.sendMessage(Component.text("No se encontró la ruta de la cutscene."));
+            finish();
             return;
         }
         Location start = crate.getCameraStart() != null ? crate.getCameraStart() : player.getLocation();
