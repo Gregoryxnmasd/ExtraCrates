@@ -111,8 +111,7 @@ public class RouteEditorManager {
             player.sendMessage(Component.text("Ruta '" + session.getPathId() + "' guardada con " + points.size() + " puntos."));
         } catch (IOException ex) {
             player.sendMessage(Component.text("No se pudo guardar paths.yml."));
-            plugin.getLogger().log(Level.SEVERE, "No se pudo guardar paths.yml para la ruta '" + session.getPathId()
-                    + "' con " + points.size() + " puntos.", ex);
+            plugin.getLogger().log(Level.WARNING, "No se pudo guardar paths.yml para la ruta '" + session.getPathId() + "'.", ex);
         }
     }
 
