@@ -1,6 +1,7 @@
 package com.extracrates.util;
 
-import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.SettingsSnapshot;
+import com.extracrates.runtime.core.ConfigLoader;
 import com.extracrates.model.Reward;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -29,9 +30,9 @@ public final class ItemUtil {
         ItemStack item = new ItemStack(material, Math.max(1, reward.getAmount()));
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
+            SettingsSnapshot settings = configLoader.getSettings();
             meta.displayName(TextUtil.color(reward.getDisplayName()));
             applyResourcepackModel(reward, meta, settings);
-            applyMapImage(reward, meta, settings, material);
             for (Map.Entry<String, Integer> entry : reward.getEnchantments().entrySet()) {
                 Enchantment enchantment = Enchantment.getByKey(org.bukkit.NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT)));
                 if (enchantment != null) {
@@ -45,7 +46,7 @@ public final class ItemUtil {
                 }
                 meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
             }
-            applyMapImage(reward, meta, world, configLoader, mapImageCache);
+            applyMapImage(reward, meta, settings, world, mapImageCache);
             item.setItemMeta(meta);
         }
         return item;
@@ -54,8 +55,8 @@ public final class ItemUtil {
     private static void applyMapImage(
             Reward reward,
             ItemMeta meta,
+            SettingsSnapshot settings,
             World world,
-            ConfigLoader configLoader,
             MapImageCache mapImageCache
     ) {
         if (!(meta instanceof MapMeta mapMeta)) {
@@ -68,8 +69,7 @@ public final class ItemUtil {
         if (mapImage == null || mapImage.isBlank()) {
             return;
         }
-        boolean allowMapImages = configLoader.getMainConfig().getBoolean("resourcepack.allow-map-images", true);
-        if (!allowMapImages) {
+        if (settings == null || !settings.getResourcepack().allowMapImages()) {
             return;
         }
         World resolvedWorld = world != null ? world : Bukkit.getWorlds().stream().findFirst().orElse(null);
@@ -84,5 +84,19 @@ public final class ItemUtil {
         mapView.getRenderers().forEach(mapView::removeRenderer);
         mapView.addRenderer(new MapImageRenderer(image.get()));
         mapMeta.setMapView(mapView);
+    }
+
+    private static void applyResourcepackModel(Reward reward, ItemMeta meta, SettingsSnapshot settings) {
+        if (settings == null || !settings.getResourcepack().useCustomModelData()) {
+            return;
+        }
+        String customModel = reward.getCustomModel();
+        if (customModel == null || customModel.isBlank()) {
+            return;
+        }
+        try {
+            meta.setCustomModelData(Integer.parseInt(customModel.trim()));
+        } catch (NumberFormatException ignored) {
+        }
     }
 }

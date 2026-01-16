@@ -1,10 +1,10 @@
 package com.extracrates.runtime.core;
 
 import com.extracrates.ExtraCratesPlugin;
+import com.extracrates.config.SettingsSnapshot;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.RewardPool;
-import com.extracrates.resourcepack.ResourcePackRegistry;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -57,6 +57,13 @@ public class ConfigLoader {
         return plugin.getConfig();
     }
 
+    public SettingsSnapshot getSettings() {
+        if (settings == null) {
+            loadSettings();
+        }
+        return settings;
+    }
+
     public Integer resolveModelData(String modelKey) {
         if (modelKey == null || modelKey.isEmpty()) {
             return null;
@@ -70,6 +77,10 @@ public class ConfigLoader {
             return section.getInt(modelKey);
         }
         return null;
+    }
+
+    private void loadSettings() {
+        settings = SettingsSnapshot.fromConfig(getMainConfig());
     }
 
     private void loadCrates() {
