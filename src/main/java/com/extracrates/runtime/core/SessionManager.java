@@ -42,6 +42,7 @@ public class SessionManager {
     private final CrateStorage storage;
     private final SyncBridge syncBridge;
     private final boolean storageEnabled;
+    // Stores both preview and normal crate sessions. Preview sessions are marked in CrateSession.
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Random> sessionRandoms = new HashMap<>();
@@ -116,6 +117,13 @@ public class SessionManager {
             session.end();
         }
         sessionRandoms.remove(playerId);
+    }
+
+    public void endPreview(UUID playerId) {
+        CrateSession session = sessions.get(playerId);
+        if (session != null && session.isPreview()) {
+            endSession(playerId);
+        }
     }
 
     public CrateSession getSession(UUID playerId) {

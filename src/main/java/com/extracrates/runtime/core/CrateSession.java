@@ -423,6 +423,10 @@ public class CrateSession {
         return crate.getCutsceneSettings().isLockMovement();
     }
 
+    public boolean isPreview() {
+        return preview;
+    }
+
     private boolean toggleHud(boolean hidden) {
         try {
             String methodName = hidden ? "hideHud" : "showHud";
