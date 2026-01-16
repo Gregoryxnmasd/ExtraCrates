@@ -32,15 +32,15 @@ public class CrateSession {
     private final CutscenePath path;
     private final boolean grantReward;
     private final SessionManager sessionManager;
-    private final HologramSettings hologramSettings;
+    private final RewardAnimationService rewardAnimationService;
 
     private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
     private TextDisplay hologram;
     private BukkitRunnable task;
-    private int rewardIndex;
-    private long rewardSwitchTicks;
-    private long nextRewardSwitchTick;
+    private Location rewardBaseLocation;
+    private Location hologramBaseLocation;
+    private org.bukkit.util.Transformation rewardBaseTransform;
 
     private GameMode previousGameMode;
     private UUID speedModifierUuid;
@@ -67,7 +67,7 @@ public class CrateSession {
         this.path = path;
         this.grantReward = grantReward;
         this.sessionManager = sessionManager;
-        this.hologramSettings = sessionManager.getHologramSettings();
+        this.rewardAnimationService = new RewardAnimationService();
     }
 
     public void start() {
@@ -156,6 +156,10 @@ public class CrateSession {
 
         hideFromOthers(rewardDisplay);
         hideFromOthers(hologram);
+
+        rewardBaseLocation = rewardDisplay.getLocation().clone();
+        hologramBaseLocation = hologram.getLocation().clone();
+        rewardBaseTransform = rewardDisplay.getTransformation();
     }
 
     private void hideFromOthers(Entity entity) {
@@ -184,9 +188,6 @@ public class CrateSession {
         }
         task = new BukkitRunnable() {
             int index = 0;
-            double rotation = 0;
-            int tick = 0;
-            final int totalTicks = (int) Math.max(1, path.getDurationSeconds() * 20);
 
             @Override
             public void run() {
@@ -201,11 +202,18 @@ public class CrateSession {
                 Location point = timeline.get(index).location();
                 cameraStand.teleport(point);
                 player.setSpectatorTarget(cameraStand);
-
-                if (rewardRenderer != null) {
-                    rewardRenderer.tick();
-                }
-                tick++;
+                CrateDefinition.RewardFloatSettings floatSettings = crate.getAnimation().getRewardFloatSettings();
+                String animationName = reward.getEffects() != null ? reward.getEffects().getAnimation() : "";
+                rewardAnimationService.applyAnimation(
+                        animationName,
+                        rewardDisplay,
+                        hologram,
+                        rewardBaseLocation,
+                        hologramBaseLocation,
+                        rewardBaseTransform,
+                        index,
+                        floatSettings
+                );
             }
         };
         assignTicks(timeline, timelineData.totalDistance(), (int) Math.max(1, path.getDurationSeconds() * 20));
