@@ -3,7 +3,7 @@ command:
   only-players: "&cSolo para jugadores."
   no-permission: "&cNo tienes permiso."
   open-usage: "&cUso: /crate open <id>"
-  givekey-usage: "&cUso: /crate givekey <id>"
+  givekey-usage: "&cUso: /crate givekey <id> &7(dar llave)"
   crate-not-found: "&cCrate no encontrada."
   reload-success: "&aConfiguración recargada."
   givekey-success: "&aLlave entregada correctamente."
