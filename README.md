@@ -1,17 +1,25 @@
 # ExtraCrates
 
-Diseño de un plugin de crates con interfaz gráfica avanzada, animaciones tipo cutscene y compatibilidad con resourcepacks.
+Base inicial para un plugin de Paper 1.21 orientado a un sistema complejo de cajas.
+La estructura está preparada para escalar y adaptarse a proxies en el futuro.
 
-Esta base describe todas las características esperadas, comandos y permisos para implementar un sistema de crates altamente configurable.
+## Características incluidas
+- `plugin.yml` configurado con nombre **ExtraCrates** y paquete base `me.savaduki.extracrates`.
+- Clase principal `ExtraCratesPlugin` con comando `/extracrates` para verificar el estado.
+- Registros iniciales `CrateRegistry` y `RewardRegistry` para futuros datos y lógica.
+- Configuración Maven lista para construir un JAR sombreado (shade) compatible con Paper 1.21.
 
-- Revisa [docs/PluginDesign.md](docs/PluginDesign.md) para los detalles técnicos y flujos de trabajo.
-- Consulta `config/examples/` para ejemplos de configuración inicial (crates, recompensas, rutas y ajustes globales).
+## Requisitos
+- Java 21
+- Maven 3.9+
 
-## Gradle en IntelliJ (sin wrapper jar en Git)
-Por restricciones de GitHub, el repositorio no incluye `gradle/wrapper/gradle-wrapper.jar`.
-Para regenerarlo localmente:
+## Cómo compilar
+```bash
+mvn clean package
+```
+El artefacto resultante se generará en `target/extracrates-<version>.jar`.
 
-- Linux/macOS: `./scripts/bootstrap-wrapper.sh`
-- Windows: `scripts\bootstrap-wrapper.bat`
-
-Esto ejecuta `gradle wrapper` y crea el `gradle-wrapper.jar` necesario para que IntelliJ detecte el proyecto como Gradle.
+## Próximos pasos sugeridos
+- Implementar carga de crates y recompensas desde `config.yml` o archivos dedicados.
+- Añadir persistencia y sincronización con proxy para redes.
+- Crear comandos administrativos para gestionar crates y llaves.

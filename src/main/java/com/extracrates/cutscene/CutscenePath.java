@@ -14,6 +14,7 @@ public class CutscenePath {
     private final String smoothing;
     private final String particlePreview;
     private final List<CutscenePoint> points;
+    private volatile List<CutscenePoint> timelineCache;
 
     public CutscenePath(
             String id,
@@ -61,6 +62,19 @@ public class CutscenePath {
         return Collections.unmodifiableList(points);
     }
 
+    public List<CutscenePoint> getTimelinePoints() {
+        List<CutscenePoint> cached = timelineCache;
+        if (cached != null) {
+            return cached;
+        }
+        synchronized (this) {
+            if (timelineCache == null) {
+                timelineCache = Collections.unmodifiableList(buildTimelinePoints());
+            }
+            return timelineCache;
+        }
+    }
+
     public static CutscenePath fromSection(String id, ConfigurationSection section) {
         if (section == null) {
             return null;
@@ -82,6 +96,40 @@ public class CutscenePath {
             }
         }
         return new CutscenePath(id, duration, constantSpeed, stepResolution, smoothing, particlePreview, points);
+    }
+
+    private List<CutscenePoint> buildTimelinePoints() {
+        if (points.isEmpty()) {
+            return List.of();
+        }
+        if (points.size() == 1) {
+            return new ArrayList<>(points);
+        }
+        List<CutscenePoint> timeline = new ArrayList<>();
+        for (int i = 0; i < points.size() - 1; i++) {
+            CutscenePoint start = points.get(i);
+            CutscenePoint end = points.get(i + 1);
+            double distance = Math.sqrt(
+                    Math.pow(start.getX() - end.getX(), 2)
+                            + Math.pow(start.getY() - end.getY(), 2)
+                            + Math.pow(start.getZ() - end.getZ(), 2)
+            );
+            int steps = Math.max(2, (int) Math.ceil(distance / stepResolution));
+            for (int s = 0; s <= steps; s++) {
+                double t = s / (double) steps;
+                double x = lerp(start.getX(), end.getX(), t);
+                double y = lerp(start.getY(), end.getY(), t);
+                double z = lerp(start.getZ(), end.getZ(), t);
+                float yaw = (float) lerp(start.getYaw(), end.getYaw(), t);
+                float pitch = (float) lerp(start.getPitch(), end.getPitch(), t);
+                timeline.add(new CutscenePoint(x, y, z, yaw, pitch));
+            }
+        }
+        return timeline;
+    }
+
+    private double lerp(double start, double end, double t) {
+        return start + (end - start) * t;
     }
 
     private static double getNumber(java.util.Map<?, ?> map, String key) {
