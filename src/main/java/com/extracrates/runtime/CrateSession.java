@@ -288,7 +288,9 @@ public class CrateSession {
     }
 
     private void executeReward() {
-        for (Reward reward : rewards) {
+        if (isQaMode()) {
+            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
+        } else {
             player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
             ItemStack item = ItemUtil.buildItem(reward);
             player.getInventory().addItem(item);
@@ -297,53 +299,6 @@ public class CrateSession {
                 String parsed = command.replace("%player%", player.getName());
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
-            if (reward.getMessage() != null && (!reward.getMessage().getTitle().isEmpty() || !reward.getMessage().getSubtitle().isEmpty())) {
-                player.showTitle(net.kyori.adventure.title.Title.title(
-                        TextUtil.color(reward.getMessage().getTitle()),
-                        TextUtil.color(reward.getMessage().getSubtitle())
-                ));
-            }
-            if (reward.getEffects() != null) {
-                if (!reward.getEffects().getSound().isEmpty()) {
-                    try {
-                        Sound sound = Sound.valueOf(reward.getEffects().getSound().toUpperCase(Locale.ROOT));
-                        player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
-                    } catch (IllegalArgumentException ignored) {
-                    }
-                }
-                if (!reward.getEffects().getParticles().isEmpty()) {
-                    try {
-                        Particle particle = Particle.valueOf(reward.getEffects().getParticles().toUpperCase(Locale.ROOT));
-                        player.getWorld().spawnParticle(particle, player.getLocation(), 20, 0.2, 0.2, 0.2, 0.01);
-                    } catch (IllegalArgumentException ignored) {
-                    }
-                }
-            }
-        }
-    }
-
-    private Reward getCurrentReward() {
-        if (rewards == null || rewards.isEmpty()) {
-            return null;
-        }
-        int clamped = Math.min(rewardIndex, rewards.size() - 1);
-        return rewards.get(clamped);
-    }
-
-    private void configureRewardSequence(int totalTicks) {
-        rewardIndex = 0;
-        if (rewards == null || rewards.size() <= 1) {
-            rewardSwitchTicks = 0;
-            nextRewardSwitchTick = 0;
-            return;
-        }
-        rewardSwitchTicks = Math.max(1L, totalTicks / rewards.size());
-        nextRewardSwitchTick = rewardSwitchTicks;
-    }
-
-    private void updateRewardSequence(long elapsedTicks) {
-        if (rewardSwitchTicks <= 0 || rewards == null) {
-            return;
         }
         if (rewardIndex >= rewards.size() - 1) {
             return;
@@ -368,6 +323,10 @@ public class CrateSession {
             String name = format.replace("%reward_name%", reward.getDisplayName());
             hologram.text(TextUtil.color(name));
         }
+    }
+
+    private boolean isQaMode() {
+        return configLoader.getMainConfig().getBoolean("qa-mode", false);
     }
 
     public void end() {
