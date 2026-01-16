@@ -51,10 +51,10 @@ public class SessionManager {
     }
 
     public boolean openCrate(Player player, CrateDefinition crate) {
-        return openCrate(player, crate, OpenMode.REWARD_ONLY);
+        return openCrate(player, crate, false);
     }
 
-    public boolean openCrate(Player player, CrateDefinition crate, OpenMode openMode) {
+    public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(languageManager.getMessage("session.already-in-progress"));
             return false;
