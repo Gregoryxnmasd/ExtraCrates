@@ -110,18 +110,18 @@ public class CutscenePath {
             CutscenePoint start = points.get(i);
             CutscenePoint end = points.get(i + 1);
             double distance = Math.sqrt(
-                    Math.pow(start.getX() - end.getX(), 2)
-                            + Math.pow(start.getY() - end.getY(), 2)
-                            + Math.pow(start.getZ() - end.getZ(), 2)
+                    Math.pow(start.x() - end.x(), 2)
+                            + Math.pow(start.y() - end.y(), 2)
+                            + Math.pow(start.z() - end.z(), 2)
             );
             int steps = Math.max(2, (int) Math.ceil(distance / stepResolution));
             for (int s = 0; s <= steps; s++) {
                 double t = s / (double) steps;
-                double x = lerp(start.getX(), end.getX(), t);
-                double y = lerp(start.getY(), end.getY(), t);
-                double z = lerp(start.getZ(), end.getZ(), t);
-                float yaw = (float) lerp(start.getYaw(), end.getYaw(), t);
-                float pitch = (float) lerp(start.getPitch(), end.getPitch(), t);
+                double x = lerp(start.x(), end.x(), t);
+                double y = lerp(start.y(), end.y(), t);
+                double z = lerp(start.z(), end.z(), t);
+                float yaw = (float) lerp(start.yaw(), end.yaw(), t);
+                float pitch = (float) lerp(start.pitch(), end.pitch(), t);
                 timeline.add(new CutscenePoint(x, y, z, yaw, pitch));
             }
         }

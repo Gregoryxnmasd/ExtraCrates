@@ -57,11 +57,10 @@ public class CrateGui implements Listener {
             ItemStack item = new ItemStack(Material.CHEST);
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
-                meta.displayName(TextUtil.color(crate.getDisplayName()));
+                meta.displayName(TextUtil.color(crate.displayName()));
                 List<Component> lore = new ArrayList<>();
-                lore.add(Component.text("ID: ").append(Component.text(crate.getId())));
-                lore.add(Component.text("Tipo: ").append(Component.text(crate.getType().name())));
-                meta.getPersistentDataContainer().set(crateKey, PersistentDataType.STRING, crate.getId());
+                lore.add(Component.text("ID: ").append(Component.text(crate.id())));
+                lore.add(Component.text("Tipo: ").append(Component.text(crate.type().name())));
                 meta.lore(lore);
                 item.setItemMeta(meta);
             }

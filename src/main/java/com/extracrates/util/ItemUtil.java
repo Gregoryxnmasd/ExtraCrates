@@ -24,28 +24,24 @@ public final class ItemUtil {
     }
 
     public static ItemStack buildItem(Reward reward, World world, ConfigLoader configLoader, MapImageCache mapImageCache) {
-        String itemName = reward.getItem();
-        Material material = itemName != null
-                ? Material.matchMaterial(itemName.toUpperCase(Locale.ROOT))
-                : null;
+        Material material = Material.matchMaterial(reward.item().toUpperCase(Locale.ROOT));
         if (material == null) {
             material = Material.STONE;
         }
-        ItemStack item = new ItemStack(material, Math.max(1, reward.getAmount()));
+        ItemStack item = new ItemStack(material, Math.max(1, reward.amount()));
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             SettingsSnapshot settings = configLoader != null ? configLoader.getSettings() : null;
-            String displayName = reward.getDisplayName();
-            meta.displayName(TextUtil.color(displayName != null ? displayName : ""));
+            meta.displayName(TextUtil.color(reward.displayName()));
             applyResourcepackModel(reward, meta, settings, configLoader);
-            for (Map.Entry<String, Integer> entry : reward.getEnchantments().entrySet()) {
-                Enchantment enchantment = Registry.ENCHANTMENT.get(NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT)));
+            for (Map.Entry<String, Integer> entry : reward.enchantments().entrySet()) {
+                Enchantment enchantment = Enchantment.getByKey(org.bukkit.NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT)));
                 if (enchantment != null) {
                     meta.addEnchant(enchantment, entry.getValue(), true);
                 }
             }
-            if (reward.isGlow()) {
-                Enchantment glowEnchant = Registry.ENCHANTMENT.get(NamespacedKey.minecraft("luck_of_the_sea"));
+            if (reward.glow()) {
+                Enchantment glowEnchant = Enchantment.getByKey(NamespacedKey.minecraft("luck_of_the_sea"));
                 if (glowEnchant != null) {
                     meta.addEnchant(glowEnchant, 1, true);
                 }
@@ -71,7 +67,7 @@ public final class ItemUtil {
         if (material != Material.FILLED_MAP) {
             return;
         }
-        String mapImage = reward.getMapImage();
+        String mapImage = reward.mapImage();
         if (mapImage == null || mapImage.isBlank()) {
             return;
         }
@@ -101,7 +97,7 @@ public final class ItemUtil {
         if (settings == null || !settings.getResourcepack().useCustomModelData()) {
             return;
         }
-        String customModel = reward.getCustomModel();
+        String customModel = reward.customModel();
         if (customModel == null || customModel.isBlank()) {
             return;
         }

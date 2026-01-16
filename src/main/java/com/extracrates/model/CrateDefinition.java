@@ -5,108 +5,35 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 
-public class CrateDefinition {
-    private final String id;
-    private final String displayName;
-    private final CrateType type;
-    private final String openMode;
-    private final String keyModel;
-    private final Material keyMaterial;
-    private final int cooldownSeconds;
-    private final double cost;
-    private final String permission;
-    private final Location cameraStart;
-    private final Location rewardAnchor;
-    private final AnimationSettings animation;
-    private final CutsceneSettings cutsceneSettings;
-    private final String rewardsPool;
-
-    public CrateDefinition(
-            String id,
-            String displayName,
-            CrateType type,
-            String openMode,
-            String keyModel,
-            Material keyMaterial,
-            int cooldownSeconds,
-            double cost,
-            String permission,
-            Location cameraStart,
-            Location rewardAnchor,
-            AnimationSettings animation,
-            CutsceneSettings cutsceneSettings,
-            String rewardsPool
-    ) {
-        this.id = id;
-        this.displayName = displayName;
-        this.type = type;
-        this.openMode = openMode;
-        this.keyModel = keyModel;
-        this.keyMaterial = keyMaterial;
-        this.cooldownSeconds = cooldownSeconds;
-        this.cost = cost;
-        this.permission = permission;
-        this.cameraStart = cameraStart;
-        this.rewardAnchor = rewardAnchor;
-        this.animation = animation;
-        this.cutsceneSettings = cutsceneSettings;
-        this.rewardsPool = rewardsPool;
+public record CrateDefinition(
+        String id,
+        String displayName,
+        CrateType type,
+        String openMode,
+        String keyModel,
+        Material keyMaterial,
+        int cooldownSeconds,
+        double cost,
+        String permission,
+        Location cameraStart,
+        Location rewardAnchor,
+        AnimationSettings animation,
+        CutsceneSettings cutsceneSettings,
+        String rewardsPool
+) {
+    public CrateDefinition {
+        cameraStart = cameraStart == null ? null : cameraStart.clone();
+        rewardAnchor = rewardAnchor == null ? null : rewardAnchor.clone();
     }
 
-    public String getId() {
-        return id;
+    @Override
+    public Location cameraStart() {
+        return cameraStart == null ? null : cameraStart.clone();
     }
 
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public CrateType getType() {
-        return type;
-    }
-
-    public String getOpenMode() {
-        return openMode;
-    }
-
-    public String getKeyModel() {
-        return keyModel;
-    }
-
-    public Material getKeyMaterial() {
-        return keyMaterial;
-    }
-
-    public int getCooldownSeconds() {
-        return cooldownSeconds;
-    }
-
-    public double getCost() {
-        return cost;
-    }
-
-    public String getPermission() {
-        return permission;
-    }
-
-    public Location getCameraStart() {
-        return cameraStart;
-    }
-
-    public Location getRewardAnchor() {
-        return rewardAnchor;
-    }
-
-    public AnimationSettings getAnimation() {
-        return animation;
-    }
-
-    public CutsceneSettings getCutsceneSettings() {
-        return cutsceneSettings;
-    }
-
-    public String getRewardsPool() {
-        return rewardsPool;
+    @Override
+    public Location rewardAnchor() {
+        return rewardAnchor == null ? null : rewardAnchor.clone();
     }
 
     public static CrateDefinition fromSection(String id, ConfigurationSection section, ConfigurationSection defaults) {
@@ -181,47 +108,13 @@ public class CrateDefinition {
         );
     }
 
-    public static class AnimationSettings {
-        private final String path;
-        private final String rewardModel;
-        private final String hologramFormat;
-        private final RewardFloatSettings rewardFloatSettings;
-        private final RewardDisplaySettings rewardDisplaySettings;
-
-        public AnimationSettings(
-                String path,
-                String rewardModel,
-                String hologramFormat,
-                RewardFloatSettings rewardFloatSettings,
-                RewardDisplaySettings rewardDisplaySettings
-        ) {
-            this.path = path;
-            this.rewardModel = rewardModel;
-            this.hologramFormat = hologramFormat;
-            this.rewardFloatSettings = rewardFloatSettings;
-            this.rewardDisplaySettings = rewardDisplaySettings;
-        }
-
-        public String getPath() {
-            return path;
-        }
-
-        public String getRewardModel() {
-            return rewardModel;
-        }
-
-        public String getHologramFormat() {
-            return hologramFormat;
-        }
-
-        public RewardFloatSettings getRewardFloatSettings() {
-            return rewardFloatSettings;
-        }
-
-        public RewardDisplaySettings getRewardDisplaySettings() {
-            return rewardDisplaySettings;
-        }
-
+    public record AnimationSettings(
+            String path,
+            String rewardModel,
+            String hologramFormat,
+            RewardFloatSettings rewardFloatSettings,
+            RewardDisplaySettings rewardDisplaySettings
+    ) {
         public static AnimationSettings fromSection(ConfigurationSection section) {
             if (section == null) {
                 return new AnimationSettings(
@@ -241,29 +134,7 @@ public class CrateDefinition {
         }
     }
 
-    public static class RewardFloatSettings {
-        private final double height;
-        private final double spinSpeed;
-        private final boolean bobbing;
-
-        public RewardFloatSettings(double height, double spinSpeed, boolean bobbing) {
-            this.height = height;
-            this.spinSpeed = spinSpeed;
-            this.bobbing = bobbing;
-        }
-
-        public double getHeight() {
-            return height;
-        }
-
-        public double getSpinSpeed() {
-            return spinSpeed;
-        }
-
-        public boolean isBobbing() {
-            return bobbing;
-        }
-
+    public record RewardFloatSettings(double height, double spinSpeed, boolean bobbing) {
         public static RewardFloatSettings fromSection(ConfigurationSection section) {
             if (section == null) {
                 return new RewardFloatSettings(0.8, 2.0, true);
@@ -276,35 +147,7 @@ public class CrateDefinition {
         }
     }
 
-    public static class CutsceneSettings {
-        private final String overlayModel;
-        private final boolean lockMovement;
-        private final boolean hideHud;
-        private final MusicSettings musicSettings;
-
-        public CutsceneSettings(String overlayModel, boolean lockMovement, boolean hideHud, MusicSettings musicSettings) {
-            this.overlayModel = overlayModel;
-            this.lockMovement = lockMovement;
-            this.hideHud = hideHud;
-            this.musicSettings = musicSettings;
-        }
-
-        public String getOverlayModel() {
-            return overlayModel;
-        }
-
-        public boolean isLockMovement() {
-            return lockMovement;
-        }
-
-        public boolean isHideHud() {
-            return hideHud;
-        }
-
-        public MusicSettings getMusicSettings() {
-            return musicSettings;
-        }
-
+    public record CutsceneSettings(String overlayModel, boolean lockMovement, boolean hideHud, MusicSettings musicSettings) {
         public static CutsceneSettings fromSections(ConfigurationSection section, ConfigurationSection defaults) {
             String overlayModel = readString(section, "overlay-model", defaults, "overlay-model", "pumpkin-model", "");
             boolean lockMovement = readBoolean(section, "locks.movement", defaults, "locks.movement", true);
@@ -342,47 +185,7 @@ public class CrateDefinition {
         }
     }
 
-    public static class MusicSettings {
-        private final String sound;
-        private final float volume;
-        private final float pitch;
-        private final int fadeInTicks;
-        private final int fadeOutTicks;
-        private final String category;
-
-        public MusicSettings(String sound, float volume, float pitch, int fadeInTicks, int fadeOutTicks, String category) {
-            this.sound = sound;
-            this.volume = volume;
-            this.pitch = pitch;
-            this.fadeInTicks = fadeInTicks;
-            this.fadeOutTicks = fadeOutTicks;
-            this.category = category;
-        }
-
-        public String getSound() {
-            return sound;
-        }
-
-        public float getVolume() {
-            return volume;
-        }
-
-        public float getPitch() {
-            return pitch;
-        }
-
-        public int getFadeInTicks() {
-            return fadeInTicks;
-        }
-
-        public int getFadeOutTicks() {
-            return fadeOutTicks;
-        }
-
-        public String getCategory() {
-            return category;
-        }
-
+    public record MusicSettings(String sound, float volume, float pitch, int fadeInTicks, int fadeOutTicks, String category) {
         public static MusicSettings fromSections(ConfigurationSection section, ConfigurationSection defaults) {
             String sound = readString(section, "sound", defaults, "sound", "");
             if (sound == null || sound.isEmpty()) {

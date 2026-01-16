@@ -3,30 +3,11 @@ package com.extracrates.model;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-public class RewardPool {
-    private final String id;
-    private final int rollCount;
-    private final List<Reward> rewards;
-
-    public RewardPool(String id, int rollCount, List<Reward> rewards) {
-        this.id = id;
-        this.rollCount = rollCount;
-        this.rewards = rewards;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public int getRollCount() {
-        return rollCount;
-    }
-
-    public List<Reward> getRewards() {
-        return Collections.unmodifiableList(rewards);
+public record RewardPool(String id, int rollCount, List<Reward> rewards) {
+    public RewardPool {
+        rewards = rewards == null ? List.of() : List.copyOf(rewards);
     }
 
     public static RewardPool fromSection(String id, ConfigurationSection section) {
