@@ -17,6 +17,11 @@ La estructura está preparada para escalar y adaptarse a proxies en el futuro.
 ```bash
 mvn clean package
 ```
+ProtocolLib se descarga desde el repositorio público de dmulloy2 configurado en el `pom.xml`.
+Si Maven mantiene en caché una resolución fallida, fuerza la actualización de dependencias con:
+```bash
+mvn -U clean package
+```
 El artefacto resultante se generará en `target/extracrates-<version>.jar`.
 
 ## Próximos pasos sugeridos
