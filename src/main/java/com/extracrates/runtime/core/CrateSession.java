@@ -6,6 +6,7 @@ import com.extracrates.config.LanguageManager;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.runtime.CameraEntityFactory;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
