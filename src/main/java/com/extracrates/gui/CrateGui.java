@@ -96,20 +96,8 @@ public class CrateGui implements Listener {
             open(player, holder.pageIndex() - 1);
             return;
         }
-        if (slot == NEXT_PAGE_SLOT) {
-            open(player, holder.pageIndex() + 1);
-            return;
-        }
-        if (slot >= PAGE_SIZE) {
-            return;
-        }
-        List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
-        int crateIndex = holder.pageIndex() * PAGE_SIZE + slot;
-        if (crateIndex >= crates.size()) {
-            return;
-        }
-        CrateDefinition crate = crates.get(crateIndex);
-        sessionManager.openCrate(player, crate);
+        CrateDefinition crate = crates.get(slot);
+        sessionManager.openCrate(player, crate, false);
         player.closeInventory();
     }
 

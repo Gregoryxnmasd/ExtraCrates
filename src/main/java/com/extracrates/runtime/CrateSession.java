@@ -7,6 +7,7 @@ import com.extracrates.hologram.HologramSettings;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
+import com.extracrates.util.CutsceneTimeline;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
 import org.bukkit.*;
@@ -31,15 +32,15 @@ public class CrateSession {
     private final CutscenePath path;
     private final boolean grantReward;
     private final SessionManager sessionManager;
-    private final HologramSettings hologramSettings;
+    private final boolean preview;
 
     private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
     private TextDisplay hologram;
     private BukkitRunnable task;
-    private int rewardIndex;
-    private long rewardSwitchTicks;
-    private long nextRewardSwitchTick;
+    private Location rewardBaseLocation;
+    private Location hologramBaseLocation;
+    private org.bukkit.util.Transformation rewardBaseTransform;
 
     private GameMode previousGameMode;
     private UUID speedModifierUuid;
@@ -66,7 +67,7 @@ public class CrateSession {
         this.path = path;
         this.grantReward = grantReward;
         this.sessionManager = sessionManager;
-        this.hologramSettings = sessionManager.getHologramSettings();
+        this.preview = preview;
     }
 
     public void start() {
@@ -84,8 +85,10 @@ public class CrateSession {
     }
 
     private void spawnCamera(Location start) {
-        CameraEntityFactory factory = new CameraEntityFactory(configLoader);
-        cameraEntity = factory.spawn(start);
+        FileConfiguration config = configLoader.getMainConfig();
+        String cameraEntityType = config.getString("cutscene.camera-entity", "armorstand");
+        boolean armorStandInvisible = config.getBoolean("cutscene.armorstand-invisible", true);
+        cameraEntity = CameraEntityFactory.spawn(start, cameraEntityType, armorStandInvisible);
         hideFromOthers(cameraEntity);
     }
 
@@ -147,7 +150,13 @@ public class CrateSession {
             display.setItemStack(displayItem);
         });
         hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
-            String format = crate.getAnimation().getHologramFormat();
+            String format = reward.getHologram();
+            if (format == null || format.isEmpty()) {
+                format = crate.getAnimation().getHologramFormat();
+            }
+            if (format == null || format.isEmpty()) {
+                format = "%reward_name%";
+            }
             String name = format.replace("%reward_name%", reward.getDisplayName());
             display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
             display.setBillboard(Display.Billboard.CENTER);
@@ -155,6 +164,10 @@ public class CrateSession {
 
         hideFromOthers(rewardDisplay);
         hideFromOthers(hologram);
+
+        rewardBaseLocation = rewardDisplay.getLocation().clone();
+        hologramBaseLocation = hologram.getLocation().clone();
+        rewardBaseTransform = rewardDisplay.getTransformation();
     }
 
     private void hideFromOthers(Entity entity) {
@@ -176,12 +189,10 @@ public class CrateSession {
         List<Location> timeline = buildTimeline(cameraEntity.getWorld(), path);
         task = new BukkitRunnable() {
             int index = 0;
-            double rotation = 0;
-            long elapsedTicks = 0;
 
             @Override
             public void run() {
-                if (index >= timeline.size()) {
+                if (tick > totalTicks) {
                     cancel();
                     finish();
                     return;
@@ -190,155 +201,112 @@ public class CrateSession {
                 cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
 
-                if (rewardRenderer != null) {
-                    rewardRenderer.tick();
+    private TimelineData buildTimeline(World world, CutscenePath path) {
+        List<TimelinePoint> timeline = new ArrayList<>();
+        List<com.extracrates.model.CutscenePoint> points = path.getPoints();
+        String smoothing = path.getSmoothing() == null ? "linear" : path.getSmoothing().trim().toLowerCase(Locale.ROOT);
+        boolean useCatmullRom = smoothing.equals("catmull-rom") || smoothing.equals("catmullrom");
+        for (int i = 0; i < points.size() - 1; i++) {
+            com.extracrates.model.CutscenePoint start = points.get(i);
+            com.extracrates.model.CutscenePoint end = points.get(i + 1);
+            Location startLoc = new Location(world, start.getX(), start.getY(), start.getZ(), start.getYaw(), start.getPitch());
+            Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ(), end.getYaw(), end.getPitch());
+            double distance = startLoc.distance(endLoc);
+            int steps = Math.max(2, (int) Math.ceil(distance / path.getStepResolution()));
+            com.extracrates.model.CutscenePoint prev = i > 0 ? points.get(i - 1) : start;
+            com.extracrates.model.CutscenePoint next = (i + 2) < points.size() ? points.get(i + 2) : end;
+            for (int s = 0; s <= steps; s++) {
+                double t = s / (double) steps;
+                double x;
+                double y;
+                double z;
+                float yaw;
+                float pitch;
+                if (useCatmullRom) {
+                    x = catmullRom(prev.getX(), start.getX(), end.getX(), next.getX(), t);
+                    y = catmullRom(prev.getY(), start.getY(), end.getY(), next.getY(), t);
+                    z = catmullRom(prev.getZ(), start.getZ(), end.getZ(), next.getZ(), t);
+                    yaw = (float) catmullRom(prev.getYaw(), start.getYaw(), end.getYaw(), next.getYaw(), t);
+                    pitch = (float) catmullRom(prev.getPitch(), start.getPitch(), end.getPitch(), next.getPitch(), t);
+                } else {
+                    x = lerp(startLoc.getX(), endLoc.getX(), t);
+                    y = lerp(startLoc.getY(), endLoc.getY(), t);
+                    z = lerp(startLoc.getZ(), endLoc.getZ(), t);
+                    yaw = (float) lerp(startLoc.getYaw(), endLoc.getYaw(), t);
+                    pitch = (float) lerp(startLoc.getPitch(), endLoc.getPitch(), t);
                 }
+                timeline.add(new Location(world, x, y, z, yaw, pitch));
             }
-        };
-        task.runTaskTimer(plugin, 0L, period);
+            distanceSoFar += distance;
+        }
+        return new TimelineData(timeline, totalDistance);
     }
 
-    private void scheduleTimeout() {
-        long maxDurationTicks = Math.max(0L, configLoader.getMainConfig().getLong("sessions.max-duration-ticks", 600L));
-        if (maxDurationTicks == 0L) {
-            return;
-        }
-        timeoutTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                end();
-            }
-        };
-        timeoutTask.runTaskLater(plugin, maxDurationTicks);
+    private double lerp(double start, double end, double t) {
+        return start + (end - start) * t;
     }
 
     private List<Location> buildTimeline(World world, CutscenePath path) {
         List<Location> timeline = new ArrayList<>();
         List<com.extracrates.model.CutscenePoint> points = path.getPoints();
-        if (points.size() < 2) {
-            return timeline;
-        }
-
-        boolean useCatmullRom = "catmull-rom".equalsIgnoreCase(path.getSmoothing());
-        List<Double> segmentDistances = new ArrayList<>();
-        double totalDistance = 0.0;
+        String smoothing = resolveSmoothing(path);
         for (int i = 0; i < points.size() - 1; i++) {
-            double distance = estimateSegmentDistance(points, i, useCatmullRom);
-            segmentDistances.add(distance);
-            totalDistance += distance;
-        }
-
-        int totalIntervals = 0;
-        if (path.isConstantSpeed() && totalDistance > 0) {
-            totalIntervals = Math.max(1, (int) Math.ceil(totalDistance / path.getStepResolution()));
-        }
-
-        int remainingIntervals = totalIntervals;
-        double remainingDistance = totalDistance;
-        for (int i = 0; i < points.size() - 1; i++) {
-            int intervals;
-            double segmentDistance = segmentDistances.get(i);
-            if (path.isConstantSpeed() && totalDistance > 0) {
-                int remainingSegments = (points.size() - 1) - i;
-                int maxAlloc = remainingIntervals - (remainingSegments - 1);
-                double ratio = remainingDistance > 0 ? (segmentDistance / remainingDistance) : 0.0;
-                intervals = Math.max(1, (int) Math.round(remainingIntervals * ratio));
-                intervals = Math.min(maxAlloc, intervals);
-                remainingIntervals -= intervals;
-                remainingDistance -= segmentDistance;
-            } else {
-                intervals = Math.max(1, (int) Math.ceil(segmentDistance / path.getStepResolution()));
-            }
-
-            for (int s = 0; s <= intervals; s++) {
-                if (i > 0 && s == 0) {
-                    continue;
-                }
-                double t = s / (double) intervals;
-                com.extracrates.model.CutscenePoint p1 = points.get(i);
-                com.extracrates.model.CutscenePoint p2 = points.get(i + 1);
-                if (useCatmullRom) {
-                    com.extracrates.model.CutscenePoint p0 = points.get(Math.max(0, i - 1));
-                    com.extracrates.model.CutscenePoint p3 = points.get(Math.min(points.size() - 1, i + 2));
-                    double x = catmullRom(p0.getX(), p1.getX(), p2.getX(), p3.getX(), t);
-                    double y = catmullRom(p0.getY(), p1.getY(), p2.getY(), p3.getY(), t);
-                    double z = catmullRom(p0.getZ(), p1.getZ(), p2.getZ(), p3.getZ(), t);
-                    float yaw = (float) catmullRom(p0.getYaw(), p1.getYaw(), p2.getYaw(), p3.getYaw(), t);
-                    float pitch = (float) catmullRom(p0.getPitch(), p1.getPitch(), p2.getPitch(), p3.getPitch(), t);
-                    timeline.add(new Location(world, x, y, z, yaw, pitch));
-                } else {
-                    double x = lerp(p1.getX(), p2.getX(), t);
-                    double y = lerp(p1.getY(), p2.getY(), t);
-                    double z = lerp(p1.getZ(), p2.getZ(), t);
-                    float yaw = (float) lerp(p1.getYaw(), p2.getYaw(), t);
-                    float pitch = (float) lerp(p1.getPitch(), p2.getPitch(), t);
-                    timeline.add(new Location(world, x, y, z, yaw, pitch));
-                }
+            com.extracrates.model.CutscenePoint start = points.get(i);
+            com.extracrates.model.CutscenePoint end = points.get(i + 1);
+            Location startLoc = new Location(world, start.getX(), start.getY(), start.getZ(), start.getYaw(), start.getPitch());
+            Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ(), end.getYaw(), end.getPitch());
+            double distance = startLoc.distance(endLoc);
+            int steps = Math.max(2, (int) Math.ceil(distance / path.getStepResolution()));
+            for (int s = 0; s <= steps; s++) {
+                double t = s / (double) steps;
+                double eased = applyEasing(t, smoothing);
+                double x = lerp(startLoc.getX(), endLoc.getX(), eased);
+                double y = lerp(startLoc.getY(), endLoc.getY(), eased);
+                double z = lerp(startLoc.getZ(), endLoc.getZ(), eased);
+                float yaw = lerpAngle(startLoc.getYaw(), endLoc.getYaw(), eased);
+                float pitch = lerpAngle(startLoc.getPitch(), endLoc.getPitch(), eased);
+                timeline.add(new Location(world, x, y, z, yaw, pitch));
             }
         }
         return timeline;
     }
 
-    private double estimateSegmentDistance(List<com.extracrates.model.CutscenePoint> points, int index, boolean useCatmullRom) {
-        com.extracrates.model.CutscenePoint p1 = points.get(index);
-        com.extracrates.model.CutscenePoint p2 = points.get(index + 1);
-        if (!useCatmullRom) {
-            double dx = p2.getX() - p1.getX();
-            double dy = p2.getY() - p1.getY();
-            double dz = p2.getZ() - p1.getZ();
-            return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    private String resolveSmoothing(CutscenePath path) {
+        String smoothing = path.getSmoothing();
+        if (smoothing == null || smoothing.isBlank()) {
+            smoothing = "linear";
         }
-        com.extracrates.model.CutscenePoint p0 = points.get(Math.max(0, index - 1));
-        com.extracrates.model.CutscenePoint p3 = points.get(Math.min(points.size() - 1, index + 2));
-        int samples = 12;
-        double distance = 0.0;
-        double lastX = p1.getX();
-        double lastY = p1.getY();
-        double lastZ = p1.getZ();
-        for (int s = 1; s <= samples; s++) {
-            double t = s / (double) samples;
-            double x = catmullRom(p0.getX(), p1.getX(), p2.getX(), p3.getX(), t);
-            double y = catmullRom(p0.getY(), p1.getY(), p2.getY(), p3.getY(), t);
-            double z = catmullRom(p0.getZ(), p1.getZ(), p2.getZ(), p3.getZ(), t);
-            double dx = x - lastX;
-            double dy = y - lastY;
-            double dz = z - lastZ;
-            distance += Math.sqrt(dx * dx + dy * dy + dz * dz);
-            lastX = x;
-            lastY = y;
-            lastZ = z;
-        }
-        return distance;
+        return smoothing;
     }
 
-    private double catmullRom(double p0, double p1, double p2, double p3, double t) {
-        double t2 = t * t;
-        double t3 = t2 * t;
-        return 0.5 * ((2.0 * p1)
-                + (-p0 + p2) * t
-                + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
-                + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3);
-    }
-
-    private void spawnPathPreview(List<Location> timeline, CutscenePath path) {
-        if (timeline.isEmpty()) {
-            return;
-        }
-        String preview = path.getParticlePreview();
-        if (preview == null || preview.isEmpty()) {
-            return;
-        }
-        try {
-            Particle particle = Particle.valueOf(preview.toUpperCase(Locale.ROOT));
-            for (Location point : timeline) {
-                player.spawnParticle(particle, point, 1, 0.0, 0.0, 0.0, 0.0);
-            }
-        } catch (IllegalArgumentException ignored) {
-        }
+    private double applyEasing(double t, String smoothing) {
+        String mode = smoothing == null ? "linear" : smoothing.trim().toLowerCase(Locale.ROOT);
+        return switch (mode) {
+            case "ease-in", "ease_in", "in" -> t * t;
+            case "ease-out", "ease_out", "out" -> 1 - Math.pow(1 - t, 2);
+            case "ease-in-out", "ease_in_out", "in-out", "smoothstep", "catmull-rom" -> t * t * (3 - 2 * t);
+            default -> t;
+        };
     }
 
     private double lerp(double start, double end, double t) {
         return start + (end - start) * t;
+    }
+
+    private float lerpAngle(float start, float end, double t) {
+        float delta = wrapDegrees(end - start);
+        return start + (float) (delta * t);
+    }
+
+    private float wrapDegrees(float angle) {
+        float wrapped = angle % 360.0f;
+        if (wrapped >= 180.0f) {
+            wrapped -= 360.0f;
+        }
+        if (wrapped < -180.0f) {
+            wrapped += 360.0f;
+        }
+        return wrapped;
     }
 
     private void finish() {
@@ -349,7 +317,9 @@ public class CrateSession {
     }
 
     private void executeReward() {
-        for (Reward reward : rewards) {
+        if (isQaMode()) {
+            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
+        } else {
             player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
             ItemStack item = ItemUtil.buildItem(reward);
             player.getInventory().addItem(item);
@@ -358,53 +328,6 @@ public class CrateSession {
                 String parsed = command.replace("%player%", player.getName());
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
-            if (reward.getMessage() != null && (!reward.getMessage().getTitle().isEmpty() || !reward.getMessage().getSubtitle().isEmpty())) {
-                player.showTitle(net.kyori.adventure.title.Title.title(
-                        TextUtil.color(reward.getMessage().getTitle()),
-                        TextUtil.color(reward.getMessage().getSubtitle())
-                ));
-            }
-            if (reward.getEffects() != null) {
-                if (!reward.getEffects().getSound().isEmpty()) {
-                    try {
-                        Sound sound = Sound.valueOf(reward.getEffects().getSound().toUpperCase(Locale.ROOT));
-                        player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
-                    } catch (IllegalArgumentException ignored) {
-                    }
-                }
-                if (!reward.getEffects().getParticles().isEmpty()) {
-                    try {
-                        Particle particle = Particle.valueOf(reward.getEffects().getParticles().toUpperCase(Locale.ROOT));
-                        player.getWorld().spawnParticle(particle, player.getLocation(), 20, 0.2, 0.2, 0.2, 0.01);
-                    } catch (IllegalArgumentException ignored) {
-                    }
-                }
-            }
-        }
-    }
-
-    private Reward getCurrentReward() {
-        if (rewards == null || rewards.isEmpty()) {
-            return null;
-        }
-        int clamped = Math.min(rewardIndex, rewards.size() - 1);
-        return rewards.get(clamped);
-    }
-
-    private void configureRewardSequence(int totalTicks) {
-        rewardIndex = 0;
-        if (rewards == null || rewards.size() <= 1) {
-            rewardSwitchTicks = 0;
-            nextRewardSwitchTick = 0;
-            return;
-        }
-        rewardSwitchTicks = Math.max(1L, totalTicks / rewards.size());
-        nextRewardSwitchTick = rewardSwitchTicks;
-    }
-
-    private void updateRewardSequence(long elapsedTicks) {
-        if (rewardSwitchTicks <= 0 || rewards == null) {
-            return;
         }
         if (rewardIndex >= rewards.size() - 1) {
             return;
@@ -429,6 +352,10 @@ public class CrateSession {
             String name = format.replace("%reward_name%", reward.getDisplayName());
             hologram.text(TextUtil.color(name));
         }
+    }
+
+    private boolean isQaMode() {
+        return configLoader.getMainConfig().getBoolean("qa-mode", false);
     }
 
     public void end() {
