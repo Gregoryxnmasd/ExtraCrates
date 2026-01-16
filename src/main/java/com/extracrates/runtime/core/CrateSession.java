@@ -4,6 +4,7 @@ import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
+import com.extracrates.runtime.CameraEntityFactory;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;

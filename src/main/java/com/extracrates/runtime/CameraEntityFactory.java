@@ -10,11 +10,11 @@ import org.bukkit.entity.TextDisplay;
 
 import java.util.Locale;
 
-final class CameraEntityFactory {
+public final class CameraEntityFactory {
     private CameraEntityFactory() {
     }
 
-    static Entity spawn(Location start, String cameraEntityType, boolean armorStandInvisible) {
+    public static Entity spawn(Location start, String cameraEntityType, boolean armorStandInvisible) {
         String type = cameraEntityType == null ? "armorstand" : cameraEntityType.trim().toLowerCase(Locale.ROOT);
         return switch (type) {
             case "display", "itemdisplay", "item_display" -> start.getWorld().spawn(start, ItemDisplay.class, display -> {
