@@ -9,6 +9,7 @@ import com.extracrates.gui.editor.EditorMenu;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.runtime.SessionManager;
+import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -160,8 +161,10 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     String keyName = languageManager.getRaw("command.key-item-name", java.util.Map.of("crate_name", crate.getDisplayName()));
                     meta.displayName(TextUtil.color(keyName));
                     if (crate.getKeyModel() != null && !crate.getKeyModel().isEmpty()) {
-                        configLoader.getResourcePackRegistry().resolveCustomModelData(crate.getKeyModel())
-                                .ifPresent(meta::setCustomModelData);
+                        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.getKeyModel());
+                        if (modelData >= 0) {
+                            meta.setCustomModelData(modelData);
+                        }
                     }
                     key.setItemMeta(meta);
                 }

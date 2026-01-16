@@ -17,6 +17,7 @@ import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
 import com.extracrates.storage.StorageSettings;
 import com.extracrates.util.RewardSelector;
+import com.extracrates.util.ResourcepackModelResolver;
 import net.kyori.adventure.text.Component;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
@@ -221,7 +222,10 @@ public class SessionManager {
         if (crate.getKeyModel() == null || crate.getKeyModel().isEmpty()) {
             return true;
         }
-        int modelData = parseModel(crate.getKeyModel());
+        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.getKeyModel());
+        if (modelData < 0) {
+            return false;
+        }
         return Arrays.stream(player.getInventory().getContents()).anyMatch(item -> {
             if (item == null || item.getItemMeta() == null) {
                 return false;
@@ -233,20 +237,11 @@ public class SessionManager {
         });
     }
 
-    private int parseModel(String value) {
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException ex) {
-            return -1;
-        }
-    }
-
     private void consumeKey(Player player, CrateDefinition crate) {
-        if (storageEnabled) {
-            storage.consumeKey(player.getUniqueId(), crate.getId());
+        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.getKeyModel());
+        if (modelData < 0) {
             return;
         }
-        int modelData = parseModel(crate.getKeyModel());
         ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {
             ItemStack item = contents[i];
