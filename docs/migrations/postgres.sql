@@ -1,0 +1,31 @@
+CREATE TABLE IF NOT EXISTS crate_cooldowns (
+  player_uuid TEXT NOT NULL,
+  crate_id TEXT NOT NULL,
+  cooldown_at BIGINT NOT NULL,
+  PRIMARY KEY (player_uuid, crate_id)
+);
+
+CREATE TABLE IF NOT EXISTS crate_keys (
+  player_uuid TEXT NOT NULL,
+  crate_id TEXT NOT NULL,
+  amount INT NOT NULL,
+  PRIMARY KEY (player_uuid, crate_id)
+);
+
+CREATE TABLE IF NOT EXISTS crate_opens (
+  id BIGSERIAL PRIMARY KEY,
+  player_uuid TEXT NOT NULL,
+  crate_id TEXT NOT NULL,
+  reward_id TEXT NOT NULL,
+  server_id TEXT NOT NULL,
+  opened_at BIGINT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_crate_opens_player ON crate_opens (player_uuid);
+
+CREATE TABLE IF NOT EXISTS crate_locks (
+  player_uuid TEXT NOT NULL,
+  crate_id TEXT NOT NULL,
+  locked_at BIGINT NOT NULL,
+  PRIMARY KEY (player_uuid, crate_id)
+);
