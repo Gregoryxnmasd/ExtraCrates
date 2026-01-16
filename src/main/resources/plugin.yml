@@ -2,6 +2,7 @@ name: ExtraCrates
 main: com.extracrates.ExtraCratesPlugin
 version: 1.0.0
 api-version: 1.20
+softdepend: [ProtocolLib]
 commands:
   crate:
     description: Comandos principales de ExtraCrates

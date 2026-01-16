@@ -7,7 +7,7 @@ import com.extracrates.command.SyncCommand;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.gui.CrateGui;
-import com.extracrates.logging.RewardLogger;
+import com.extracrates.runtime.ProtocolEntityHider;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.runtime.SessionListener;
 import com.extracrates.sync.SyncBridge;
@@ -19,7 +19,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private SessionManager sessionManager;
     private CrateGui crateGui;
-    private ExtraCratesApi api;
+    private ProtocolEntityHider protocolEntityHider;
 
     @Override
     public void onEnable() {
@@ -35,8 +35,9 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         ConfigValidator validator = new ConfigValidator(this, configLoader);
         validator.report(validator.validate());
 
-        RewardLogger rewardLogger = new RewardLogger(this);
-        sessionManager = new SessionManager(this, configLoader, rewardLogger);
+        protocolEntityHider = ProtocolEntityHider.createIfPresent(this);
+
+        sessionManager = new SessionManager(this, configLoader);
         new SessionListener(this, sessionManager);
         routeEditorManager = new RouteEditorManager(this, configLoader);
         new RouteEditorListener(this, routeEditorManager);
@@ -56,16 +57,12 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         if (sessionManager != null) {
             sessionManager.shutdown();
         }
-        if (syncBridge != null) {
-            syncBridge.shutdown();
+        if (protocolEntityHider != null) {
+            protocolEntityHider.shutdown();
         }
     }
 
-    public LanguageManager getLanguageManager() {
-        return languageManager;
-    }
-
-    public ExtraCratesApi getApi() {
-        return api;
+    public ProtocolEntityHider getProtocolEntityHider() {
+        return protocolEntityHider;
     }
 }

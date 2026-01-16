@@ -144,12 +144,11 @@ public class CrateSession {
         resetVisibility(hologram);
     }
 
-    private void resetVisibility(Entity entity) {
-        if (entity == null) {
+    private void hideFromOthers(Entity entity) {
+        ProtocolEntityHider protocolEntityHider = plugin.getProtocolEntityHider();
+        if (protocolEntityHider != null) {
+            protocolEntityHider.trackEntity(player, entity);
             return;
-        }
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            online.showEntity(plugin, entity);
         }
         for (Player online : Bukkit.getOnlinePlayers()) {
             if (!online.getUniqueId().equals(player.getUniqueId())) {
@@ -296,7 +295,7 @@ public class CrateSession {
             if (!reward.getEffects().getParticles().isEmpty()) {
                 try {
                     Particle particle = Particle.valueOf(reward.getEffects().getParticles().toUpperCase(Locale.ROOT));
-                    player.getWorld().spawnParticle(particle, player.getLocation(), 20, 0.2, 0.2, 0.2, 0.01);
+                    player.spawnParticle(particle, player.getLocation(), 20, 0.2, 0.2, 0.2, 0.01);
                 } catch (IllegalArgumentException ignored) {
                 }
             }
@@ -319,19 +318,29 @@ public class CrateSession {
         if (hologram != null && !hologram.isDead()) {
             sessionManager.getDisplayPool().releaseTextDisplay(hologram);
         }
-        if (spectatorApplied) {
-            if (previousGameMode != null) {
-                player.setGameMode(previousGameMode);
+        ProtocolEntityHider protocolEntityHider = plugin.getProtocolEntityHider();
+        if (protocolEntityHider != null) {
+            if (cameraStand != null) {
+                protocolEntityHider.untrackEntity(cameraStand);
             }
-            player.setSpectatorTarget(null);
-            if (speedModifierUuid != null) {
-                sessionManager.removeSpectatorModifier(player, speedModifierUuid);
+            if (rewardDisplay != null) {
+                protocolEntityHider.untrackEntity(rewardDisplay);
             }
-            if (previousHelmet != null) {
-                player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet);
-            } else {
-                player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
+            if (hologram != null) {
+                protocolEntityHider.untrackEntity(hologram);
             }
+        }
+        if (previousGameMode != null) {
+            player.setGameMode(previousGameMode);
+        }
+        player.setSpectatorTarget(null);
+        if (speedModifierUuid != null) {
+            sessionManager.removeSpectatorModifier(player, speedModifierUuid);
+        }
+        if (previousHelmet != null) {
+            player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet);
+        } else {
+            player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
         }
         sessionManager.removeSession(player.getUniqueId());
     }
