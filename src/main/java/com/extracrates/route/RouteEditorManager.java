@@ -14,6 +14,7 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.logging.Level;
 
 public class RouteEditorManager {
     private final ExtraCratesPlugin plugin;
@@ -110,7 +111,7 @@ public class RouteEditorManager {
             player.sendMessage(Component.text("Ruta '" + session.getPathId() + "' guardada con " + points.size() + " puntos."));
         } catch (IOException ex) {
             player.sendMessage(Component.text("No se pudo guardar paths.yml."));
-            ex.printStackTrace();
+            plugin.getLogger().log(Level.WARNING, "No se pudo guardar paths.yml para la ruta '" + session.getPathId() + "'.", ex);
         }
     }
 
