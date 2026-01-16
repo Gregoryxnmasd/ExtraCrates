@@ -72,7 +72,7 @@ public class DisplayPool {
         if (stand == null || stand.isDead()) {
             return;
         }
-        stand.setCustomName(null);
+        stand.customName(null);
         stand.setCustomNameVisible(false);
         stand.setSilent(true);
         stand.setInvisible(true);
