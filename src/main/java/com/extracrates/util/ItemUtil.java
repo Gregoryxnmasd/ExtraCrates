@@ -2,6 +2,7 @@ package com.extracrates.util;
 
 import com.extracrates.config.SettingsSnapshot;
 import com.extracrates.model.Reward;
+import com.extracrates.resourcepack.ResourcePackRegistry;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
