@@ -2,6 +2,7 @@ package com.extracrates.config;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.cutscene.CutscenePath;
+import com.extracrates.config.SettingsSnapshot;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.RewardPool;
 import org.bukkit.configuration.ConfigurationSection;
@@ -50,6 +51,13 @@ public class ConfigLoader {
 
     public Map<String, CutscenePath> getPaths() {
         return Collections.unmodifiableMap(paths);
+    }
+
+    public SettingsSnapshot getSettings() {
+        if (settings == null) {
+            settings = SettingsSnapshot.fromConfig(getMainConfig());
+        }
+        return settings;
     }
 
     public FileConfiguration getMainConfig() {
@@ -132,5 +140,9 @@ public class ConfigLoader {
                 file.getAbsolutePath(),
                 paths.size()
         ));
+    }
+
+    private void loadSettings() {
+        settings = SettingsSnapshot.fromConfig(getMainConfig());
     }
 }
