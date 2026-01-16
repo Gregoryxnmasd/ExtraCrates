@@ -5,8 +5,7 @@ import com.extracrates.command.SyncCommand;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.gui.CrateGui;
-import com.extracrates.route.RouteEditorListener;
-import com.extracrates.route.RouteEditorManager;
+import com.extracrates.logging.RewardLogger;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.runtime.SessionListener;
 import com.extracrates.sync.SyncBridge;
@@ -34,10 +33,8 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         ConfigValidator validator = new ConfigValidator(this, configLoader);
         validator.report(validator.validate());
 
-        languageManager = new LanguageManager(this);
-        languageManager.load();
-
-        sessionManager = new SessionManager(this, configLoader, languageManager);
+        RewardLogger rewardLogger = new RewardLogger(this);
+        sessionManager = new SessionManager(this, configLoader, rewardLogger);
         new SessionListener(this, sessionManager);
         routeEditorManager = new RouteEditorManager(this, configLoader);
         new RouteEditorListener(this, routeEditorManager);
