@@ -1,11 +1,12 @@
 package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
+import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.Map;
@@ -32,13 +33,13 @@ public class EditorInputManager implements Listener {
     }
 
     @EventHandler
-    public void onChat(AsyncPlayerChatEvent event) {
+    public void onChat(AsyncChatEvent event) {
         InputRequest request = pendingInputs.get(event.getPlayer().getUniqueId());
         if (request == null) {
             return;
         }
         event.setCancelled(true);
-        String message = event.getMessage().trim();
+        String message = PlainTextComponentSerializer.plainText().serialize(event.message()).trim();
         pendingInputs.remove(event.getPlayer().getUniqueId());
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             if (message.equalsIgnoreCase("cancel")) {

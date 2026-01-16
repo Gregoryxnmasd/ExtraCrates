@@ -14,17 +14,17 @@ Este documento describe cómo implementar el plugin solicitado: un sistema de cr
 - **Módulo Core**: carga configs, gestiona crates, recompensa y pool de animaciones.
 - **Módulo GUI**: builder de menús con vistas (lista de crates, editor de crate, editor de recompensas, vista previa de cutscene).
 - **Módulo Cutscene**: interpola rutas de cámara y gestiona armor stands usados como cámara y la lógica de spectator + fake equip.
-- **Módulo ResourcePack**: API para mapear modelos personalizados a items y para cargar metadatos de animación/partículas.
+- **Módulo ResourcePack**: API para mapear modelos personalizados a ítems y para cargar metadatos de animación/partículas.
 - **Módulo Runtime Session**: aísla la sesión de apertura de cada jugador para evitar fugas entre usuarios concurrentes.
 - **Módulo Comandos/Permisos**: registra comandos con subcomandos y auto-completado, junto a permisos específicos.
 - **Módulo Hologramas**: interfaz para proveedores (decides si usas displays nativos o integra HolographicDisplays).
-- **Módulo Render de Recompensa**: item display/armor stand con rotación y animación del ítem.
+- **Módulo Render de Recompensa**: ItemDisplay/ArmorStand con rotación y animación del ítem.
 
 ### Modelos de datos
 - `CrateDefinition`: id, nombre, tipo (normal, llave, evento, temporada, caja misteriosa), requisitos, animación, tabla de recompensas, ubicaciones de aparición.
-- `Reward`: id, nombre visible, peso, comandos, items, modelos personalizados, probabilidades, mensajes, partículas, sonidos, duración flotando, animaciones locales.
+- `Reward`: id, nombre visible, peso, comandos, ítems, modelos personalizados, probabilidades, mensajes, partículas, sonidos, duración flotando, animaciones locales.
 - `CutscenePath`: puntos de control (XYZ + yaw/pitch), duración total, interpolación lineal uniforme (misma velocidad), suavizado (catmull-rom), partículas de guía y previsualización en GUI.
-- `SessionContext`: jugador, crate, ruta, armor stand de cámara, holograma, item flotante, estado (progreso, cancelaciones, timeouts).
+- `SessionContext`: jugador, crate, ruta, armor stand de cámara, holograma, ítem flotante, estado (progreso, cancelaciones, timeouts).
 
 ## Flujo de apertura de crate (sin caja física)
 1. El jugador abre la crate desde GUI o con comando. Se crea un `SessionContext` aislado.
@@ -44,9 +44,9 @@ Este documento describe cómo implementar el plugin solicitado: un sistema de cr
   - Flags avanzadas: bloqueo de movimiento, ocultar HUD, ocultar otros jugadores, pausa en desconexión.
   - Previsualización en vivo de la cutscene y de la recompensa final.
 - **Editor de recompensas**
-  - Tabla de pesos (chance), vista previa de item/modelo, comandos, mensajes, cantidad, títulos, partículas personalizadas.
+- Tabla de pesos (chance), vista previa de ítem/modelo, comandos, mensajes, cantidad, títulos, partículas personalizadas.
   - Botón de "añadir animación local" (por ejemplo, giro del ítem flotante o pulsos de escala).
-  - Soporte a imágenes en mapas o displays (resourcepack) y partículas propias.
+- Soporte a imágenes en mapas o displays (resourcepack) y partículas propias.
 - **Editor de rutas**
   - Modo de puntos: clic en bloques para añadir puntos de control; cada punto almacena posición y orientación.
   - Velocidad uniforme con indicador de duración total; vista previa fantasma con armor stand y partículas.
@@ -98,7 +98,7 @@ Valores válidos en `crates.yml` para decidir si se entrega recompensa o si se r
 - Imagen/animación para “overlay” de cutscene (calabaza tallada con líneas de trayectoria).
 
 ## Optimización
-- Reutilizar armor stands e item displays con pools de objetos para evitar picos de entidades.
+- Reutilizar armor stands e ItemDisplay con pools de objetos para evitar picos de entidades.
 - Uso de interpolaciones programadas y tareas asíncronas para cargas de configuración.
 - Filtrado de espectadores por paquete para que cada jugador vea solo su animación y holograma.
 - Caché de rutas interpoladas para reducir cálculos cuando múltiples jugadores usan la misma cutscene.

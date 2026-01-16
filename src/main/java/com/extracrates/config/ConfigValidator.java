@@ -6,6 +6,7 @@ import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.enchantments.Enchantment;
 
 import java.io.File;

@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.UUID;
 
 public class RewardEditorMenu implements Listener {
+    private static final int DEFAULT_INT_FALLBACK = 1;
+    private static final double DEFAULT_DOUBLE_FALLBACK = 0;
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final EditorInputManager inputManager;
@@ -291,7 +293,7 @@ public class RewardEditorMenu implements Listener {
                 "&8Confirmar cambio",
                 "Actualizar roll-count de " + poolId,
                 () -> {
-                    updatePoolField(poolId, "roll-count", parseInt(input, 1));
+                    updatePoolField(poolId, "roll-count", parseInt(input));
                     player.sendMessage(Component.text("Pool actualizada y guardada en YAML."));
                     openPoolDetail(player, poolId);
                 },
@@ -355,10 +357,10 @@ public class RewardEditorMenu implements Listener {
                 () -> {
                     Object value = input;
                     if (field.equals("chance")) {
-                        value = parseDouble(input, 0);
+                        value = parseDouble(input);
                     }
                     if (field.equals("amount")) {
-                        value = parseInt(input, 1);
+                        value = parseInt(input);
                     }
                     updateRewardField(poolId, rewardId, field, value);
                     player.sendMessage(Component.text("Reward actualizada y guardada en YAML."));
@@ -482,19 +484,19 @@ public class RewardEditorMenu implements Listener {
         return item;
     }
 
-    private int parseInt(String input, int fallback) {
+    private int parseInt(String input) {
         try {
             return Integer.parseInt(input);
         } catch (NumberFormatException ex) {
-            return fallback;
+            return DEFAULT_INT_FALLBACK;
         }
     }
 
-    private double parseDouble(String input, double fallback) {
+    private double parseDouble(String input) {
         try {
             return Double.parseDouble(input);
         } catch (NumberFormatException ex) {
-            return fallback;
+            return DEFAULT_DOUBLE_FALLBACK;
         }
     }
 }

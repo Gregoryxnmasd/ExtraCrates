@@ -60,7 +60,8 @@ public record CrateDefinition(
             String worldName = locations.getString("world", "world");
             World world = org.bukkit.Bukkit.getWorld(worldName);
             if (world == null) {
-                world = org.bukkit.Bukkit.getWorlds().isEmpty() ? null : org.bukkit.Bukkit.getWorlds().get(0);
+                java.util.List<World> worlds = org.bukkit.Bukkit.getWorlds();
+                world = worlds.isEmpty() ? null : worlds.getFirst();
             }
             if (world != null) {
                 ConfigurationSection camera = locations.getConfigurationSection("camera-start");

@@ -9,6 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Coordinates sync providers and stores; public for admin commands and integrations.
+ */
 public class SyncBridge {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -104,14 +107,17 @@ public class SyncBridge {
         return store;
     }
 
+    @SuppressWarnings("unused")
     public SyncSettings getSettings() {
         return settings;
     }
 
+    @SuppressWarnings("unused")
     public SyncHealthMonitor getMonitor() {
         return monitor;
     }
 
+    @SuppressWarnings("unused")
     public boolean isDegraded() {
         return degraded;
     }
