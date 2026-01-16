@@ -2,12 +2,12 @@ package com.extracrates.command;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
-import com.extracrates.config.ConfigValidator;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.gui.CrateGui;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.util.TextUtil;
-import net.kyori.adventure.text.Component;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -25,31 +25,31 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
     private final ConfigLoader configLoader;
     private final SessionManager sessionManager;
     private final CrateGui crateGui;
-    private final SyncCommand syncCommand;
+    private final LanguageManager languageManager;
 
-    public CrateCommand(ExtraCratesPlugin plugin, ConfigLoader configLoader, SessionManager sessionManager, CrateGui crateGui, SyncCommand syncCommand) {
+    public CrateCommand(ExtraCratesPlugin plugin, ConfigLoader configLoader, SessionManager sessionManager, CrateGui crateGui, LanguageManager languageManager) {
         this.plugin = plugin;
         this.configLoader = configLoader;
         this.sessionManager = sessionManager;
         this.crateGui = crateGui;
-        this.syncCommand = syncCommand;
+        this.languageManager = languageManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usa /crate gui|open|preview|reload|sync|givekey"));
+            sender.sendMessage(languageManager.getMessage("command.usage"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
         switch (sub) {
             case "gui" -> {
                 if (!(sender instanceof Player player)) {
-                    sender.sendMessage(Component.text("Solo jugadores."));
+                    sender.sendMessage(languageManager.getMessage("command.only-players"));
                     return true;
                 }
                 if (!sender.hasPermission("extracrates.gui")) {
-                    sender.sendMessage(Component.text("Sin permiso."));
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
                     return true;
                 }
                 crateGui.open(player);
@@ -57,21 +57,20 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             }
             case "open", "preview" -> {
                 if (!(sender instanceof Player player)) {
-                    sender.sendMessage(Component.text("Solo jugadores."));
+                    sender.sendMessage(languageManager.getMessage("command.only-players"));
                     return true;
                 }
-                String permission = sub.equals("preview") ? "extracrates.preview" : "extracrates.open";
-                if (!sender.hasPermission(permission)) {
-                    sender.sendMessage(Component.text("Sin permiso."));
+                if (!sender.hasPermission("extracrates.open")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage(Component.text("Uso: /crate " + sub + " <id>"));
+                    sender.sendMessage(languageManager.getMessage("command.open-usage"));
                     return true;
                 }
                 CrateDefinition crate = configLoader.getCrates().get(args[1]);
                 if (crate == null) {
-                    sender.sendMessage(Component.text("Crate no encontrada."));
+                    sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
                     return true;
                 }
                 sessionManager.openCrate(player, crate);
@@ -79,14 +78,13 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             }
             case "reload" -> {
                 if (!sender.hasPermission("extracrates.reload")) {
-                    sender.sendMessage(Component.text("Sin permiso."));
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
                     return true;
                 }
                 plugin.reloadConfig();
                 configLoader.loadAll();
-                ConfigValidator validator = new ConfigValidator(plugin, configLoader);
-                validator.report(validator.validate());
-                sender.sendMessage(Component.text("Configuraciones recargadas."));
+                languageManager.load();
+                sender.sendMessage(languageManager.getMessage("command.reload-success"));
                 return true;
             }
             case "sync" -> {
@@ -94,26 +92,27 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             }
             case "givekey" -> {
                 if (!(sender instanceof Player player)) {
-                    sender.sendMessage(Component.text("Solo jugadores."));
+                    sender.sendMessage(languageManager.getMessage("command.only-players"));
                     return true;
                 }
                 if (!sender.hasPermission("extracrates.givekey")) {
-                    sender.sendMessage(Component.text("Sin permiso."));
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage(Component.text("Uso: /crate givekey <id>"));
+                    sender.sendMessage(languageManager.getMessage("command.givekey-usage"));
                     return true;
                 }
                 CrateDefinition crate = configLoader.getCrates().get(args[1]);
                 if (crate == null) {
-                    sender.sendMessage(Component.text("Crate no encontrada."));
+                    sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
                     return true;
                 }
                 ItemStack key = new ItemStack(crate.getKeyMaterial());
                 ItemMeta meta = key.getItemMeta();
                 if (meta != null) {
-                    meta.displayName(TextUtil.color(crate.getDisplayName() + " &7(llave)"));
+                    String keyName = languageManager.getRaw("command.key-item-name", java.util.Map.of("crate_name", crate.getDisplayName()));
+                    meta.displayName(TextUtil.color(keyName));
                     if (crate.getKeyModel() != null && !crate.getKeyModel().isEmpty()) {
                         try {
                             meta.setCustomModelData(Integer.parseInt(crate.getKeyModel()));
@@ -123,11 +122,11 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     key.setItemMeta(meta);
                 }
                 player.getInventory().addItem(key);
-                sender.sendMessage(Component.text("Llave entregada."));
+                sender.sendMessage(languageManager.getMessage("command.givekey-success"));
                 return true;
             }
             default -> {
-                sender.sendMessage(Component.text("Subcomando desconocido."));
+                sender.sendMessage(languageManager.getMessage("command.unknown-subcommand"));
                 return true;
             }
         }

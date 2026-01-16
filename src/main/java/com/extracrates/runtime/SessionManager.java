@@ -2,6 +2,7 @@ package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CrateType;
 import com.extracrates.model.CutscenePath;
@@ -13,7 +14,6 @@ import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
 import com.extracrates.storage.StorageSettings;
 import com.extracrates.util.RewardSelector;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.attribute.Attribute;
@@ -33,17 +33,15 @@ import java.util.UUID;
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
-    private SyncBridge syncBridge;
+    private final LanguageManager languageManager;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final CrateStorage storage;
     private final boolean storageEnabled;
 
-    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, SyncBridge syncBridge) {
+    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, LanguageManager languageManager) {
         this.plugin = plugin;
         this.configLoader = configLoader;
-        StorageSettings settings = StorageSettings.fromConfig(configLoader.getMainConfig());
-        this.storageEnabled = settings.enabled();
-        this.storage = initializeStorage(settings);
+        this.languageManager = languageManager;
     }
 
     public void shutdown() {
@@ -54,26 +52,15 @@ public class SessionManager {
 
     public boolean openCrate(Player player, CrateDefinition crate) {
         if (sessions.containsKey(player.getUniqueId())) {
-            player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
+            player.sendMessage(languageManager.getMessage("session.already-in-progress"));
             return false;
         }
         if (!player.hasPermission(crate.getPermission())) {
-            player.sendMessage(Component.text("No tienes permiso para abrir esta crate."));
+            player.sendMessage(languageManager.getMessage("session.no-permission"));
             return false;
         }
-        String openMode = normalizeOpenMode(crate.getOpenMode());
-        boolean previewOnly = openMode.equals("preview-only");
-        boolean requiresKey = openMode.equals("key-required")
-                || openMode.equals("keyed")
-                || openMode.equals("key-only");
-        boolean requiresEconomy = openMode.equals("economy-required")
-                || openMode.equals("economy")
-                || openMode.equals("economy-only");
-        if (!previewOnly && !requiresKey && !requiresEconomy && crate.getType() == CrateType.KEYED) {
-            requiresKey = true;
-        }
-        if (!previewOnly && requiresKey && !hasKey(player, crate)) {
-            player.sendMessage(Component.text("Necesitas una llave para esta crate."));
+        if (crate.getType() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
+            player.sendMessage(languageManager.getMessage("session.key-required"));
             return false;
         }
         if (!previewOnly && requiresEconomy && !canAffordEconomy(player, crate)) {
@@ -81,19 +68,18 @@ public class SessionManager {
             return false;
         }
         if (isOnCooldown(player, crate)) {
-            player.sendMessage(Component.text("Esta crate está en cooldown."));
+            player.sendMessage(languageManager.getMessage("session.cooldown"));
             return false;
         }
         RewardPool pool = configLoader.getRewardPools().get(crate.getRewardsPool());
         List<Reward> rewards = RewardSelector.roll(pool);
         if (rewards.isEmpty()) {
-            player.sendMessage(Component.text("No hay recompensas configuradas."));
+            player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
         Reward reward = rewards.get(0);
         CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
-        boolean grantReward = !previewOnly;
-        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, grantReward, this);
+        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, reward, path, this);
         sessions.put(player.getUniqueId(), session);
         if (!previewOnly && requiresKey) {
             consumeKey(player, crate);
