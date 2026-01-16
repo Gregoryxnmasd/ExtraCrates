@@ -12,6 +12,7 @@ tasks.withType<JavaCompile> {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://repo.milkbowl.net/repository/maven-public/")
 }
 
 dependencies {
