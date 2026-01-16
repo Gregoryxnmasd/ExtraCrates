@@ -13,6 +13,10 @@ resourcepack:
   allow-animated-items: true
   allow-map-images: true
   pumpkin-overlay-model: "cutscene_mask"
+  models:
+    dragon_sword: 1001
+    candy_bow: 1002
+    cutscene_mask: 1003
 cutscene:
   default-speed: 0.35
   constant-speed: true
@@ -32,5 +36,16 @@ holograms:
   provider: "display"
   name-format: "&e%reward_name%"
   height-offset: 0.8
+  x-offset: 0.0
+  z-offset: 0.0
+  text-animations:
+    enabled: true
+    interpolation-delay: 0
+    interpolation-duration: 2
+    teleport-duration: 2
 permissions:
   use-per-crate: true
+logging:
+  format: "json"
+  file: "logs/rewards.log"
+  debug: false

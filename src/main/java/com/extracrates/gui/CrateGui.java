@@ -6,6 +6,7 @@ import com.extracrates.model.CrateDefinition;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -16,6 +17,8 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,11 +28,13 @@ public class CrateGui implements Listener {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final SessionManager sessionManager;
+    private final NamespacedKey crateKey;
 
     public CrateGui(ExtraCratesPlugin plugin, ConfigLoader configLoader, SessionManager sessionManager) {
         this.plugin = plugin;
         this.configLoader = configLoader;
         this.sessionManager = sessionManager;
+        this.crateKey = new NamespacedKey(plugin, "crate-id");
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -37,7 +42,7 @@ public class CrateGui implements Listener {
         String title = configLoader.getMainConfig().getString("gui.title", "&8ExtraCrates");
         Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color(title));
         int slot = 0;
-        for (CrateDefinition crate : configLoader.getCrates().values()) {
+        for (CrateDefinition crate : getAccessibleCrates(player)) {
             ItemStack item = new ItemStack(Material.CHEST);
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
@@ -52,6 +57,12 @@ public class CrateGui implements Listener {
             if (slot >= inventory.getSize()) {
                 break;
             }
+            if (slot == nextSlot) {
+                nextSlot = slot + 1;
+            }
+            usedSlots[slot] = true;
+            ItemStack item = buildCrateItem(crate, crateSection);
+            inventory.setItem(slot, item);
         }
         player.openInventory(inventory);
     }
@@ -71,7 +82,7 @@ public class CrateGui implements Listener {
             return;
         }
         int slot = event.getSlot();
-        List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
+        List<CrateDefinition> crates = getAccessibleCrates(player);
         if (slot >= crates.size()) {
             return;
         }
