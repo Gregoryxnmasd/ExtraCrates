@@ -1,7 +1,7 @@
 package com.extracrates.util;
 
 import com.extracrates.config.SettingsSnapshot;
-import com.extracrates.runtime.core.ConfigLoader;
+import com.extracrates.config.ConfigLoader;
 import com.extracrates.model.Reward;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -30,9 +30,9 @@ public final class ItemUtil {
         ItemStack item = new ItemStack(material, Math.max(1, reward.getAmount()));
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            SettingsSnapshot settings = configLoader.getSettings();
+            SettingsSnapshot settings = configLoader != null ? configLoader.getSettings() : null;
             meta.displayName(TextUtil.color(reward.getDisplayName()));
-            applyResourcepackModel(reward, meta, settings);
+            applyResourcepackModel(reward, meta, settings, configLoader);
             for (Map.Entry<String, Integer> entry : reward.getEnchantments().entrySet()) {
                 Enchantment enchantment = Enchantment.getByKey(org.bukkit.NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT)));
                 if (enchantment != null) {
@@ -46,7 +46,7 @@ public final class ItemUtil {
                 }
                 meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
             }
-            applyMapImage(reward, meta, settings, world, mapImageCache);
+            applyMapImage(reward, meta, material, settings, world, mapImageCache);
             item.setItemMeta(meta);
         }
         return item;
@@ -55,6 +55,7 @@ public final class ItemUtil {
     private static void applyMapImage(
             Reward reward,
             ItemMeta meta,
+            Material material,
             SettingsSnapshot settings,
             World world,
             MapImageCache mapImageCache
@@ -62,7 +63,7 @@ public final class ItemUtil {
         if (!(meta instanceof MapMeta mapMeta)) {
             return;
         }
-        if (Material.matchMaterial(reward.getItem().toUpperCase(Locale.ROOT)) != Material.FILLED_MAP) {
+        if (material != Material.FILLED_MAP) {
             return;
         }
         String mapImage = reward.getMapImage();
@@ -86,7 +87,12 @@ public final class ItemUtil {
         mapMeta.setMapView(mapView);
     }
 
-    private static void applyResourcepackModel(Reward reward, ItemMeta meta, SettingsSnapshot settings) {
+    private static void applyResourcepackModel(
+            Reward reward,
+            ItemMeta meta,
+            SettingsSnapshot settings,
+            ConfigLoader configLoader
+    ) {
         if (settings == null || !settings.getResourcepack().useCustomModelData()) {
             return;
         }
@@ -94,9 +100,25 @@ public final class ItemUtil {
         if (customModel == null || customModel.isBlank()) {
             return;
         }
+        Integer modelData = resolveModelData(customModel, settings, configLoader);
+        if (modelData != null) {
+            meta.setCustomModelData(modelData);
+        }
+    }
+
+    private static Integer resolveModelData(
+            String customModel,
+            SettingsSnapshot settings,
+            ConfigLoader configLoader
+    ) {
+        String trimmedModel = customModel.trim();
+        if (settings.getResourcepack().allowAnimatedItems() && configLoader != null) {
+            return configLoader.resolveModelData(trimmedModel);
+        }
         try {
-            meta.setCustomModelData(Integer.parseInt(customModel.trim()));
+            return Integer.parseInt(trimmedModel);
         } catch (NumberFormatException ignored) {
+            return null;
         }
     }
 }
