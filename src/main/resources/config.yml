@@ -7,6 +7,23 @@ gui:
   editor-title: "&0Editor de Crates"
   preview-enabled: true
   click-sounds: true
+  crates:
+    legendary:
+      slot: 10
+      material: "CHEST"
+      icon: 12001
+      lore:
+        - "&7Nombre: &f%crate_name%"
+        - "&7Cooldown: &f%cooldown%s"
+        - "&7Permiso: &f%permission%"
+    seasonal:
+      slot: 12
+      material: "ENDER_CHEST"
+      icon: 12002
+      lore:
+        - "&7Nombre: &f%crate_name%"
+        - "&7Cooldown: &f%cooldown%s"
+        - "&7Permiso: &f%permission%"
 resourcepack:
   use-custom-model-data: true
   allow-animated-items: true
@@ -33,3 +50,7 @@ holograms:
   height-offset: 0.8
 permissions:
   use-per-crate: true
+logging:
+  format: "json"
+  file: "logs/rewards.log"
+  debug: false
