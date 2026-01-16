@@ -8,7 +8,6 @@ import com.extracrates.model.CrateDefinition;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -111,7 +110,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Component.text("Crate no encontrada."));
                     return true;
                 }
-                ItemStack key = new ItemStack(Material.TRIPWIRE_HOOK);
+                ItemStack key = new ItemStack(crate.getKeyMaterial());
                 ItemMeta meta = key.getItemMeta();
                 if (meta != null) {
                     meta.displayName(TextUtil.color(crate.getDisplayName() + " &7(llave)"));

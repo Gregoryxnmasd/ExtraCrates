@@ -5,6 +5,7 @@ crates:
     # open-mode: reward-only | full | preview-only
     open-mode: "reward-only"
     key-model: "legendary_key"
+    key-material: "TRIPWIRE_HOOK"
     cooldown-seconds: 120
     cost: 0
     permission: "extracrates.open.legendary"
