@@ -27,7 +27,6 @@ public class CrateSession {
     private final CrateDefinition crate;
     private final List<Reward> rewards;
     private final CutscenePath path;
-    private final boolean grantReward;
     private final SessionManager sessionManager;
     private final boolean preview;
 
@@ -62,7 +61,6 @@ public class CrateSession {
         this.crate = crate;
         this.rewards = rewards;
         this.path = path;
-        this.grantReward = grantReward;
         this.sessionManager = sessionManager;
         this.preview = preview;
     }
