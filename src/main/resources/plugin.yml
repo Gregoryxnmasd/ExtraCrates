@@ -1,15 +1,32 @@
 name: ExtraCrates
-main: me.savaduki.extracrates.ExtraCratesPlugin
+main: com.extracrates.ExtraCratesPlugin
 version: ${project.version}
 description: Base scaffolding for a complex crates plugin.
 author: Savaduki
 api-version: '1.21'
 commands:
-  extracrates:
-    description: Muestra el estado base del plugin ExtraCrates.
-    usage: /<command>
-    permission: extracrates.command
+  crate:
+    description: Gestiona crates y sus opciones principales.
+    usage: /<command> <gui|open|preview|cutscene|reload|givekey|route|sync>
 permissions:
-  extracrates.command:
-    description: Permite a los jugadores usar /extracrates.
+  extracrates.gui:
+    description: Permite abrir el GUI de crates.
     default: true
+  extracrates.open:
+    description: Permite abrir crates.
+    default: true
+  extracrates.preview:
+    description: Permite previsualizar crates.
+    default: true
+  extracrates.reload:
+    description: Permite recargar la configuración de crates.
+    default: op
+  extracrates.givekey:
+    description: Permite otorgar llaves de crates.
+    default: op
+  extracrates.route.editor:
+    description: Permite editar rutas de cutscene para crates.
+    default: op
+  extracrates.sync:
+    description: Permite gestionar la sincronización de crates.
+    default: op
