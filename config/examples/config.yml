@@ -1,5 +1,6 @@
 # Opciones globales
 language: es_es
+qa-mode: false
 particles-default: "crit"
 hologram-font: "resourcepack:cutscene_font"
 gui:
@@ -7,32 +8,15 @@ gui:
   editor-title: "&0Editor de Crates"
   preview-enabled: true
   click-sounds: true
-  crates:
-    legendary:
-      slot: 10
-      material: "CHEST"
-      icon: 12001
-      lore:
-        - "&7Nombre: &f%crate_name%"
-        - "&7Cooldown: &f%cooldown%s"
-        - "&7Permiso: &f%permission%"
-    seasonal:
-      slot: 12
-      material: "ENDER_CHEST"
-      icon: 12002
-      lore:
-        - "&7Nombre: &f%crate_name%"
-        - "&7Cooldown: &f%cooldown%s"
-        - "&7Permiso: &f%permission%"
+  click-sound: "UI_BUTTON_CLICK"
 resourcepack:
   use-custom-model-data: true
   allow-animated-items: true
   allow-map-images: true
   pumpkin-overlay-model: "cutscene_mask"
   models:
-    dragon_sword: 1001
-    candy_bow: 1002
-    cutscene_mask: 1003
+    legendary_key: 1001
+    legendary_reward: 1002
 cutscene:
   default-speed: 0.35
   constant-speed: true

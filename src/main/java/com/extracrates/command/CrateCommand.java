@@ -7,8 +7,9 @@ import com.extracrates.config.LanguageManager;
 import com.extracrates.gui.CrateGui;
 import com.extracrates.gui.editor.EditorMenu;
 import com.extracrates.model.CrateDefinition;
-import com.extracrates.route.RouteEditorManager;
+import com.extracrates.model.CutscenePath;
 import com.extracrates.runtime.SessionManager;
+import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -47,7 +48,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|reload|givekey"));
+            sender.sendMessage(Component.text("Usa /crate gui|open|preview|cutscene|reload|givekey"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -69,7 +70,11 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Component.text("Solo jugadores."));
                     return true;
                 }
-                if (!sender.hasPermission("extracrates.editor")) {
+                if (sub.equals("open") && !sender.hasPermission("extracrates.open")) {
+                    sender.sendMessage(Component.text("Sin permiso."));
+                    return true;
+                }
+                if (sub.equals("preview") && !sender.hasPermission("extracrates.preview")) {
                     sender.sendMessage(Component.text("Sin permiso."));
                     return true;
                 }
@@ -83,14 +88,6 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 }
                 if (args.length < 2) {
                     sender.sendMessage(Component.text("Uso: /crate " + sub + " <id>"));
-                    return true;
-                }
-                if (sub.equals("open") && !sender.hasPermission("extracrates.open")) {
-                    sender.sendMessage(Component.text("Sin permiso."));
-                    return true;
-                }
-                if (sub.equals("preview") && !sender.hasPermission("extracrates.preview")) {
-                    sender.sendMessage(Component.text("Sin permiso."));
                     return true;
                 }
                 CrateDefinition crate = configLoader.getCrates().get(args[1]);
@@ -139,8 +136,10 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     String keyName = languageManager.getRaw("command.key-item-name", java.util.Map.of("crate_name", crate.getDisplayName()));
                     meta.displayName(TextUtil.color(keyName));
                     if (crate.getKeyModel() != null && !crate.getKeyModel().isEmpty()) {
-                        configLoader.getResourcePackRegistry().resolveCustomModelData(crate.getKeyModel())
-                                .ifPresent(meta::setCustomModelData);
+                        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.getKeyModel());
+                        if (modelData >= 0) {
+                            meta.setCustomModelData(modelData);
+                        }
                     }
                     key.setItemMeta(meta);
                 }
@@ -205,6 +204,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("editor");
             results.add("open");
             results.add("preview");
+            results.add("cutscene");
             results.add("reload");
             results.add("sync");
             results.add("givekey");
@@ -222,9 +222,10 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         if (args.length == 2 && (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview") || args[0].equalsIgnoreCase("givekey"))) {
             results.addAll(configLoader.getCrates().keySet());
         }
-        if (args.length == 3 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("editor")) {
-            results.add("stop");
-            results.add("cancel");
+        if (args.length == 2 && args[0].equalsIgnoreCase("cutscene")) {
+            results.add("test");
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("cutscene") && args[1].equalsIgnoreCase("test")) {
             results.addAll(configLoader.getPaths().keySet());
         }
         return results;
