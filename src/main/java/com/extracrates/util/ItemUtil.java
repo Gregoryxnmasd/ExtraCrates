@@ -1,7 +1,7 @@
 package com.extracrates.util;
 
-import com.extracrates.config.SettingsSnapshot;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.SettingsSnapshot;
 import com.extracrates.model.Reward;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
