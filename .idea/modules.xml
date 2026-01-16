@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/ExtraCrates.iml" filepath="$PROJECT_DIR$/.idea/ExtraCrates.iml" />
+      <module fileurl="file://$PROJECT_DIR$/extracrates.iml" filepath="$PROJECT_DIR$/extracrates.iml" />
     </modules>
   </component>
 </project>
