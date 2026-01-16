@@ -4,7 +4,13 @@ import com.extracrates.config.ConfigLoader;
 import org.bukkit.configuration.ConfigurationSection;
 
 public final class ResourcepackModelResolver {
+    private static final ResourcepackModelResolver INSTANCE = new ResourcepackModelResolver();
+
     private ResourcepackModelResolver() {
+    }
+
+    public static ResourcepackModelResolver getInstance() {
+        return INSTANCE;
     }
 
     public static int resolveCustomModelData(ConfigLoader configLoader, String value) {
@@ -31,5 +37,9 @@ public final class ResourcepackModelResolver {
             }
         }
         return -1;
+    }
+
+    public int resolve(ConfigLoader configLoader, String value) {
+        return resolveCustomModelData(configLoader, value);
     }
 }
