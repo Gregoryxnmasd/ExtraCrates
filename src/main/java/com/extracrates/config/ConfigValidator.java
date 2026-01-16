@@ -6,6 +6,7 @@ import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.enchantments.Enchantment;
 
 import java.io.File;
@@ -54,7 +55,7 @@ public class ConfigValidator {
                     warnings.add("Material desconocido en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "'): '" + itemName + "'.");
                 }
                 for (String enchantmentKey : reward.getEnchantments().keySet()) {
-                    Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(enchantmentKey.toLowerCase(Locale.ROOT)));
+                    Enchantment enchantment = Registry.ENCHANTMENT.get(NamespacedKey.minecraft(enchantmentKey.toLowerCase(Locale.ROOT)));
                     if (enchantment == null) {
                         warnings.add("Encantamiento inválido en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "'): '" + enchantmentKey + "'.");
                     }
