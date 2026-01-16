@@ -1,12 +1,8 @@
-package com.extracrates.runtime;
+package com.extracrates.runtime.core;
 
 import com.extracrates.ExtraCratesPlugin;
-import com.extracrates.config.ConfigLoader;
-import com.extracrates.economy.EconomyService;
+import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.model.CrateDefinition;
-import com.extracrates.model.CrateType;
-import com.extracrates.model.CutscenePath;
-import com.extracrates.model.CutscenePoint;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.storage.CrateStorage;
@@ -17,8 +13,6 @@ import com.extracrates.storage.StorageSettings;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
 import net.kyori.adventure.text.Component;
-import net.milkbowl.vault.economy.EconomyResponse;
-import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Particle;
 import org.bukkit.attribute.Attribute;
@@ -112,11 +106,8 @@ public class SessionManager {
         sessionRandoms.remove(playerId);
     }
 
-    public void endPreview(UUID playerId) {
-        CutscenePreviewSession preview = previews.remove(playerId);
-        if (preview != null) {
-            preview.end();
-        }
+    public CrateSession getSession(UUID playerId) {
+        return sessions.get(playerId);
     }
 
     public void removeSession(UUID playerId) {

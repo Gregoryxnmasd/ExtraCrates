@@ -29,11 +29,10 @@ resourcepack:
   allow-animated-items: true
   allow-map-images: true
   pumpkin-overlay-model: "cutscene_mask"
-  models:
-    dragon_sword: 1001
-    candy_bow: 1002
-    cutscene_mask: 1003
+  model-data:
+    cutscene_mask: 1001
 cutscene:
+  overlay-model: "cutscene_mask"
   default-speed: 0.35
   constant-speed: true
   smooth-tick: 2
@@ -45,6 +44,9 @@ cutscene:
   armorstand-invisible: true
   camera-entity: "armorstand"
   speed-modifier-uuid: "c0c0a1f2-7a89-4a2c-88a7-9f53b0d6f8b1"
+  locks:
+    movement: true
+    hud: true
 sessions:
   max-duration-ticks: 600
   cleanup-on-quit: true
@@ -52,14 +54,14 @@ holograms:
   provider: "display"
   name-format: "&e%reward_name%"
   height-offset: 0.8
-  x-offset: 0.0
-  z-offset: 0.0
-  text-animations:
-    enabled: true
-    interpolation-delay: 0
-    interpolation-duration: 2
-    teleport-duration: 2
 permissions:
   use-per-crate: true
-debug:
-  rolls: false
+storage:
+  enabled: false
+  type: "mysql"
+  jdbc-url: "jdbc:mysql://localhost:3306/extracrates"
+  username: "root"
+  password: "password"
+  pool:
+    size: 10
+    timeout: 30000

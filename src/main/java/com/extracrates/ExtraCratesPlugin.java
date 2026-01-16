@@ -1,20 +1,14 @@
 package com.extracrates;
 
 import com.extracrates.api.ExtraCratesApi;
-import com.extracrates.api.ExtraCratesApiImpl;
 import com.extracrates.command.CrateCommand;
-import com.extracrates.command.SyncCommand;
-import com.extracrates.config.ConfigLoader;
-import com.extracrates.economy.EconomyService;
 import com.extracrates.gui.CrateGui;
-import com.extracrates.gui.editor.ConfirmationMenu;
-import com.extracrates.gui.editor.EditorInputManager;
-import com.extracrates.gui.editor.EditorMenu;
-import com.extracrates.runtime.SessionManager;
 import com.extracrates.runtime.SessionListener;
-import net.milkbowl.vault.economy.Economy;
+import com.extracrates.runtime.core.ConfigLoader;
+import com.extracrates.runtime.core.ExtraCratesApiService;
+import com.extracrates.runtime.core.SessionManager;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class ExtraCratesPlugin extends JavaPlugin {
@@ -22,7 +16,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private SessionManager sessionManager;
     private CrateGui crateGui;
-    private EconomyService economyService;
+    private ExtraCratesApi apiService;
 
     @Override
     public void onEnable() {
@@ -38,15 +32,14 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         ConfigValidator validator = new ConfigValidator(this, configLoader);
         validator.report(validator.validate());
 
-        economyService = new EconomyService(this);
-        sessionManager = new SessionManager(this, configLoader, economyService);
+        sessionManager = new SessionManager(this, configLoader);
+        apiService = new ExtraCratesApiService(configLoader, sessionManager);
+        getServer().getServicesManager().register(ExtraCratesApi.class, apiService, this, ServicePriority.Normal);
         new SessionListener(this, sessionManager);
         routeEditorManager = new RouteEditorManager(this, configLoader);
         new RouteEditorListener(this, routeEditorManager);
         crateGui = new CrateGui(this, configLoader, sessionManager);
-        EditorInputManager inputManager = new EditorInputManager(this);
-        ConfirmationMenu confirmationMenu = new ConfirmationMenu(this);
-        editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu);
+        mapImageCache = new MapImageCache(this);
 
         PluginCommand crateCommand = getCommand("crate");
         if (crateCommand != null) {
@@ -58,6 +51,9 @@ public final class ExtraCratesPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (apiService != null) {
+            getServer().getServicesManager().unregister(ExtraCratesApi.class, apiService);
+        }
         if (sessionManager != null) {
             sessionManager.shutdown();
         }
@@ -79,5 +75,9 @@ public final class ExtraCratesPlugin extends JavaPlugin {
             return;
         }
         economy = registration.getProvider();
+    }
+
+    public MapImageCache getMapImageCache() {
+        return mapImageCache;
     }
 }

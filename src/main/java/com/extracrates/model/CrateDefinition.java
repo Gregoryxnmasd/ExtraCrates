@@ -18,6 +18,7 @@ public class CrateDefinition {
     private final Location cameraStart;
     private final Location rewardAnchor;
     private final AnimationSettings animation;
+    private final CutsceneSettings cutsceneSettings;
     private final String rewardsPool;
 
     public CrateDefinition(
@@ -33,6 +34,7 @@ public class CrateDefinition {
             Location cameraStart,
             Location rewardAnchor,
             AnimationSettings animation,
+            CutsceneSettings cutsceneSettings,
             String rewardsPool
     ) {
         this.id = id;
@@ -47,6 +49,7 @@ public class CrateDefinition {
         this.cameraStart = cameraStart;
         this.rewardAnchor = rewardAnchor;
         this.animation = animation;
+        this.cutsceneSettings = cutsceneSettings;
         this.rewardsPool = rewardsPool;
     }
 
@@ -98,11 +101,15 @@ public class CrateDefinition {
         return animation;
     }
 
+    public CutsceneSettings getCutsceneSettings() {
+        return cutsceneSettings;
+    }
+
     public String getRewardsPool() {
         return rewardsPool;
     }
 
-    public static CrateDefinition fromSection(String id, ConfigurationSection section) {
+    public static CrateDefinition fromSection(String id, ConfigurationSection section, ConfigurationSection defaults) {
         if (section == null) {
             return null;
         }
@@ -153,8 +160,9 @@ public class CrateDefinition {
         }
 
         AnimationSettings animation = AnimationSettings.fromSection(section.getConfigurationSection("animation"));
+        CutsceneSettings cutsceneSettings = CutsceneSettings.fromSections(section.getConfigurationSection("cutscene"), defaults == null ? null : defaults.getConfigurationSection("cutscene"));
         String rewardsPool = section.getString("rewards-pool", "");
-        return new CrateDefinition(id, displayName, type, openMode, keyModel, keyMaterial, cooldown, cost, permission, cameraStart, rewardAnchor, animation, rewardsPool);
+        return new CrateDefinition(id, displayName, type, openMode, keyModel, cooldown, cost, permission, cameraStart, rewardAnchor, animation, cutsceneSettings, rewardsPool);
     }
 
     public static class AnimationSettings {
@@ -252,264 +260,154 @@ public class CrateDefinition {
         }
     }
 
-    public static class RewardDisplaySettings {
-        private final int itemCount;
-        private final double textLineSpacing;
-        private final double orbitRadius;
-        private final double orbitSpeed;
-        private final double pulseScale;
-        private final double pulseSpeed;
-        private final double wobbleAmplitude;
-        private final double wobbleSpeed;
-        private final double glowScale;
-        private final ParticleSettings particles;
-        private final TrailSettings trail;
+    public static class CutsceneSettings {
+        private final String overlayModel;
+        private final boolean lockMovement;
+        private final boolean hideHud;
+        private final MusicSettings musicSettings;
 
-        public RewardDisplaySettings(
-                int itemCount,
-                double textLineSpacing,
-                double orbitRadius,
-                double orbitSpeed,
-                double pulseScale,
-                double pulseSpeed,
-                double wobbleAmplitude,
-                double wobbleSpeed,
-                double glowScale,
-                ParticleSettings particles,
-                TrailSettings trail
-        ) {
-            this.itemCount = Math.max(1, itemCount);
-            this.textLineSpacing = textLineSpacing;
-            this.orbitRadius = orbitRadius;
-            this.orbitSpeed = orbitSpeed;
-            this.pulseScale = pulseScale;
-            this.pulseSpeed = pulseSpeed;
-            this.wobbleAmplitude = wobbleAmplitude;
-            this.wobbleSpeed = wobbleSpeed;
-            this.glowScale = glowScale;
-            this.particles = particles;
-            this.trail = trail;
+        public CutsceneSettings(String overlayModel, boolean lockMovement, boolean hideHud, MusicSettings musicSettings) {
+            this.overlayModel = overlayModel;
+            this.lockMovement = lockMovement;
+            this.hideHud = hideHud;
+            this.musicSettings = musicSettings;
         }
 
-        public int getItemCount() {
-            return itemCount;
+        public String getOverlayModel() {
+            return overlayModel;
         }
 
-        public double getTextLineSpacing() {
-            return textLineSpacing;
+        public boolean isLockMovement() {
+            return lockMovement;
         }
 
-        public double getOrbitRadius() {
-            return orbitRadius;
+        public boolean isHideHud() {
+            return hideHud;
         }
 
-        public double getOrbitSpeed() {
-            return orbitSpeed;
+        public MusicSettings getMusicSettings() {
+            return musicSettings;
         }
 
-        public double getPulseScale() {
-            return pulseScale;
-        }
-
-        public double getPulseSpeed() {
-            return pulseSpeed;
-        }
-
-        public double getWobbleAmplitude() {
-            return wobbleAmplitude;
-        }
-
-        public double getWobbleSpeed() {
-            return wobbleSpeed;
-        }
-
-        public double getGlowScale() {
-            return glowScale;
-        }
-
-        public ParticleSettings getParticles() {
-            return particles;
-        }
-
-        public TrailSettings getTrail() {
-            return trail;
-        }
-
-        public static RewardDisplaySettings defaultSettings() {
-            return new RewardDisplaySettings(
-                    3,
-                    0.22,
-                    0.45,
-                    0.12,
-                    0.15,
-                    0.2,
-                    0.08,
-                    0.2,
-                    0.2,
-                    ParticleSettings.defaultSettings(),
-                    TrailSettings.defaultSettings()
+        public static CutsceneSettings fromSections(ConfigurationSection section, ConfigurationSection defaults) {
+            String overlayModel = readString(section, "overlay-model", defaults, "overlay-model", "pumpkin-model", "");
+            boolean lockMovement = readBoolean(section, "locks.movement", defaults, "locks.movement", true);
+            boolean hideHud = readBoolean(section, "locks.hud", defaults, "locks.hud", true);
+            MusicSettings musicSettings = MusicSettings.fromSections(
+                    section == null ? null : section.getConfigurationSection("music"),
+                    defaults == null ? null : defaults.getConfigurationSection("music")
             );
+            return new CutsceneSettings(overlayModel, lockMovement, hideHud, musicSettings);
         }
 
-        public static RewardDisplaySettings fromSection(ConfigurationSection section) {
-            if (section == null) {
-                return defaultSettings();
+        private static String readString(ConfigurationSection section, String key, ConfigurationSection defaults, String defaultKey, String fallbackKey, String fallback) {
+            if (section != null && section.isString(key)) {
+                return section.getString(key, fallback);
             }
-            return new RewardDisplaySettings(
-                    section.getInt("item-count", 3),
-                    section.getDouble("text-line-spacing", 0.22),
-                    section.getDouble("orbit-radius", 0.45),
-                    section.getDouble("orbit-speed", 0.12),
-                    section.getDouble("pulse-scale", 0.15),
-                    section.getDouble("pulse-speed", 0.2),
-                    section.getDouble("wobble-amplitude", 0.08),
-                    section.getDouble("wobble-speed", 0.2),
-                    section.getDouble("glow-scale", 0.2),
-                    ParticleSettings.fromSection(section.getConfigurationSection("particles")),
-                    TrailSettings.fromSection(section.getConfigurationSection("trail"))
-            );
+            if (defaults != null) {
+                if (defaults.isString(defaultKey)) {
+                    return defaults.getString(defaultKey, fallback);
+                }
+                if (fallbackKey != null && defaults.isString(fallbackKey)) {
+                    return defaults.getString(fallbackKey, fallback);
+                }
+            }
+            return fallback;
+        }
+
+        private static boolean readBoolean(ConfigurationSection section, String key, ConfigurationSection defaults, String defaultKey, boolean fallback) {
+            if (section != null && section.isBoolean(key)) {
+                return section.getBoolean(key);
+            }
+            if (defaults != null && defaults.isBoolean(defaultKey)) {
+                return defaults.getBoolean(defaultKey);
+            }
+            return fallback;
         }
     }
 
-    public static class ParticleSettings {
-        private final String type;
-        private final int count;
-        private final double radius;
-        private final double yOffset;
-        private final double spread;
-        private final double speed;
-        private final int interval;
+    public static class MusicSettings {
+        private final String sound;
+        private final float volume;
+        private final float pitch;
+        private final int fadeInTicks;
+        private final int fadeOutTicks;
+        private final String category;
 
-        public ParticleSettings(String type, int count, double radius, double yOffset, double spread, double speed, int interval) {
-            this.type = type;
-            this.count = count;
-            this.radius = radius;
-            this.yOffset = yOffset;
-            this.spread = spread;
-            this.speed = speed;
-            this.interval = interval;
+        public MusicSettings(String sound, float volume, float pitch, int fadeInTicks, int fadeOutTicks, String category) {
+            this.sound = sound;
+            this.volume = volume;
+            this.pitch = pitch;
+            this.fadeInTicks = fadeInTicks;
+            this.fadeOutTicks = fadeOutTicks;
+            this.category = category;
         }
 
-        public String getType() {
-            return type;
+        public String getSound() {
+            return sound;
         }
 
-        public int getCount() {
-            return count;
+        public float getVolume() {
+            return volume;
         }
 
-        public double getRadius() {
-            return radius;
+        public float getPitch() {
+            return pitch;
         }
 
-        public double getYOffset() {
-            return yOffset;
+        public int getFadeInTicks() {
+            return fadeInTicks;
         }
 
-        public double getSpread() {
-            return spread;
+        public int getFadeOutTicks() {
+            return fadeOutTicks;
         }
 
-        public double getSpeed() {
-            return speed;
+        public String getCategory() {
+            return category;
         }
 
-        public int getInterval() {
-            return interval;
-        }
-
-        public boolean isEnabled() {
-            return type != null && !type.isEmpty() && count > 0;
-        }
-
-        public static ParticleSettings defaultSettings() {
-            return new ParticleSettings("", 0, 0.35, 0.12, 0.02, 0.01, 2);
-        }
-
-        public static ParticleSettings fromSection(ConfigurationSection section) {
-            if (section == null) {
-                return defaultSettings();
+        public static MusicSettings fromSections(ConfigurationSection section, ConfigurationSection defaults) {
+            String sound = readString(section, "sound", defaults, "sound", "");
+            if (sound == null || sound.isEmpty()) {
+                return null;
             }
-            return new ParticleSettings(
-                    section.getString("type", ""),
-                    section.getInt("count", 2),
-                    section.getDouble("radius", 0.35),
-                    section.getDouble("y-offset", 0.12),
-                    section.getDouble("spread", 0.02),
-                    section.getDouble("speed", 0.01),
-                    section.getInt("interval", 2)
-            );
-        }
-    }
-
-    public static class TrailSettings {
-        private final String type;
-        private final int count;
-        private final double spacing;
-        private final int length;
-        private final double spread;
-        private final double speed;
-        private final int interval;
-
-        public TrailSettings(String type, int count, double spacing, int length, double spread, double speed, int interval) {
-            this.type = type;
-            this.count = count;
-            this.spacing = spacing;
-            this.length = length;
-            this.spread = spread;
-            this.speed = speed;
-            this.interval = interval;
+            float volume = (float) readDouble(section, "volume", defaults, "volume", 1.0);
+            float pitch = (float) readDouble(section, "pitch", defaults, "pitch", 1.0);
+            int fadeIn = readInt(section, "fade-in-ticks", defaults, "fade-in-ticks", 0);
+            int fadeOut = readInt(section, "fade-out-ticks", defaults, "fade-out-ticks", 0);
+            String category = readString(section, "category", defaults, "category", "music");
+            return new MusicSettings(sound, volume, pitch, fadeIn, fadeOut, category);
         }
 
-        public String getType() {
-            return type;
-        }
-
-        public int getCount() {
-            return count;
-        }
-
-        public double getSpacing() {
-            return spacing;
-        }
-
-        public int getLength() {
-            return length;
-        }
-
-        public double getSpread() {
-            return spread;
-        }
-
-        public double getSpeed() {
-            return speed;
-        }
-
-        public int getInterval() {
-            return interval;
-        }
-
-        public boolean isEnabled() {
-            return type != null && !type.isEmpty() && count > 0 && length > 0;
-        }
-
-        public static TrailSettings defaultSettings() {
-            return new TrailSettings("", 0, 0.15, 8, 0.01, 0.01, 1);
-        }
-
-        public static TrailSettings fromSection(ConfigurationSection section) {
-            if (section == null) {
-                return defaultSettings();
+        private static String readString(ConfigurationSection section, String key, ConfigurationSection defaults, String defaultKey, String fallback) {
+            if (section != null && section.isString(key)) {
+                return section.getString(key, fallback);
             }
-            return new TrailSettings(
-                    section.getString("type", ""),
-                    section.getInt("count", 1),
-                    section.getDouble("spacing", 0.15),
-                    section.getInt("length", 8),
-                    section.getDouble("spread", 0.01),
-                    section.getDouble("speed", 0.01),
-                    section.getInt("interval", 1)
-            );
+            if (defaults != null && defaults.isString(defaultKey)) {
+                return defaults.getString(defaultKey, fallback);
+            }
+            return fallback;
+        }
+
+        private static double readDouble(ConfigurationSection section, String key, ConfigurationSection defaults, String defaultKey, double fallback) {
+            if (section != null && section.isDouble(key)) {
+                return section.getDouble(key);
+            }
+            if (defaults != null && defaults.isDouble(defaultKey)) {
+                return defaults.getDouble(defaultKey);
+            }
+            return fallback;
+        }
+
+        private static int readInt(ConfigurationSection section, String key, ConfigurationSection defaults, String defaultKey, int fallback) {
+            if (section != null && section.isInt(key)) {
+                return section.getInt(key);
+            }
+            if (defaults != null && defaults.isInt(defaultKey)) {
+                return defaults.getInt(defaultKey);
+            }
+            return fallback;
         }
     }
 }

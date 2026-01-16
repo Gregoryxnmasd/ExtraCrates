@@ -14,10 +14,10 @@ resourcepack:
   allow-animated-items: true
   allow-map-images: true
   pumpkin-overlay-model: "cutscene_mask"
-  models:
-    legendary_key: 1001
-    legendary_reward: 1002
+  model-data:
+    cutscene_mask: 1001
 cutscene:
+  overlay-model: "cutscene_mask"
   default-speed: 0.35
   constant-speed: true
   smooth-tick: 2
@@ -30,6 +30,9 @@ cutscene:
   armorstand-invisible: true
   camera-entity: "armorstand"
   speed-modifier-uuid: "c0c0a1f2-7a89-4a2c-88a7-9f53b0d6f8b1"
+  locks:
+    movement: true
+    hud: true
 sessions:
   max-duration-ticks: 600
   cleanup-on-quit: true
