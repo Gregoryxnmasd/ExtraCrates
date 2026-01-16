@@ -14,7 +14,7 @@ gui:
       icon: 12001
       lore:
         - "&7Nombre: &f%crate_name%"
-        - "&7Cooldown: &f%cooldown%s"
+        - "&7Cooldown: &f%cooldown%"
         - "&7Permiso: &f%permission%"
     seasonal:
       slot: 12
@@ -22,7 +22,7 @@ gui:
       icon: 12002
       lore:
         - "&7Nombre: &f%crate_name%"
-        - "&7Cooldown: &f%cooldown%s"
+        - "&7Cooldown: &f%cooldown%"
         - "&7Permiso: &f%permission%"
 resourcepack:
   use-custom-model-data: true
