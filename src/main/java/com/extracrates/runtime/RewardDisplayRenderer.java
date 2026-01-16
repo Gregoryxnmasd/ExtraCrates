@@ -4,6 +4,7 @@ import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.util.ItemUtil;
+import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -14,6 +15,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Transformation;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -74,12 +77,13 @@ public class RewardDisplayRenderer {
         int itemCount = displaySettings.getItemCount();
         for (int i = 0; i < itemCount; i++) {
             ItemDisplay display = world.spawn(baseLocation, ItemDisplay.class, entity -> {
-                entity.setItemStack(ItemUtil.buildItem(
+                ItemStack item = ItemUtil.buildItem(
                         reward,
                         world,
                         plugin.getConfigLoader(),
                         plugin.getMapImageCache()
-                ));
+                );
+                entity.setItemStack(applyRewardModel(item));
                 if (animations.contains("glow")) {
                     entity.setGlowing(true);
                 }
@@ -180,6 +184,23 @@ public class RewardDisplayRenderer {
         itemDisplays.clear();
         textDisplays.clear();
         trailPoints.clear();
+    }
+
+    private ItemStack applyRewardModel(ItemStack item) {
+        String rewardModel = crate.getAnimation().getRewardModel();
+        if (rewardModel == null || rewardModel.isEmpty()) {
+            return item;
+        }
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return item;
+        }
+        int modelData = ResourcepackModelResolver.resolveCustomModelData(plugin.getConfigLoader(), rewardModel);
+        if (modelData >= 0) {
+            meta.setCustomModelData(modelData);
+            item.setItemMeta(meta);
+        }
+        return item;
     }
 
     private void spawnParticles(Location center, double orbitOffset) {

@@ -1,7 +1,7 @@
 package com.extracrates.command;
 
 import com.extracrates.ExtraCratesPlugin;
-import com.extracrates.config.ConfigLoader;
+import com.extracrates.runtime.core.ConfigLoader;
 import com.extracrates.sync.SyncBridge;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
