@@ -294,7 +294,7 @@ public class CrateSession {
             player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
         } else {
             player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
-            ItemStack item = ItemUtil.buildItem(reward);
+            ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
             player.getInventory().addItem(item);
 
             for (String command : reward.getCommands()) {
@@ -328,7 +328,12 @@ public class CrateSession {
             return;
         }
         if (rewardDisplay != null) {
-            rewardDisplay.setItemStack(ItemUtil.buildItem(reward));
+            rewardDisplay.setItemStack(ItemUtil.buildItem(
+                    reward,
+                    rewardDisplay.getWorld(),
+                    configLoader,
+                    plugin.getMapImageCache()
+            ));
         }
         if (hologram != null) {
             String format = crate.getAnimation().getHologramFormat();
