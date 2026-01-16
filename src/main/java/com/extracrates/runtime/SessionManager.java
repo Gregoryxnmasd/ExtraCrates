@@ -29,16 +29,20 @@ import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final EconomyService economyService;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
-    private final Map<UUID, CutscenePreviewSession> previews = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
+    private final Map<UUID, Random> sessionRandoms = new HashMap<>();
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, EconomyService economyService) {
         this.plugin = plugin;
@@ -49,8 +53,7 @@ public class SessionManager {
     public void shutdown() {
         sessions.values().forEach(CrateSession::end);
         sessions.clear();
-        previews.values().forEach(CutscenePreviewSession::end);
-        previews.clear();
+        sessionRandoms.clear();
     }
 
     public boolean openCrate(Player player, CrateDefinition crate) {
@@ -74,22 +77,12 @@ public class SessionManager {
             player.sendMessage(Component.text("Esta crate está en cooldown."));
             return false;
         }
-        double cost = crate.getCost();
-        if (cost > 0) {
-            if (!economyService.isAvailable()) {
-                player.sendMessage(Component.text("No hay un sistema de economía disponible para cobrar esta crate."));
-                return false;
-            }
-            if (!economyService.hasBalance(player, cost)) {
-                player.sendMessage(Component.text("Saldo insuficiente para abrir esta crate."));
-                player.sendMessage(Component.text("Necesitas " + economyService.format(cost) + "."));
-                return false;
-            }
-            EconomyResponse response = economyService.withdraw(player, cost);
-            if (!response.transactionSuccess()) {
-                player.sendMessage(Component.text("No se pudo cobrar el costo de esta crate."));
-                return false;
-            }
+        RewardPool pool = configLoader.getRewardPools().get(crate.getRewardsPool());
+        Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
+        List<Reward> rewards = RewardSelector.roll(pool, random, buildRollLogger(player));
+        if (rewards.isEmpty()) {
+            player.sendMessage(languageManager.getMessage("session.no-rewards"));
+            return false;
         }
         RewardPool pool = configLoader.getRewardPools().get(crate.getRewardsPool());
         List<Reward> rewards = RewardSelector.roll(pool);
@@ -116,6 +109,7 @@ public class SessionManager {
         if (session != null) {
             session.end();
         }
+        sessionRandoms.remove(playerId);
     }
 
     public void endPreview(UUID playerId) {
@@ -127,6 +121,21 @@ public class SessionManager {
 
     public void removeSession(UUID playerId) {
         sessions.remove(playerId);
+        sessionRandoms.remove(playerId);
+    }
+
+    private RewardSelector.RewardRollLogger buildRollLogger(Player player) {
+        if (!configLoader.getMainConfig().getBoolean("debug.rolls", false)) {
+            return null;
+        }
+        return (reward, roll, total) -> plugin.getLogger().info(String.format(
+                "Roll debug player=%s rewardId=%s roll=%.4f chance=%.4f total=%.4f",
+                player.getName(),
+                reward.getId(),
+                roll,
+                reward.getChance(),
+                total
+        ));
     }
 
     private CutscenePath buildDefaultPath(Player player) {
