@@ -6,6 +6,7 @@ import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
+import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.RewardSelector;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -23,17 +24,29 @@ import java.util.*;
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private SyncBridge syncBridge;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
+    private final DisplayPool displayPool = new DisplayPool();
 
-    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
+    public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, SyncBridge syncBridge) {
         this.plugin = plugin;
         this.configLoader = configLoader;
+        this.syncBridge = syncBridge;
     }
 
     public void shutdown() {
         sessions.values().forEach(CrateSession::end);
         sessions.clear();
+        displayPool.clear();
+    }
+
+    public DisplayPool getDisplayPool() {
+        return displayPool;
+    }
+
+    public void setSyncBridge(SyncBridge syncBridge) {
+        this.syncBridge = syncBridge;
     }
 
     public boolean openCrate(Player player, CrateDefinition crate) {
@@ -67,6 +80,7 @@ public class SessionManager {
             consumeKey(player, crate);
         }
         session.start();
+        recordCrateOpen(player, crate);
         applyCooldown(player, crate);
         return true;
     }
@@ -99,10 +113,17 @@ public class SessionManager {
     }
 
     private void applyCooldown(Player player, CrateDefinition crate) {
+        applyCooldown(player, crate, Instant.now(), true);
+    }
+
+    private void applyCooldown(Player player, CrateDefinition crate, Instant timestamp, boolean record) {
         if (crate.getCooldownSeconds() <= 0) {
             return;
         }
-        cooldowns.computeIfAbsent(player.getUniqueId(), key -> new HashMap<>()).put(crate.getId(), Instant.now());
+        cooldowns.computeIfAbsent(player.getUniqueId(), key -> new HashMap<>()).put(crate.getId(), timestamp);
+        if (record && syncBridge != null) {
+            syncBridge.recordCooldown(player.getUniqueId(), crate.getId());
+        }
     }
 
     private boolean hasKey(Player player, CrateDefinition crate) {
@@ -130,6 +151,10 @@ public class SessionManager {
     }
 
     private void consumeKey(Player player, CrateDefinition crate) {
+        consumeKey(player, crate, true);
+    }
+
+    private void consumeKey(Player player, CrateDefinition crate, boolean record) {
         int modelData = parseModel(crate.getKeyModel());
         ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {
@@ -145,6 +170,9 @@ public class SessionManager {
                     item.setAmount(amount - 1);
                 }
                 player.getInventory().setContents(contents);
+                if (record && syncBridge != null) {
+                    syncBridge.recordKeyConsumed(player.getUniqueId(), crate.getId());
+                }
                 return;
             }
         }
@@ -166,5 +194,38 @@ public class SessionManager {
                     .filter(mod -> mod.getUniqueId().equals(modifierUuid))
                     .forEach(attribute::removeModifier);
         }
+    }
+
+    public void recordRewardGranted(Player player, CrateDefinition crate, Reward reward) {
+        if (syncBridge != null) {
+            syncBridge.recordRewardGranted(player.getUniqueId(), crate.getId(), reward.getId());
+        }
+    }
+
+    public void applyRemoteCooldown(UUID playerId, String crateId, Instant timestamp) {
+        cooldowns.computeIfAbsent(playerId, key -> new HashMap<>()).put(crateId, timestamp);
+    }
+
+    public void applyRemoteKeyConsumed(UUID playerId, String crateId) {
+        CrateDefinition crate = configLoader.getCrates().get(crateId);
+        if (crate == null) {
+            return;
+        }
+        Player player = Bukkit.getPlayer(playerId);
+        if (player != null) {
+            consumeKey(player, crate, false);
+        }
+    }
+
+    public void applyRemoteOpen(UUID playerId, String crateId) {
+        plugin.getLogger().info(() -> "[Sync] Apertura remota registrada " + playerId + " en crate " + crateId);
+    }
+
+    public void applyRemoteReward(UUID playerId, String crateId, String rewardId) {
+        plugin.getLogger().info(() -> "[Sync] Recompensa remota registrada " + rewardId + " para " + playerId);
+    }
+
+    public void flushSyncCaches() {
+        cooldowns.clear();
     }
 }
