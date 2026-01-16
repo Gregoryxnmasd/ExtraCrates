@@ -148,7 +148,13 @@ public class CrateSession {
             display.setItemStack(displayItem);
         });
         hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
-            String format = crate.getAnimation().getHologramFormat();
+            String format = reward.getHologram();
+            if (format == null || format.isEmpty()) {
+                format = crate.getAnimation().getHologramFormat();
+            }
+            if (format == null || format.isEmpty()) {
+                format = "%reward_name%";
+            }
             String name = format.replace("%reward_name%", reward.getDisplayName());
             display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
             display.setBillboard(Display.Billboard.CENTER);
