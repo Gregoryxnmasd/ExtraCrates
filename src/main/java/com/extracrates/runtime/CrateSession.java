@@ -113,8 +113,9 @@ public class CrateSession {
             }
             pumpkin.setItemMeta(meta);
         }
-        player.sendEquipmentChange(player, EquipmentSlot.HEAD, pumpkin);
-        spectatorApplied = true;
+        if (config.getBoolean("cutscene.fake-equip", true)) {
+            player.sendEquipmentChange(player, EquipmentSlot.HEAD, pumpkin);
+        }
     }
 
     private void spawnRewardDisplay() {
