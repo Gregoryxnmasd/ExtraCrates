@@ -215,6 +215,7 @@ public class CrateSession {
         player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
         ItemStack item = ItemUtil.buildItem(reward);
         player.getInventory().addItem(item);
+        sessionManager.recordRewardGranted(player, crate, reward);
 
         for (String command : reward.getCommands()) {
             String parsed = command.replace("%player%", player.getName());
