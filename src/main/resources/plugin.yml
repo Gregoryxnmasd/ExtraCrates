@@ -7,10 +7,12 @@ softdepend:
 commands:
   crate:
     description: Comandos principales de ExtraCrates
-    usage: /<command> <gui|open|preview|reload|givekey|route>
+    usage: /<command> <gui|editor|open|preview|reload|givekey>
 permissions:
   extracrates.gui:
     default: true
+  extracrates.editor:
+    default: op
   extracrates.open:
     default: true
   extracrates.preview:

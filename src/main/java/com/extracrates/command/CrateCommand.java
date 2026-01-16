@@ -5,6 +5,7 @@ import com.extracrates.api.OpenMode;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.gui.CrateGui;
+import com.extracrates.gui.editor.EditorMenu;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.route.RouteEditorManager;
 import com.extracrates.runtime.SessionManager;
@@ -27,20 +28,26 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
     private final ConfigLoader configLoader;
     private final SessionManager sessionManager;
     private final CrateGui crateGui;
-    private final RouteEditorManager routeEditorManager;
+    private final EditorMenu editorMenu;
 
-    public CrateCommand(ExtraCratesPlugin plugin, ConfigLoader configLoader, SessionManager sessionManager, CrateGui crateGui, RouteEditorManager routeEditorManager) {
+    public CrateCommand(
+            ExtraCratesPlugin plugin,
+            ConfigLoader configLoader,
+            SessionManager sessionManager,
+            CrateGui crateGui,
+            EditorMenu editorMenu
+    ) {
         this.plugin = plugin;
         this.configLoader = configLoader;
         this.sessionManager = sessionManager;
         this.crateGui = crateGui;
-        this.routeEditorManager = routeEditorManager;
+        this.editorMenu = editorMenu;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usa /crate gui|open|preview|reload|givekey|route"));
+            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|reload|givekey"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -55,6 +62,18 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 crateGui.open(player);
+                return true;
+            }
+            case "editor" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage(Component.text("Solo jugadores."));
+                    return true;
+                }
+                if (!sender.hasPermission("extracrates.editor")) {
+                    sender.sendMessage(Component.text("Sin permiso."));
+                    return true;
+                }
+                editorMenu.open(player);
                 return true;
             }
             case "open", "preview" -> {
@@ -183,6 +202,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         List<String> results = new ArrayList<>();
         if (args.length == 1) {
             results.add("gui");
+            results.add("editor");
             results.add("open");
             results.add("preview");
             results.add("reload");
