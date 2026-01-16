@@ -162,7 +162,22 @@ public class CrateDefinition {
         AnimationSettings animation = AnimationSettings.fromSection(section.getConfigurationSection("animation"));
         CutsceneSettings cutsceneSettings = CutsceneSettings.fromSections(section.getConfigurationSection("cutscene"), defaults == null ? null : defaults.getConfigurationSection("cutscene"));
         String rewardsPool = section.getString("rewards-pool", "");
-        return new CrateDefinition(id, displayName, type, openMode, keyModel, cooldown, cost, permission, cameraStart, rewardAnchor, animation, cutsceneSettings, rewardsPool);
+        return new CrateDefinition(
+                id,
+                displayName,
+                type,
+                openMode,
+                keyModel,
+                keyMaterial,
+                cooldown,
+                cost,
+                permission,
+                cameraStart,
+                rewardAnchor,
+                animation,
+                cutsceneSettings,
+                rewardsPool
+        );
     }
 
     public static class AnimationSettings {
