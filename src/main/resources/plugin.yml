@@ -5,7 +5,7 @@ api-version: 1.20
 commands:
   crate:
     description: Comandos principales de ExtraCrates
-    usage: /<command> <gui|open|preview|reload|givekey>
+    usage: /<command> <gui|open|preview|reload|givekey|route>
 permissions:
   extracrates.gui:
     default: true
@@ -16,4 +16,6 @@ permissions:
   extracrates.reload:
     default: op
   extracrates.givekey:
+    default: op
+  extracrates.route.editor:
     default: op

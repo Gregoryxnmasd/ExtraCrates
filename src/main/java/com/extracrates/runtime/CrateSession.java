@@ -2,14 +2,13 @@ package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
-import net.kyori.adventure.text.Component;
 import org.bukkit.*;
-import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
@@ -22,56 +21,74 @@ import java.util.*;
 public class CrateSession {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private final LanguageManager languageManager;
     private final Player player;
     private final CrateDefinition crate;
-    private final Reward reward;
+    private final List<Reward> rewards;
     private final CutscenePath path;
+    private final boolean grantReward;
     private final SessionManager sessionManager;
+    private final String openMode;
 
     private ArmorStand cameraStand;
     private ItemDisplay rewardDisplay;
     private TextDisplay hologram;
     private BukkitRunnable task;
+    private BukkitRunnable rewardTask;
+    private int rewardIndex;
 
     private GameMode previousGameMode;
     private UUID speedModifierUuid;
     private ItemStack previousHelmet;
+    private boolean spectatorApplied;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
             ConfigLoader configLoader,
+            LanguageManager languageManager,
             Player player,
             CrateDefinition crate,
-            Reward reward,
+            List<Reward> rewards,
             CutscenePath path,
+            boolean grantReward,
             SessionManager sessionManager
     ) {
         this.plugin = plugin;
         this.configLoader = configLoader;
+        this.languageManager = languageManager;
         this.player = player;
         this.crate = crate;
-        this.reward = reward;
+        this.rewards = rewards == null ? Collections.emptyList() : rewards;
         this.path = path;
+        this.grantReward = grantReward;
         this.sessionManager = sessionManager;
+        this.openMode = normalizeOpenMode(crate.getOpenMode());
     }
 
     public void start() {
+        if (isRewardOnly()) {
+            executeReward();
+            sessionManager.removeSession(player.getUniqueId());
+            return;
+        }
         Location start = crate.getCameraStart() != null ? crate.getCameraStart() : player.getLocation();
-        previousGameMode = player.getGameMode();
         spawnCamera(start);
         applySpectatorMode();
         spawnRewardDisplay();
+        scheduleTimeout();
         startCutscene();
     }
 
     private void spawnCamera(Location start) {
-        cameraStand = start.getWorld().spawn(start, ArmorStand.class, stand -> {
-            stand.setInvisible(true);
-            stand.setGravity(false);
-            stand.setMarker(true);
-            stand.setSilent(true);
-        });
-        hideFromOthers(cameraStand);
+        cameraStand = sessionManager.getDisplayPool().acquireArmorStand(start);
+        if (cameraStand == null) {
+            return;
+        }
+        cameraStand.setInvisible(true);
+        cameraStand.setGravity(false);
+        cameraStand.setMarker(true);
+        cameraStand.setSilent(true);
+        resetVisibility(cameraStand);
     }
 
     private void applySpectatorMode() {
@@ -82,6 +99,7 @@ public class CrateSession {
         } catch (IllegalArgumentException ex) {
             speedModifierUuid = UUID.randomUUID();
         }
+        previousGameMode = player.getGameMode();
         double modifierValue = config.getDouble("cutscene.slowdown-modifier", -10.0);
         sessionManager.applySpectator(player, speedModifierUuid, modifierValue);
         player.setSpectatorTarget(cameraStand);
@@ -98,28 +116,41 @@ public class CrateSession {
             pumpkin.setItemMeta(meta);
         }
         player.sendEquipmentChange(player, EquipmentSlot.HEAD, pumpkin);
+        spectatorApplied = true;
     }
 
     private void spawnRewardDisplay() {
+        if (rewards.isEmpty()) {
+            return;
+        }
         Location anchor = crate.getRewardAnchor() != null ? crate.getRewardAnchor() : player.getLocation().add(0, 1.5, 0);
         CrateDefinition.RewardFloatSettings floatSettings = crate.getAnimation().getRewardFloatSettings();
         Location displayLocation = anchor.clone().add(0, floatSettings.getHeight(), 0);
+        Reward reward = rewards.get(0);
 
-        rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
-            display.setItemStack(ItemUtil.buildItem(reward));
-        });
-        hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
+        rewardDisplay = sessionManager.getDisplayPool().acquireItemDisplay(displayLocation);
+        if (rewardDisplay != null) {
+            rewardDisplay.setItemStack(ItemUtil.buildItem(reward));
+        }
+        hologram = sessionManager.getDisplayPool().acquireTextDisplay(displayLocation.clone().add(0, 0.4, 0));
+        if (hologram != null) {
             String format = crate.getAnimation().getHologramFormat();
             String name = format.replace("%reward_name%", reward.getDisplayName());
-            display.text(TextUtil.color(name));
-            display.setBillboard(Display.Billboard.CENTER);
-        });
+            hologram.text(TextUtil.color(name));
+            hologram.setBillboard(Display.Billboard.CENTER);
+        }
 
-        hideFromOthers(rewardDisplay);
-        hideFromOthers(hologram);
+        resetVisibility(rewardDisplay);
+        resetVisibility(hologram);
     }
 
-    private void hideFromOthers(Entity entity) {
+    private void resetVisibility(Entity entity) {
+        if (entity == null) {
+            return;
+        }
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            online.showEntity(plugin, entity);
+        }
         for (Player online : Bukkit.getOnlinePlayers()) {
             if (!online.getUniqueId().equals(player.getUniqueId())) {
                 online.hideEntity(plugin, entity);
@@ -168,42 +199,78 @@ public class CrateSession {
         task.runTaskTimer(plugin, 0L, period);
     }
 
+    private void scheduleTimeout() {
+        long maxDurationTicks = Math.max(0L, configLoader.getMainConfig().getLong("sessions.max-duration-ticks", 600L));
+        if (maxDurationTicks == 0L) {
+            return;
+        }
+        timeoutTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                end();
+            }
+        };
+        timeoutTask.runTaskLater(plugin, maxDurationTicks);
+    }
+
     private List<Location> buildTimeline(World world, CutscenePath path) {
         List<Location> timeline = new ArrayList<>();
-        List<com.extracrates.model.CutscenePoint> points = path.getPoints();
-        for (int i = 0; i < points.size() - 1; i++) {
-            com.extracrates.model.CutscenePoint start = points.get(i);
-            com.extracrates.model.CutscenePoint end = points.get(i + 1);
-            Location startLoc = new Location(world, start.getX(), start.getY(), start.getZ(), start.getYaw(), start.getPitch());
-            Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ(), end.getYaw(), end.getPitch());
-            double distance = startLoc.distance(endLoc);
-            int steps = Math.max(2, (int) Math.ceil(distance / path.getStepResolution()));
-            for (int s = 0; s <= steps; s++) {
-                double t = s / (double) steps;
-                double x = lerp(startLoc.getX(), endLoc.getX(), t);
-                double y = lerp(startLoc.getY(), endLoc.getY(), t);
-                double z = lerp(startLoc.getZ(), endLoc.getZ(), t);
-                float yaw = (float) lerp(startLoc.getYaw(), endLoc.getYaw(), t);
-                float pitch = (float) lerp(startLoc.getPitch(), endLoc.getPitch(), t);
-                timeline.add(new Location(world, x, y, z, yaw, pitch));
-            }
+        for (com.extracrates.model.CutscenePoint point : path.getTimelinePoints()) {
+            timeline.add(new Location(world, point.getX(), point.getY(), point.getZ(), point.getYaw(), point.getPitch()));
         }
         return timeline;
     }
 
-    private double lerp(double start, double end, double t) {
-        return start + (end - start) * t;
-    }
-
     private void finish() {
-        executeReward();
-        end();
+        startRewardSequence();
     }
 
-    private void executeReward() {
+    private void startRewardSequence() {
+        if (rewards.isEmpty()) {
+            end();
+            return;
+        }
+        rewardIndex = 0;
+        updateRewardDisplay(rewards.get(rewardIndex));
+        long delayTicks = Math.max(1L, configLoader.getMainConfig().getLong("cutscene.reward-delay-ticks", 20L));
+        rewardTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (rewardIndex >= rewards.size()) {
+                    cancel();
+                    end();
+                    return;
+                }
+                Reward current = rewards.get(rewardIndex);
+                executeReward(current);
+                rewardIndex++;
+                if (rewardIndex >= rewards.size()) {
+                    cancel();
+                    end();
+                    return;
+                }
+                updateRewardDisplay(rewards.get(rewardIndex));
+            }
+        };
+        rewardTask.runTaskTimer(plugin, delayTicks, delayTicks);
+    }
+
+    private void updateRewardDisplay(Reward reward) {
+        if (rewardDisplay != null) {
+            rewardDisplay.setItemStack(ItemUtil.buildItem(reward));
+        }
+        if (hologram != null) {
+            String format = crate.getAnimation().getHologramFormat();
+            String name = format.replace("%reward_name%", reward.getDisplayName());
+            hologram.text(TextUtil.color(name));
+        }
+    }
+
+    private void executeReward(Reward reward) {
         player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
         ItemStack item = ItemUtil.buildItem(reward);
         player.getInventory().addItem(item);
+        sessionManager.recordRewardGranted(player, crate, reward);
 
         for (String command : reward.getCommands()) {
             String parsed = command.replace("%player%", player.getName());
@@ -237,27 +304,47 @@ public class CrateSession {
         if (task != null) {
             task.cancel();
         }
+        if (rewardTask != null) {
+            rewardTask.cancel();
+        }
         if (cameraStand != null && !cameraStand.isDead()) {
-            cameraStand.remove();
+            sessionManager.getDisplayPool().releaseArmorStand(cameraStand);
         }
         if (rewardDisplay != null && !rewardDisplay.isDead()) {
-            rewardDisplay.remove();
+            sessionManager.getDisplayPool().releaseItemDisplay(rewardDisplay);
         }
         if (hologram != null && !hologram.isDead()) {
-            hologram.remove();
+            sessionManager.getDisplayPool().releaseTextDisplay(hologram);
         }
-        if (previousGameMode != null) {
-            player.setGameMode(previousGameMode);
-        }
-        player.setSpectatorTarget(null);
-        if (speedModifierUuid != null) {
-            sessionManager.removeSpectatorModifier(player, speedModifierUuid);
-        }
-        if (previousHelmet != null) {
-            player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet);
-        } else {
-            player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
+        if (spectatorApplied) {
+            if (previousGameMode != null) {
+                player.setGameMode(previousGameMode);
+            }
+            player.setSpectatorTarget(null);
+            if (speedModifierUuid != null) {
+                sessionManager.removeSpectatorModifier(player, speedModifierUuid);
+            }
+            if (previousHelmet != null) {
+                player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet);
+            } else {
+                player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
+            }
         }
         sessionManager.removeSession(player.getUniqueId());
+    }
+
+    private boolean isRewardOnly() {
+        return "reward-only".equals(openMode);
+    }
+
+    private boolean isPreviewOnly() {
+        return "preview-only".equals(openMode);
+    }
+
+    private String normalizeOpenMode(String mode) {
+        if (mode == null || mode.isBlank()) {
+            return "reward-only";
+        }
+        return mode.toLowerCase(Locale.ROOT);
     }
 }

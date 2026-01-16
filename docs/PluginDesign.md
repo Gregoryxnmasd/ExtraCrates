@@ -60,6 +60,13 @@ Este documento describe cómo implementar el plugin solicitado: un sistema de cr
 
 Se incluyen ejemplos mínimos en `config/examples/`.
 
+### Modos de apertura (`open-mode`)
+Valores válidos en `crates.yml` para decidir si se entrega recompensa o si se requiere llave/economía:
+- `reward-only`: modo estándar. Entrega recompensa al final. Si el `type` es `keyed`, requiere llave.
+- `preview-only`: solo reproduce la cutscene y muestra el ítem flotante, sin entregar recompensa ni consumir llave/economía.
+- `key-required`: requiere y consume llave (ignora el coste de economía).
+- `economy-required`: requiere saldo de economía (usa el campo `cost`).
+
 ## Concurrencia y aislamiento
 - Cada apertura crea IDs únicos para hologramas e ítems de recompensa usando `NamespacedKey`.
 - Se usan canales de paquetes o `adventure` para enviar entidades fantasma solo al jugador involucrado (Packets/ProtocolLib). Al resto se les ocultan.
