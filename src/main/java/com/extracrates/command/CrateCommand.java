@@ -87,6 +87,9 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(languageManager.getMessage("command.reload-success"));
                 return true;
             }
+            case "sync" -> {
+                return syncCommand.handle(sender, args);
+            }
             case "givekey" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage(languageManager.getMessage("command.only-players"));
@@ -105,7 +108,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
                     return true;
                 }
-                ItemStack key = new ItemStack(Material.TRIPWIRE_HOOK);
+                ItemStack key = new ItemStack(crate.getKeyMaterial());
                 ItemMeta meta = key.getItemMeta();
                 if (meta != null) {
                     String keyName = languageManager.getRaw("command.key-item-name", java.util.Map.of("crate_name", crate.getDisplayName()));
@@ -137,7 +140,12 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("open");
             results.add("preview");
             results.add("reload");
+            results.add("sync");
             results.add("givekey");
+            return results;
+        }
+        if (args.length >= 2 && args[0].equalsIgnoreCase("sync")) {
+            results.addAll(syncCommand.tabComplete(args));
             return results;
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview") || args[0].equalsIgnoreCase("givekey"))) {

@@ -1,11 +1,13 @@
 package com.extracrates;
 
 import com.extracrates.command.CrateCommand;
+import com.extracrates.command.SyncCommand;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.gui.CrateGui;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.runtime.SessionListener;
+import com.extracrates.sync.SyncBridge;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -14,6 +16,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private SessionManager sessionManager;
     private CrateGui crateGui;
+    private SyncBridge syncBridge;
 
     @Override
     public void onEnable() {
@@ -26,6 +29,8 @@ public final class ExtraCratesPlugin extends JavaPlugin {
 
         configLoader = new ConfigLoader(this);
         configLoader.loadAll();
+        ConfigValidator validator = new ConfigValidator(this, configLoader);
+        validator.report(validator.validate());
 
         languageManager = new LanguageManager(this);
         languageManager.load();
@@ -46,6 +51,9 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     public void onDisable() {
         if (sessionManager != null) {
             sessionManager.shutdown();
+        }
+        if (syncBridge != null) {
+            syncBridge.shutdown();
         }
     }
 
