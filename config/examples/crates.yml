@@ -2,6 +2,7 @@ crates:
   legendary:
     display-name: "&6Legendaria"
     type: "keyed"
+    # open-mode: reward-only | full | preview-only
     open-mode: "reward-only"
     key-model: "legendary_key"
     cooldown-seconds: 120
@@ -27,6 +28,7 @@ crates:
   seasonal:
     display-name: "&dTemporada"
     type: "event"
+    # open-mode: reward-only | full | preview-only
     open-mode: "reward-only"
     cooldown-seconds: 30
     permission: "extracrates.open.seasonal"
