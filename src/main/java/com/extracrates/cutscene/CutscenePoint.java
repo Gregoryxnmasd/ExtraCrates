@@ -1,4 +1,4 @@
-package com.extracrates.model;
+package com.extracrates.cutscene;
 
 public class CutscenePoint {
     private final double x;
