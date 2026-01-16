@@ -5,7 +5,7 @@ import com.extracrates.api.ExtraCratesApiImpl;
 import com.extracrates.command.CrateCommand;
 import com.extracrates.command.SyncCommand;
 import com.extracrates.config.ConfigLoader;
-import com.extracrates.config.LanguageManager;
+import com.extracrates.economy.EconomyService;
 import com.extracrates.gui.CrateGui;
 import com.extracrates.gui.editor.ConfirmationMenu;
 import com.extracrates.gui.editor.EditorInputManager;
@@ -38,10 +38,8 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         ConfigValidator validator = new ConfigValidator(this, configLoader);
         validator.report(validator.validate());
 
-        protocolEntityHider = ProtocolEntityHider.createIfPresent(this);
-
-        setupEconomy();
-        sessionManager = new SessionManager(this, configLoader, economy);
+        economyService = new EconomyService(this);
+        sessionManager = new SessionManager(this, configLoader, economyService);
         new SessionListener(this, sessionManager);
         routeEditorManager = new RouteEditorManager(this, configLoader);
         new RouteEditorListener(this, routeEditorManager);

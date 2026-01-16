@@ -9,6 +9,7 @@ import com.extracrates.gui.editor.EditorMenu;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.runtime.SessionManager;
+import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -94,32 +95,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
                     return true;
                 }
-                if (sub.equals("preview")) {
-                    sessionManager.previewCutscene(player, configLoader.getPaths().get(crate.getAnimation().getPath()));
-                } else {
-                    sessionManager.openCrate(player, crate);
-                }
-                return true;
-            }
-            case "cutscene" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage(Component.text("Solo jugadores."));
-                    return true;
-                }
-                if (!sender.hasPermission("extracrates.preview")) {
-                    sender.sendMessage(Component.text("Sin permiso."));
-                    return true;
-                }
-                if (args.length < 3 || !args[1].equalsIgnoreCase("test")) {
-                    sender.sendMessage(Component.text("Uso: /crate cutscene test <id>"));
-                    return true;
-                }
-                CutscenePath path = configLoader.getPaths().get(args[2]);
-                if (path == null) {
-                    sender.sendMessage(Component.text("Ruta de cutscene no encontrada."));
-                    return true;
-                }
-                sessionManager.previewCutscene(player, path);
+                sessionManager.openCrate(player, crate, sub.equals("preview"));
                 return true;
             }
             case "reload" -> {
@@ -160,8 +136,10 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     String keyName = languageManager.getRaw("command.key-item-name", java.util.Map.of("crate_name", crate.getDisplayName()));
                     meta.displayName(TextUtil.color(keyName));
                     if (crate.getKeyModel() != null && !crate.getKeyModel().isEmpty()) {
-                        configLoader.getResourcePackRegistry().resolveCustomModelData(crate.getKeyModel())
-                                .ifPresent(meta::setCustomModelData);
+                        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.getKeyModel());
+                        if (modelData >= 0) {
+                            meta.setCustomModelData(modelData);
+                        }
                     }
                     key.setItemMeta(meta);
                 }

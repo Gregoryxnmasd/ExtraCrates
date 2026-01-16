@@ -17,7 +17,7 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
-    compileOnly("net.milkbowl.vault:VaultAPI:1.7.1")
+    compileOnly("net.milkbowl.vault:VaultAPI:1.7")
 }
 
 java {

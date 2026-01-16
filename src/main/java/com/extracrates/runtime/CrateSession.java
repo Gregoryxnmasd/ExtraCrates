@@ -32,15 +32,15 @@ public class CrateSession {
     private final CutscenePath path;
     private final boolean grantReward;
     private final SessionManager sessionManager;
-    private final HologramSettings hologramSettings;
+    private final boolean preview;
 
     private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
     private TextDisplay hologram;
     private BukkitRunnable task;
-    private int rewardIndex;
-    private long rewardSwitchTicks;
-    private long nextRewardSwitchTick;
+    private Location rewardBaseLocation;
+    private Location hologramBaseLocation;
+    private org.bukkit.util.Transformation rewardBaseTransform;
 
     private GameMode previousGameMode;
     private UUID speedModifierUuid;
@@ -67,7 +67,7 @@ public class CrateSession {
         this.path = path;
         this.grantReward = grantReward;
         this.sessionManager = sessionManager;
-        this.hologramSettings = sessionManager.getHologramSettings();
+        this.preview = preview;
     }
 
     public void start() {
@@ -85,8 +85,10 @@ public class CrateSession {
     }
 
     private void spawnCamera(Location start) {
-        CameraEntityFactory factory = new CameraEntityFactory(configLoader);
-        cameraEntity = factory.spawn(start);
+        FileConfiguration config = configLoader.getMainConfig();
+        String cameraEntityType = config.getString("cutscene.camera-entity", "armorstand");
+        boolean armorStandInvisible = config.getBoolean("cutscene.armorstand-invisible", true);
+        cameraEntity = CameraEntityFactory.spawn(start, cameraEntityType, armorStandInvisible);
         hideFromOthers(cameraEntity);
     }
 
@@ -135,7 +137,13 @@ public class CrateSession {
             display.setItemStack(ItemUtil.buildItem(reward, anchor.getWorld(), configLoader, plugin.getMapImageCache()));
         });
         hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
-            String format = crate.getAnimation().getHologramFormat();
+            String format = reward.getHologram();
+            if (format == null || format.isEmpty()) {
+                format = crate.getAnimation().getHologramFormat();
+            }
+            if (format == null || format.isEmpty()) {
+                format = "%reward_name%";
+            }
             String name = format.replace("%reward_name%", reward.getDisplayName());
             display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
             display.setBillboard(Display.Billboard.CENTER);
@@ -143,6 +151,10 @@ public class CrateSession {
 
         hideFromOthers(rewardDisplay);
         hideFromOthers(hologram);
+
+        rewardBaseLocation = rewardDisplay.getLocation().clone();
+        hologramBaseLocation = hologram.getLocation().clone();
+        rewardBaseTransform = rewardDisplay.getTransformation();
     }
 
     private void hideFromOthers(Entity entity) {
@@ -163,17 +175,9 @@ public class CrateSession {
             finish();
             return;
         }
-        TimelineData timelineData = buildTimeline(cameraStand.getWorld(), path);
-        List<TimelinePoint> timeline = timelineData.points();
-        if (timeline.isEmpty()) {
-            finish();
-            return;
-        }
+        List<Location> timeline = buildTimeline(cameraEntity.getWorld(), path);
         task = new BukkitRunnable() {
             int index = 0;
-            double rotation = 0;
-            int tick = 0;
-            final int totalTicks = (int) Math.max(1, path.getDurationSeconds() * 20);
 
             @Override
             public void run() {
@@ -182,22 +186,9 @@ public class CrateSession {
                     finish();
                     return;
                 }
-                while (index + 1 < timeline.size() && timeline.get(index + 1).tick() <= tick) {
-                    index++;
-                }
-                Location point = timeline.get(index).location();
-                cameraStand.teleport(point);
-                player.setSpectatorTarget(cameraStand);
-
-                if (rewardRenderer != null) {
-                    rewardRenderer.tick();
-                }
-                tick++;
-            }
-        };
-        assignTicks(timeline, timelineData.totalDistance(), (int) Math.max(1, path.getDurationSeconds() * 20));
-        task.runTaskTimer(plugin, 0L, 1L);
-    }
+                Location point = timeline.get(index++);
+                cameraEntity.teleport(point);
+                player.setSpectatorTarget(cameraEntity);
 
     private TimelineData buildTimeline(World world, CutscenePath path) {
         List<TimelinePoint> timeline = new ArrayList<>();
@@ -244,13 +235,67 @@ public class CrateSession {
         return start + (end - start) * t;
     }
 
-    private double catmullRom(double p0, double p1, double p2, double p3, double t) {
-        double t2 = t * t;
-        double t3 = t2 * t;
-        return 0.5 * ((2.0 * p1)
-                + (-p0 + p2) * t
-                + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
-                + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3);
+    private List<Location> buildTimeline(World world, CutscenePath path) {
+        List<Location> timeline = new ArrayList<>();
+        List<com.extracrates.model.CutscenePoint> points = path.getPoints();
+        String smoothing = resolveSmoothing(path);
+        for (int i = 0; i < points.size() - 1; i++) {
+            com.extracrates.model.CutscenePoint start = points.get(i);
+            com.extracrates.model.CutscenePoint end = points.get(i + 1);
+            Location startLoc = new Location(world, start.getX(), start.getY(), start.getZ(), start.getYaw(), start.getPitch());
+            Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ(), end.getYaw(), end.getPitch());
+            double distance = startLoc.distance(endLoc);
+            int steps = Math.max(2, (int) Math.ceil(distance / path.getStepResolution()));
+            for (int s = 0; s <= steps; s++) {
+                double t = s / (double) steps;
+                double eased = applyEasing(t, smoothing);
+                double x = lerp(startLoc.getX(), endLoc.getX(), eased);
+                double y = lerp(startLoc.getY(), endLoc.getY(), eased);
+                double z = lerp(startLoc.getZ(), endLoc.getZ(), eased);
+                float yaw = lerpAngle(startLoc.getYaw(), endLoc.getYaw(), eased);
+                float pitch = lerpAngle(startLoc.getPitch(), endLoc.getPitch(), eased);
+                timeline.add(new Location(world, x, y, z, yaw, pitch));
+            }
+        }
+        return timeline;
+    }
+
+    private String resolveSmoothing(CutscenePath path) {
+        String smoothing = path.getSmoothing();
+        if (smoothing == null || smoothing.isBlank()) {
+            smoothing = "linear";
+        }
+        return smoothing;
+    }
+
+    private double applyEasing(double t, String smoothing) {
+        String mode = smoothing == null ? "linear" : smoothing.trim().toLowerCase(Locale.ROOT);
+        return switch (mode) {
+            case "ease-in", "ease_in", "in" -> t * t;
+            case "ease-out", "ease_out", "out" -> 1 - Math.pow(1 - t, 2);
+            case "ease-in-out", "ease_in_out", "in-out", "smoothstep", "catmull-rom" -> t * t * (3 - 2 * t);
+            default -> t;
+        };
+    }
+
+    private double lerp(double start, double end, double t) {
+        return start + (end - start) * t;
+    }
+
+    private float lerpAngle(float start, float end, double t) {
+        float delta = wrapDegrees(end - start);
+        return start + (float) (delta * t);
+    }
+
+    private float wrapDegrees(float angle) {
+        float wrapped = angle % 360.0f;
+        if (wrapped >= 180.0f) {
+            wrapped -= 360.0f;
+        }
+        if (wrapped < -180.0f) {
+            wrapped += 360.0f;
+        }
+        return wrapped;
     }
 
     private void finish() {
@@ -269,53 +314,6 @@ public class CrateSession {
                 String parsed = command.replace("%player%", player.getName());
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
-            if (reward.getMessage() != null && (!reward.getMessage().getTitle().isEmpty() || !reward.getMessage().getSubtitle().isEmpty())) {
-                player.showTitle(net.kyori.adventure.title.Title.title(
-                        TextUtil.color(reward.getMessage().getTitle()),
-                        TextUtil.color(reward.getMessage().getSubtitle())
-                ));
-            }
-            if (reward.getEffects() != null) {
-                if (!reward.getEffects().getSound().isEmpty()) {
-                    try {
-                        Sound sound = Sound.valueOf(reward.getEffects().getSound().toUpperCase(Locale.ROOT));
-                        player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
-                    } catch (IllegalArgumentException ignored) {
-                    }
-                }
-                if (!reward.getEffects().getParticles().isEmpty()) {
-                    try {
-                        Particle particle = Particle.valueOf(reward.getEffects().getParticles().toUpperCase(Locale.ROOT));
-                        player.getWorld().spawnParticle(particle, player.getLocation(), 20, 0.2, 0.2, 0.2, 0.01);
-                    } catch (IllegalArgumentException ignored) {
-                    }
-                }
-            }
-        }
-    }
-
-    private Reward getCurrentReward() {
-        if (rewards == null || rewards.isEmpty()) {
-            return null;
-        }
-        int clamped = Math.min(rewardIndex, rewards.size() - 1);
-        return rewards.get(clamped);
-    }
-
-    private void configureRewardSequence(int totalTicks) {
-        rewardIndex = 0;
-        if (rewards == null || rewards.size() <= 1) {
-            rewardSwitchTicks = 0;
-            nextRewardSwitchTick = 0;
-            return;
-        }
-        rewardSwitchTicks = Math.max(1L, totalTicks / rewards.size());
-        nextRewardSwitchTick = rewardSwitchTicks;
-    }
-
-    private void updateRewardSequence(long elapsedTicks) {
-        if (rewardSwitchTicks <= 0 || rewards == null) {
-            return;
         }
         if (rewardIndex >= rewards.size() - 1) {
             return;
@@ -340,6 +338,10 @@ public class CrateSession {
             String name = format.replace("%reward_name%", reward.getDisplayName());
             hologram.text(TextUtil.color(name));
         }
+    }
+
+    private boolean isQaMode() {
+        return configLoader.getMainConfig().getBoolean("qa-mode", false);
     }
 
     public void end() {
