@@ -5,9 +5,11 @@ import com.extracrates.api.ExtraCratesApiImpl;
 import com.extracrates.command.CrateCommand;
 import com.extracrates.command.SyncCommand;
 import com.extracrates.config.ConfigLoader;
-import com.extracrates.config.LanguageManager;
+import com.extracrates.economy.EconomyService;
 import com.extracrates.gui.CrateGui;
-import com.extracrates.runtime.ProtocolEntityHider;
+import com.extracrates.gui.editor.ConfirmationMenu;
+import com.extracrates.gui.editor.EditorInputManager;
+import com.extracrates.gui.editor.EditorMenu;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.runtime.SessionListener;
 import net.milkbowl.vault.economy.Economy;
@@ -20,7 +22,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private SessionManager sessionManager;
     private CrateGui crateGui;
-    private Economy economy;
+    private EconomyService economyService;
 
     @Override
     public void onEnable() {
@@ -36,19 +38,19 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         ConfigValidator validator = new ConfigValidator(this, configLoader);
         validator.report(validator.validate());
 
-        protocolEntityHider = ProtocolEntityHider.createIfPresent(this);
-
-        setupEconomy();
-        sessionManager = new SessionManager(this, configLoader, economy);
+        economyService = new EconomyService(this);
+        sessionManager = new SessionManager(this, configLoader, economyService);
         new SessionListener(this, sessionManager);
         routeEditorManager = new RouteEditorManager(this, configLoader);
         new RouteEditorListener(this, routeEditorManager);
         crateGui = new CrateGui(this, configLoader, sessionManager);
-        api = new ExtraCratesApiImpl(configLoader, sessionManager);
+        EditorInputManager inputManager = new EditorInputManager(this);
+        ConfirmationMenu confirmationMenu = new ConfirmationMenu(this);
+        editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu);
 
         PluginCommand crateCommand = getCommand("crate");
         if (crateCommand != null) {
-            CrateCommand executor = new CrateCommand(this, configLoader, sessionManager, crateGui, routeEditorManager);
+            CrateCommand executor = new CrateCommand(this, configLoader, sessionManager, crateGui, editorMenu);
             crateCommand.setExecutor(executor);
             crateCommand.setTabCompleter(executor);
         }
