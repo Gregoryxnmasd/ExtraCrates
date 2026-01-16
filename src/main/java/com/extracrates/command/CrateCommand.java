@@ -2,12 +2,12 @@ package com.extracrates.command;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.ConfigValidator;
 import com.extracrates.gui.CrateGui;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -25,18 +25,20 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
     private final ConfigLoader configLoader;
     private final SessionManager sessionManager;
     private final CrateGui crateGui;
+    private final SyncCommand syncCommand;
 
-    public CrateCommand(ExtraCratesPlugin plugin, ConfigLoader configLoader, SessionManager sessionManager, CrateGui crateGui) {
+    public CrateCommand(ExtraCratesPlugin plugin, ConfigLoader configLoader, SessionManager sessionManager, CrateGui crateGui, SyncCommand syncCommand) {
         this.plugin = plugin;
         this.configLoader = configLoader;
         this.sessionManager = sessionManager;
         this.crateGui = crateGui;
+        this.syncCommand = syncCommand;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usa /crate gui|open|preview|reload|givekey"));
+            sender.sendMessage(Component.text("Usa /crate gui|open|preview|reload|sync|givekey"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -58,12 +60,13 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Component.text("Solo jugadores."));
                     return true;
                 }
-                if (!sender.hasPermission("extracrates.open")) {
+                String permission = sub.equals("preview") ? "extracrates.preview" : "extracrates.open";
+                if (!sender.hasPermission(permission)) {
                     sender.sendMessage(Component.text("Sin permiso."));
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage(Component.text("Uso: /crate open <id>"));
+                    sender.sendMessage(Component.text("Uso: /crate " + sub + " <id>"));
                     return true;
                 }
                 CrateDefinition crate = configLoader.getCrates().get(args[1]);
@@ -81,8 +84,13 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 }
                 plugin.reloadConfig();
                 configLoader.loadAll();
+                ConfigValidator validator = new ConfigValidator(plugin, configLoader);
+                validator.report(validator.validate());
                 sender.sendMessage(Component.text("Configuraciones recargadas."));
                 return true;
+            }
+            case "sync" -> {
+                return syncCommand.handle(sender, args);
             }
             case "givekey" -> {
                 if (!(sender instanceof Player player)) {
@@ -102,7 +110,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Component.text("Crate no encontrada."));
                     return true;
                 }
-                ItemStack key = new ItemStack(Material.TRIPWIRE_HOOK);
+                ItemStack key = new ItemStack(crate.getKeyMaterial());
                 ItemMeta meta = key.getItemMeta();
                 if (meta != null) {
                     meta.displayName(TextUtil.color(crate.getDisplayName() + " &7(llave)"));
@@ -133,7 +141,12 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("open");
             results.add("preview");
             results.add("reload");
+            results.add("sync");
             results.add("givekey");
+            return results;
+        }
+        if (args.length >= 2 && args[0].equalsIgnoreCase("sync")) {
+            results.addAll(syncCommand.tabComplete(args));
             return results;
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview") || args[0].equalsIgnoreCase("givekey"))) {

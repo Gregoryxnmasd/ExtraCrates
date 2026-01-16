@@ -1,6 +1,7 @@
 package com.extracrates.model;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -10,6 +11,7 @@ public class CrateDefinition {
     private final CrateType type;
     private final String openMode;
     private final String keyModel;
+    private final Material keyMaterial;
     private final int cooldownSeconds;
     private final double cost;
     private final String permission;
@@ -25,6 +27,7 @@ public class CrateDefinition {
             CrateType type,
             String openMode,
             String keyModel,
+            Material keyMaterial,
             int cooldownSeconds,
             double cost,
             String permission,
@@ -39,6 +42,7 @@ public class CrateDefinition {
         this.type = type;
         this.openMode = openMode;
         this.keyModel = keyModel;
+        this.keyMaterial = keyMaterial;
         this.cooldownSeconds = cooldownSeconds;
         this.cost = cost;
         this.permission = permission;
@@ -67,6 +71,10 @@ public class CrateDefinition {
 
     public String getKeyModel() {
         return keyModel;
+    }
+
+    public Material getKeyMaterial() {
+        return keyMaterial;
     }
 
     public int getCooldownSeconds() {
@@ -109,6 +117,11 @@ public class CrateDefinition {
         CrateType type = CrateType.fromString(section.getString("type", "normal"));
         String openMode = section.getString("open-mode", "reward-only");
         String keyModel = section.getString("key-model", "");
+        String keyMaterialName = section.getString("key-material", "TRIPWIRE_HOOK");
+        Material keyMaterial = Material.matchMaterial(keyMaterialName);
+        if (keyMaterial == null) {
+            keyMaterial = Material.TRIPWIRE_HOOK;
+        }
         int cooldown = section.getInt("cooldown-seconds", 0);
         double cost = section.getDouble("cost", 0);
         String permission = section.getString("permission", "extracrates.open");
