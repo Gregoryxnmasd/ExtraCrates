@@ -47,7 +47,6 @@ public class DecentHologramsProvider implements HologramProvider {
                 }
                 resolved = createMethod != null;
             } catch (ReflectiveOperationException ignored) {
-                resolved = false;
             }
         }
 
