@@ -22,7 +22,7 @@ import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
-import org.bukkit.Location;
+import org.bukkit.Particle;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -40,8 +40,8 @@ public class SessionManager {
     private final HologramProvider hologramProvider;
     private final HologramSettings hologramSettings;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
-    private final CrateStorage storage;
-    private final boolean storageEnabled;
+    private final Map<UUID, CutscenePreviewSession> previews = new HashMap<>();
+    private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, Economy economy) {
         this.plugin = plugin;
@@ -53,7 +53,8 @@ public class SessionManager {
     public void shutdown() {
         sessions.values().forEach(CrateSession::end);
         sessions.clear();
-        storage.close();
+        previews.values().forEach(CutscenePreviewSession::end);
+        previews.clear();
     }
 
     public boolean openCrate(Player player, CrateDefinition crate) {
@@ -119,10 +120,56 @@ public class SessionManager {
         return true;
     }
 
+    public boolean previewCutscene(Player player, CutscenePath path) {
+        if (sessions.containsKey(player.getUniqueId())) {
+            player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
+            return false;
+        }
+        if (path == null) {
+            player.sendMessage(Component.text("Ruta de cutscene no encontrada."));
+            return false;
+        }
+        if (path.getPoints().size() < 2) {
+            player.sendMessage(Component.text("La ruta necesita al menos 2 puntos para el preview."));
+            return false;
+        }
+        String previewName = path.getParticlePreview();
+        if (previewName == null || previewName.isBlank()) {
+            player.sendMessage(Component.text("La ruta no tiene particle-preview configurado."));
+            return false;
+        }
+        Particle particle;
+        try {
+            particle = Particle.valueOf(previewName.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            player.sendMessage(Component.text("Particle-preview inválido: " + previewName));
+            return false;
+        }
+        endPreview(player.getUniqueId());
+        CutscenePreviewSession preview = new CutscenePreviewSession(
+                plugin,
+                player,
+                path,
+                particle,
+                () -> previews.remove(player.getUniqueId())
+        );
+        previews.put(player.getUniqueId(), preview);
+        preview.start();
+        player.sendMessage(Component.text("Preview de cutscene iniciada."));
+        return true;
+    }
+
     public void endSession(UUID playerId) {
         CrateSession session = sessions.remove(playerId);
         if (session != null) {
             session.end();
+        }
+    }
+
+    public void endPreview(UUID playerId) {
+        CutscenePreviewSession preview = previews.remove(playerId);
+        if (preview != null) {
+            preview.end();
         }
     }
 
