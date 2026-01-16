@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public class PathEditorMenu implements Listener {
+    private static final double DEFAULT_DOUBLE_FALLBACK = 0;
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final EditorInputManager inputManager;
@@ -220,7 +221,7 @@ public class PathEditorMenu implements Listener {
                 () -> {
                     Object value = input;
                     if (field.equals("duration-seconds") || field.equals("step-resolution")) {
-                        value = parseDouble(input, 0);
+                        value = parseDouble(input);
                     }
                     updatePathField(pathId, field, value);
                     player.sendMessage(Component.text("Path actualizada y guardada en YAML."));
@@ -314,11 +315,11 @@ public class PathEditorMenu implements Listener {
         return item;
     }
 
-    private double parseDouble(String input, double fallback) {
+    private double parseDouble(String input) {
         try {
             return Double.parseDouble(input);
         } catch (NumberFormatException ex) {
-            return fallback;
+            return DEFAULT_DOUBLE_FALLBACK;
         }
     }
 }
