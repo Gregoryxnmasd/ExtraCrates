@@ -33,25 +33,22 @@ public class SyncCommand {
                 for (String line : syncBridge.getStatusLines()) {
                     sender.sendMessage(Component.text(line));
                 }
-                return true;
             }
             case "reload" -> {
                 plugin.reloadConfig();
                 configLoader.loadAll();
                 syncBridge.reload();
                 sender.sendMessage(Component.text("Sync recargado."));
-                return true;
             }
             case "flush" -> {
                 syncBridge.flush();
                 sender.sendMessage(Component.text("Caches de sync limpiadas."));
-                return true;
             }
             default -> {
                 sender.sendMessage(Component.text("Subcomando desconocido."));
-                return true;
             }
         }
+        return true;
     }
 
     public List<String> tabComplete(String[] args) {

@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 
 public class PostgresSyncStore implements SyncStore {
+    private static final int DEFAULT_KEY_COUNT = 0;
     private final ExtraCratesPlugin plugin;
     private final SyncSettings settings;
     private volatile boolean healthy = true;
@@ -87,7 +88,7 @@ public class PostgresSyncStore implements SyncStore {
                 + "(player_id, crate_id, key_count, server_id) VALUES (?, ?, ?, ?) "
                 + "ON CONFLICT (player_id, crate_id) DO UPDATE SET key_count = GREATEST(" + settings.getPostgres().getSchema()
                 + ".key_inventory.key_count - 1, 0), server_id = EXCLUDED.server_id";
-        executeKeyInventory(sql, playerId, crateId, serverId, 0);
+        executeKeyInventory(sql, playerId, crateId, serverId);
         String history = "INSERT INTO " + settings.getPostgres().getSchema() + ".crate_reward_history "
                 + "(player_id, crate_id, reward_id, granted_at, server_id) VALUES (?, ?, ?, ?, ?)";
         execute(history, playerId, crateId, timestamp, serverId, "key_consumed");
@@ -176,11 +177,11 @@ public class PostgresSyncStore implements SyncStore {
         }
     }
 
-    private void executeKeyInventory(String sql, UUID playerId, String crateId, String serverId, int defaultKeyCount) {
+    private void executeKeyInventory(String sql, UUID playerId, String crateId, String serverId) {
         try (Connection connection = openConnection(); PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setObject(1, playerId);
             stmt.setString(2, crateId);
-            stmt.setInt(3, defaultKeyCount);
+            stmt.setInt(3, DEFAULT_KEY_COUNT);
             stmt.setString(4, serverId);
             stmt.executeUpdate();
         } catch (SQLException ex) {

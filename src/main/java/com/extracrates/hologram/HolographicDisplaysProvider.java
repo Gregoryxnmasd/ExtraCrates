@@ -39,7 +39,6 @@ public class HolographicDisplaysProvider implements HologramProvider {
                 deleteMethod = hologramClass.getMethod("delete");
                 resolved = true;
             } catch (ReflectiveOperationException ignored) {
-                resolved = false;
             }
         }
 
