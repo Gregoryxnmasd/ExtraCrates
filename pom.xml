@@ -65,7 +65,8 @@
         <dependency>
             <groupId>com.comphenix.protocol</groupId>
             <artifactId>ProtocolLib</artifactId>
-            <version>5.2.0</version>
+            <!-- 5.2.0 is not published on the public repo; use the latest available 5.1.x release. -->
+            <version>5.1.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
