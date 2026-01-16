@@ -24,7 +24,7 @@ public class CrateSession {
     private final LanguageManager languageManager;
     private final Player player;
     private final CrateDefinition crate;
-    private final Reward reward;
+    private final List<Reward> rewards;
     private final CutscenePath path;
     private final boolean grantReward;
     private final SessionManager sessionManager;
@@ -34,7 +34,8 @@ public class CrateSession {
     private ItemDisplay rewardDisplay;
     private TextDisplay hologram;
     private BukkitRunnable task;
-    private BukkitRunnable timeoutTask;
+    private BukkitRunnable rewardTask;
+    private int rewardIndex;
 
     private GameMode previousGameMode;
     private UUID speedModifierUuid;
@@ -47,7 +48,7 @@ public class CrateSession {
             LanguageManager languageManager,
             Player player,
             CrateDefinition crate,
-            Reward reward,
+            List<Reward> rewards,
             CutscenePath path,
             boolean grantReward,
             SessionManager sessionManager
@@ -57,7 +58,7 @@ public class CrateSession {
         this.languageManager = languageManager;
         this.player = player;
         this.crate = crate;
-        this.reward = reward;
+        this.rewards = rewards == null ? Collections.emptyList() : rewards;
         this.path = path;
         this.grantReward = grantReward;
         this.sessionManager = sessionManager;
@@ -119,9 +120,13 @@ public class CrateSession {
     }
 
     private void spawnRewardDisplay() {
+        if (rewards.isEmpty()) {
+            return;
+        }
         Location anchor = crate.getRewardAnchor() != null ? crate.getRewardAnchor() : player.getLocation().add(0, 1.5, 0);
         CrateDefinition.RewardFloatSettings floatSettings = crate.getAnimation().getRewardFloatSettings();
         Location displayLocation = anchor.clone().add(0, floatSettings.getHeight(), 0);
+        Reward reward = rewards.get(0);
 
         rewardDisplay = sessionManager.getDisplayPool().acquireItemDisplay(displayLocation);
         if (rewardDisplay != null) {
@@ -217,14 +222,52 @@ public class CrateSession {
     }
 
     private void finish() {
-        if (!isPreviewOnly()) {
-            executeReward();
-        }
-        end();
+        startRewardSequence();
     }
 
-    private void executeReward() {
-        player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.getDisplayName())));
+    private void startRewardSequence() {
+        if (rewards.isEmpty()) {
+            end();
+            return;
+        }
+        rewardIndex = 0;
+        updateRewardDisplay(rewards.get(rewardIndex));
+        long delayTicks = Math.max(1L, configLoader.getMainConfig().getLong("cutscene.reward-delay-ticks", 20L));
+        rewardTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (rewardIndex >= rewards.size()) {
+                    cancel();
+                    end();
+                    return;
+                }
+                Reward current = rewards.get(rewardIndex);
+                executeReward(current);
+                rewardIndex++;
+                if (rewardIndex >= rewards.size()) {
+                    cancel();
+                    end();
+                    return;
+                }
+                updateRewardDisplay(rewards.get(rewardIndex));
+            }
+        };
+        rewardTask.runTaskTimer(plugin, delayTicks, delayTicks);
+    }
+
+    private void updateRewardDisplay(Reward reward) {
+        if (rewardDisplay != null) {
+            rewardDisplay.setItemStack(ItemUtil.buildItem(reward));
+        }
+        if (hologram != null) {
+            String format = crate.getAnimation().getHologramFormat();
+            String name = format.replace("%reward_name%", reward.getDisplayName());
+            hologram.text(TextUtil.color(name));
+        }
+    }
+
+    private void executeReward(Reward reward) {
+        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
         ItemStack item = ItemUtil.buildItem(reward);
         player.getInventory().addItem(item);
         sessionManager.recordRewardGranted(player, crate, reward);
@@ -261,8 +304,8 @@ public class CrateSession {
         if (task != null) {
             task.cancel();
         }
-        if (timeoutTask != null) {
-            timeoutTask.cancel();
+        if (rewardTask != null) {
+            rewardTask.cancel();
         }
         if (cameraStand != null && !cameraStand.isDead()) {
             sessionManager.getDisplayPool().releaseArmorStand(cameraStand);

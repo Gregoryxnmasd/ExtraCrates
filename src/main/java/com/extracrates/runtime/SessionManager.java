@@ -77,9 +77,8 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
-        Reward reward = rewards.get(0);
         CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
-        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, reward, path, this);
+        CrateSession session = new CrateSession(plugin, configLoader, player, crate, rewards, path, this);
         sessions.put(player.getUniqueId(), session);
         if (!previewOnly && requiresKey) {
             consumeKey(player, crate);
