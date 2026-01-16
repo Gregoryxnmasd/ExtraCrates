@@ -8,9 +8,6 @@ public enum SyncMode {
         if (value == null) {
             return EVENTUAL;
         }
-        return switch (value.toLowerCase()) {
-            case "strong" -> STRONG;
-            default -> EVENTUAL;
-        };
+        return "strong".equalsIgnoreCase(value) ? STRONG : EVENTUAL;
     }
 }

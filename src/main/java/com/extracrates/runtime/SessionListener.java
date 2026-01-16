@@ -30,9 +30,6 @@ public class SessionListener implements Listener {
         if (session == null || !session.isMovementLocked()) {
             return;
         }
-        if (event.getTo() == null) {
-            return;
-        }
         if (event.getFrom().getWorld() != null && event.getTo().getWorld() != null
                 && !event.getFrom().getWorld().equals(event.getTo().getWorld())) {
             return;
