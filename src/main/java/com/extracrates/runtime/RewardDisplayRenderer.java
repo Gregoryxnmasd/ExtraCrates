@@ -148,9 +148,8 @@ public class RewardDisplayRenderer {
 
         for (int i = 0; i < itemCount; i++) {
             ItemDisplay display = itemDisplays.get(i);
-            double angle = (orbitStep * i) + orbitOffset;
-            double x = Math.cos(angle) * orbitRadius;
-            double z = Math.sin(angle) * orbitRadius;
+            double x = Math.cos((orbitStep * i) + orbitOffset) * orbitRadius;
+            double z = Math.sin((orbitStep * i) + orbitOffset) * orbitRadius;
             Location location = center.clone().add(x, 0, z);
             display.teleport(location);
             if (animations.contains("spin")) {
@@ -241,7 +240,7 @@ public class RewardDisplayRenderer {
         if (tick % Math.max(1, trail.getInterval()) != 0) {
             return;
         }
-        Location target = itemDisplays.isEmpty() ? center : itemDisplays.get(0).getLocation();
+        Location target = itemDisplays.isEmpty() ? center : itemDisplays.getFirst().getLocation();
         if (trailPoints.isEmpty() || trailPoints.getLast().distanceSquared(target) >= trail.getSpacing() * trail.getSpacing()) {
             trailPoints.addLast(target.clone());
         }

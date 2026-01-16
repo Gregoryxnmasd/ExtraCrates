@@ -50,6 +50,10 @@ public class ConfigValidator {
             }
             for (Reward reward : pool.getRewards()) {
                 String itemName = reward.getItem();
+                if (itemName == null || itemName.isBlank()) {
+                    warnings.add("Material vacío en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "').");
+                    continue;
+                }
                 Material material = Material.matchMaterial(itemName.toUpperCase(Locale.ROOT));
                 if (material == null) {
                     warnings.add("Material desconocido en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "'): '" + itemName + "'.");

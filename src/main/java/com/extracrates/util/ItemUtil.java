@@ -24,7 +24,10 @@ public final class ItemUtil {
     }
 
     public static ItemStack buildItem(Reward reward, World world, ConfigLoader configLoader, MapImageCache mapImageCache) {
-        Material material = Material.matchMaterial(reward.getItem().toUpperCase(Locale.ROOT));
+        String itemName = reward.getItem();
+        Material material = itemName != null
+                ? Material.matchMaterial(itemName.toUpperCase(Locale.ROOT))
+                : null;
         if (material == null) {
             material = Material.STONE;
         }
@@ -32,7 +35,8 @@ public final class ItemUtil {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             SettingsSnapshot settings = configLoader != null ? configLoader.getSettings() : null;
-            meta.displayName(TextUtil.color(reward.getDisplayName()));
+            String displayName = reward.getDisplayName();
+            meta.displayName(TextUtil.color(displayName != null ? displayName : ""));
             applyResourcepackModel(reward, meta, settings, configLoader);
             for (Map.Entry<String, Integer> entry : reward.getEnchantments().entrySet()) {
                 Enchantment enchantment = Registry.ENCHANTMENT.get(NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT)));
