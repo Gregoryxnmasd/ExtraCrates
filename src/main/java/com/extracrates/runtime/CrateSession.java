@@ -85,8 +85,10 @@ public class CrateSession {
     }
 
     private void spawnCamera(Location start) {
-        CameraEntityFactory factory = new CameraEntityFactory(configLoader);
-        cameraEntity = factory.spawn(start);
+        FileConfiguration config = configLoader.getMainConfig();
+        String cameraEntityType = config.getString("cutscene.camera-entity", "armorstand");
+        boolean armorStandInvisible = config.getBoolean("cutscene.armorstand-invisible", true);
+        cameraEntity = CameraEntityFactory.spawn(start, cameraEntityType, armorStandInvisible);
         hideFromOthers(cameraEntity);
     }
 
@@ -132,20 +134,7 @@ public class CrateSession {
         }
 
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
-            ItemStack displayItem = ItemUtil.buildItem(reward);
-            String rewardModel = crate.getAnimation().getRewardModel();
-            if (rewardModel != null && !rewardModel.isEmpty()) {
-                // Animation reward-model takes priority over reward custom-model for display only.
-                ItemMeta meta = displayItem.getItemMeta();
-                if (meta != null) {
-                    try {
-                        meta.setCustomModelData(Integer.parseInt(rewardModel));
-                    } catch (NumberFormatException ignored) {
-                    }
-                    displayItem.setItemMeta(meta);
-                }
-            }
-            display.setItemStack(displayItem);
+            display.setItemStack(ItemUtil.buildItem(reward, anchor.getWorld(), configLoader, plugin.getMapImageCache()));
         });
         hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
             String format = reward.getHologram();
@@ -186,12 +175,7 @@ public class CrateSession {
             finish();
             return;
         }
-        TimelineData timelineData = buildTimeline(cameraStand.getWorld(), path);
-        List<TimelinePoint> timeline = timelineData.points();
-        if (timeline.isEmpty()) {
-            finish();
-            return;
-        }
+        List<Location> timeline = buildTimeline(cameraEntity.getWorld(), path);
         task = new BukkitRunnable() {
             int index = 0;
 
@@ -202,29 +186,9 @@ public class CrateSession {
                     finish();
                     return;
                 }
-                while (index + 1 < timeline.size() && timeline.get(index + 1).tick() <= tick) {
-                    index++;
-                }
-                Location point = timeline.get(index).location();
-                cameraStand.teleport(point);
-                player.setSpectatorTarget(cameraStand);
-                CrateDefinition.RewardFloatSettings floatSettings = crate.getAnimation().getRewardFloatSettings();
-                String animationName = reward.getEffects() != null ? reward.getEffects().getAnimation() : "";
-                rewardAnimationService.applyAnimation(
-                        animationName,
-                        rewardDisplay,
-                        hologram,
-                        rewardBaseLocation,
-                        hologramBaseLocation,
-                        rewardBaseTransform,
-                        index,
-                        floatSettings
-                );
-            }
-        };
-        assignTicks(timeline, timelineData.totalDistance(), (int) Math.max(1, path.getDurationSeconds() * 20));
-        task.runTaskTimer(plugin, 0L, 1L);
-    }
+                Location point = timeline.get(index++);
+                cameraEntity.teleport(point);
+                player.setSpectatorTarget(cameraEntity);
 
     private TimelineData buildTimeline(World world, CutscenePath path) {
         List<TimelinePoint> timeline = new ArrayList<>();
@@ -271,13 +235,67 @@ public class CrateSession {
         return start + (end - start) * t;
     }
 
-    private double catmullRom(double p0, double p1, double p2, double p3, double t) {
-        double t2 = t * t;
-        double t3 = t2 * t;
-        return 0.5 * ((2.0 * p1)
-                + (-p0 + p2) * t
-                + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
-                + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3);
+    private List<Location> buildTimeline(World world, CutscenePath path) {
+        List<Location> timeline = new ArrayList<>();
+        List<com.extracrates.model.CutscenePoint> points = path.getPoints();
+        String smoothing = resolveSmoothing(path);
+        for (int i = 0; i < points.size() - 1; i++) {
+            com.extracrates.model.CutscenePoint start = points.get(i);
+            com.extracrates.model.CutscenePoint end = points.get(i + 1);
+            Location startLoc = new Location(world, start.getX(), start.getY(), start.getZ(), start.getYaw(), start.getPitch());
+            Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ(), end.getYaw(), end.getPitch());
+            double distance = startLoc.distance(endLoc);
+            int steps = Math.max(2, (int) Math.ceil(distance / path.getStepResolution()));
+            for (int s = 0; s <= steps; s++) {
+                double t = s / (double) steps;
+                double eased = applyEasing(t, smoothing);
+                double x = lerp(startLoc.getX(), endLoc.getX(), eased);
+                double y = lerp(startLoc.getY(), endLoc.getY(), eased);
+                double z = lerp(startLoc.getZ(), endLoc.getZ(), eased);
+                float yaw = lerpAngle(startLoc.getYaw(), endLoc.getYaw(), eased);
+                float pitch = lerpAngle(startLoc.getPitch(), endLoc.getPitch(), eased);
+                timeline.add(new Location(world, x, y, z, yaw, pitch));
+            }
+        }
+        return timeline;
+    }
+
+    private String resolveSmoothing(CutscenePath path) {
+        String smoothing = path.getSmoothing();
+        if (smoothing == null || smoothing.isBlank()) {
+            smoothing = "linear";
+        }
+        return smoothing;
+    }
+
+    private double applyEasing(double t, String smoothing) {
+        String mode = smoothing == null ? "linear" : smoothing.trim().toLowerCase(Locale.ROOT);
+        return switch (mode) {
+            case "ease-in", "ease_in", "in" -> t * t;
+            case "ease-out", "ease_out", "out" -> 1 - Math.pow(1 - t, 2);
+            case "ease-in-out", "ease_in_out", "in-out", "smoothstep", "catmull-rom" -> t * t * (3 - 2 * t);
+            default -> t;
+        };
+    }
+
+    private double lerp(double start, double end, double t) {
+        return start + (end - start) * t;
+    }
+
+    private float lerpAngle(float start, float end, double t) {
+        float delta = wrapDegrees(end - start);
+        return start + (float) (delta * t);
+    }
+
+    private float wrapDegrees(float angle) {
+        float wrapped = angle % 360.0f;
+        if (wrapped >= 180.0f) {
+            wrapped -= 360.0f;
+        }
+        if (wrapped < -180.0f) {
+            wrapped += 360.0f;
+        }
+        return wrapped;
     }
 
     private void finish() {
