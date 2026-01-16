@@ -54,6 +54,7 @@ public class PathEditorMenu implements Listener {
 
     public void open(Player player) {
         Inventory inventory = Bukkit.createInventory(player, 54, title);
+        refreshPathCache();
         List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
         paths.sort(Comparator.comparing(CutscenePath::getId));
         int slot = 0;
@@ -71,6 +72,7 @@ public class PathEditorMenu implements Listener {
 
     private void openDetail(Player player, String pathId) {
         activePath.put(player.getUniqueId(), pathId);
+        refreshPathCache();
         CutscenePath path = configLoader.getPaths().get(pathId);
         Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color("&8Path: " + pathId));
         inventory.setItem(10, buildItem(Material.CLOCK, "&eDuración", List.of(
@@ -125,6 +127,7 @@ public class PathEditorMenu implements Listener {
             return;
         }
         if (slot == 53) {
+            refreshPathCache();
             open(player);
             return;
         }
@@ -284,6 +287,10 @@ public class PathEditorMenu implements Listener {
         } catch (IOException ex) {
             plugin.getLogger().warning("No se pudo guardar paths.yml: " + ex.getMessage());
         }
+    }
+
+    private void refreshPathCache() {
+        configLoader.loadAll();
     }
 
     private ItemStack buildPathItem(CutscenePath path) {
