@@ -211,19 +211,15 @@ public class SessionManager {
     }
 
     private void applyCooldown(Player player, CrateDefinition crate) {
-        applyCooldown(player, crate, Instant.now(), true);
-    }
-
-    private void applyCooldown(Player player, CrateDefinition crate, Instant timestamp, boolean record) {
         if (crate.getCooldownSeconds() <= 0) {
             return;
         }
-        Instant appliedAt = timestamp != null ? timestamp : Instant.now();
+        Instant appliedAt = Instant.now();
         cooldowns.computeIfAbsent(player.getUniqueId(), key -> new HashMap<>()).put(crate.getId(), appliedAt);
         if (storage != null) {
             storage.setCooldown(player.getUniqueId(), crate.getId(), appliedAt);
         }
-        if (record && syncBridge != null) {
+        if (syncBridge != null) {
             syncBridge.recordCooldown(player.getUniqueId(), crate.getId());
         }
     }
