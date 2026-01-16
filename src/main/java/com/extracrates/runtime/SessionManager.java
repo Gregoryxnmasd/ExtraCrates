@@ -89,16 +89,8 @@ public class SessionManager {
         if (!chargePlayer(player, crate)) {
             return false;
         }
-        Reward reward = rewards.get(0);
-        if (rewardLogger != null) {
-            rewardLogger.logReward(player, crate, reward, seed, Instant.now());
-        }
         CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
-        if (path == null) {
-            player.sendMessage(Component.text("No se encontró la ruta de la cutscene. Usando una ruta básica."));
-            path = buildDefaultPath(player);
-        }
-        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this);
+        CrateSession session = new CrateSession(plugin, configLoader, player, crate, rewards, path, this);
         sessions.put(player.getUniqueId(), session);
         if (!preview && crate.getType() == com.extracrates.model.CrateType.KEYED) {
             consumeKey(player, crate);

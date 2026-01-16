@@ -36,8 +36,9 @@ public class CrateSession {
     private ArmorStand cameraStand;
     private RewardDisplayRenderer rewardRenderer;
     private BukkitRunnable task;
-    private BukkitRunnable rewardTask;
     private int rewardIndex;
+    private long rewardSwitchTicks;
+    private long nextRewardSwitchTick;
 
     private GameMode previousGameMode;
     private UUID speedModifierUuid;
@@ -60,7 +61,7 @@ public class CrateSession {
         this.languageManager = languageManager;
         this.player = player;
         this.crate = crate;
-        this.rewards = rewards == null ? Collections.emptyList() : rewards;
+        this.rewards = rewards;
         this.path = path;
         this.grantReward = grantReward;
         this.sessionManager = sessionManager;
@@ -128,6 +129,10 @@ public class CrateSession {
         Location anchor = crate.getRewardAnchor() != null ? crate.getRewardAnchor() : player.getLocation().add(0, 1.5, 0);
         CrateDefinition.RewardFloatSettings floatSettings = crate.getAnimation().getRewardFloatSettings();
         Location displayLocation = anchor.clone().add(0, floatSettings.getHeight(), 0);
+        Reward reward = getCurrentReward();
+        if (reward == null) {
+            return;
+        }
 
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
             display.setItemStack(ItemUtil.buildItem(reward, configLoader.getSettings()));
@@ -162,9 +167,14 @@ public class CrateSession {
             return;
         }
         List<Location> timeline = buildTimeline(cameraStand.getWorld(), path);
-        spawnPathPreview(timeline, path);
+        int totalTicks = (int) Math.max(1, path.getDurationSeconds() * 20);
+        long period = Math.max(1L, totalTicks / Math.max(1, timeline.size()));
+        configureRewardSequence(totalTicks);
         task = new BukkitRunnable() {
             int index = 0;
+            double rotation = 0;
+            long elapsedTicks = 0;
+
             @Override
             public void run() {
                 if (index >= timeline.size()) {
@@ -175,14 +185,14 @@ public class CrateSession {
                 Location point = timeline.get(index++);
                 cameraStand.teleport(point);
                 player.setSpectatorTarget(cameraStand);
+                elapsedTicks += period;
+                updateRewardSequence(elapsedTicks);
 
                 if (rewardRenderer != null) {
                     rewardRenderer.tick();
                 }
             }
         };
-        int totalTicks = (int) Math.max(1, path.getDurationSeconds() * 20);
-        long period = Math.max(1L, totalTicks / Math.max(1, timeline.size()));
         task.runTaskTimer(plugin, 0L, period);
     }
 
@@ -336,37 +346,79 @@ public class CrateSession {
         end();
     }
 
-    private void startRewardSequence() {
-        if (rewards.isEmpty()) {
-            end();
-            return;
-        }
-        rewardIndex = 0;
-        updateRewardDisplay(rewards.get(rewardIndex));
-        long delayTicks = Math.max(1L, configLoader.getMainConfig().getLong("cutscene.reward-delay-ticks", 20L));
-        rewardTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (rewardIndex >= rewards.size()) {
-                    cancel();
-                    end();
-                    return;
-                }
-                Reward current = rewards.get(rewardIndex);
-                executeReward(current);
-                rewardIndex++;
-                if (rewardIndex >= rewards.size()) {
-                    cancel();
-                    end();
-                    return;
-                }
-                updateRewardDisplay(rewards.get(rewardIndex));
+    private void executeReward() {
+        for (Reward reward : rewards) {
+            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
+            ItemStack item = ItemUtil.buildItem(reward);
+            player.getInventory().addItem(item);
+
+            for (String command : reward.getCommands()) {
+                String parsed = command.replace("%player%", player.getName());
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
-        };
-        rewardTask.runTaskTimer(plugin, delayTicks, delayTicks);
+            if (reward.getMessage() != null && (!reward.getMessage().getTitle().isEmpty() || !reward.getMessage().getSubtitle().isEmpty())) {
+                player.showTitle(net.kyori.adventure.title.Title.title(
+                        TextUtil.color(reward.getMessage().getTitle()),
+                        TextUtil.color(reward.getMessage().getSubtitle())
+                ));
+            }
+            if (reward.getEffects() != null) {
+                if (!reward.getEffects().getSound().isEmpty()) {
+                    try {
+                        Sound sound = Sound.valueOf(reward.getEffects().getSound().toUpperCase(Locale.ROOT));
+                        player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+                    } catch (IllegalArgumentException ignored) {
+                    }
+                }
+                if (!reward.getEffects().getParticles().isEmpty()) {
+                    try {
+                        Particle particle = Particle.valueOf(reward.getEffects().getParticles().toUpperCase(Locale.ROOT));
+                        player.getWorld().spawnParticle(particle, player.getLocation(), 20, 0.2, 0.2, 0.2, 0.01);
+                    } catch (IllegalArgumentException ignored) {
+                    }
+                }
+            }
+        }
     }
 
-    private void updateRewardDisplay(Reward reward) {
+    private Reward getCurrentReward() {
+        if (rewards == null || rewards.isEmpty()) {
+            return null;
+        }
+        int clamped = Math.min(rewardIndex, rewards.size() - 1);
+        return rewards.get(clamped);
+    }
+
+    private void configureRewardSequence(int totalTicks) {
+        rewardIndex = 0;
+        if (rewards == null || rewards.size() <= 1) {
+            rewardSwitchTicks = 0;
+            nextRewardSwitchTick = 0;
+            return;
+        }
+        rewardSwitchTicks = Math.max(1L, totalTicks / rewards.size());
+        nextRewardSwitchTick = rewardSwitchTicks;
+    }
+
+    private void updateRewardSequence(long elapsedTicks) {
+        if (rewardSwitchTicks <= 0 || rewards == null) {
+            return;
+        }
+        if (rewardIndex >= rewards.size() - 1) {
+            return;
+        }
+        while (elapsedTicks >= nextRewardSwitchTick && rewardIndex < rewards.size() - 1) {
+            rewardIndex++;
+            nextRewardSwitchTick += rewardSwitchTicks;
+            refreshRewardDisplay();
+        }
+    }
+
+    private void refreshRewardDisplay() {
+        Reward reward = getCurrentReward();
+        if (reward == null) {
+            return;
+        }
         if (rewardDisplay != null) {
             rewardDisplay.setItemStack(ItemUtil.buildItem(reward));
         }
@@ -374,44 +426,6 @@ public class CrateSession {
             String format = crate.getAnimation().getHologramFormat();
             String name = format.replace("%reward_name%", reward.getDisplayName());
             hologram.text(TextUtil.color(name));
-        }
-    }
-
-    private void executeReward(Reward reward) {
-        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
-        ItemStack item = ItemUtil.buildItem(reward, configLoader.getSettings());
-        player.getInventory().addItem(item);
-        sessionManager.recordRewardGranted(player, crate, reward);
-
-        for (String command : reward.getCommands()) {
-            String parsed = command.replace("%player%", player.getName());
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
-        }
-        if (reward.getMessage() != null && (!reward.getMessage().getTitle().isEmpty() || !reward.getMessage().getSubtitle().isEmpty())) {
-            player.showTitle(net.kyori.adventure.title.Title.title(
-                    TextUtil.color(reward.getMessage().getTitle()),
-                    TextUtil.color(reward.getMessage().getSubtitle())
-            ));
-        }
-        if (reward.getEffects() != null) {
-            if (!reward.getEffects().getSound().isEmpty()) {
-                try {
-                    Sound sound = Sound.valueOf(reward.getEffects().getSound().toUpperCase(Locale.ROOT));
-                    player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
-                } catch (IllegalArgumentException ignored) {
-                }
-            }
-            String particleName = reward.getEffects().getParticles();
-            if (particleName.isEmpty()) {
-                particleName = configLoader.getSettings().getParticlesDefault();
-            }
-            if (!particleName.isEmpty()) {
-                try {
-                    Particle particle = Particle.valueOf(particleName.toUpperCase(Locale.ROOT));
-                    player.getWorld().spawnParticle(particle, player.getLocation(), 20, 0.2, 0.2, 0.2, 0.01);
-                } catch (IllegalArgumentException ignored) {
-                }
-            }
         }
     }
 
