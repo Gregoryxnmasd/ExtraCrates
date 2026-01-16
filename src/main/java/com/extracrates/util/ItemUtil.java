@@ -1,6 +1,7 @@
 package com.extracrates.util;
 
 import com.extracrates.model.Reward;
+import com.extracrates.resourcepack.ResourcePackRegistry;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
@@ -15,7 +16,7 @@ public final class ItemUtil {
     private ItemUtil() {
     }
 
-    public static ItemStack buildItem(Reward reward) {
+    public static ItemStack buildItem(Reward reward, ResourcePackRegistry resourcePackRegistry) {
         Material material = Material.matchMaterial(reward.getItem().toUpperCase(Locale.ROOT));
         if (material == null) {
             material = Material.STONE;
@@ -25,12 +26,8 @@ public final class ItemUtil {
         if (meta != null) {
             meta.displayName(TextUtil.color(reward.getDisplayName()));
             if (reward.getCustomModel() != null && !reward.getCustomModel().isEmpty()) {
-                try {
-                    int modelData = Integer.parseInt(reward.getCustomModel());
-                    meta.setCustomModelData(modelData);
-                } catch (NumberFormatException ignored) {
-                    // Allow string keys for resourcepack mapping handled elsewhere.
-                }
+                resourcePackRegistry.resolveCustomModelData(reward.getCustomModel())
+                        .ifPresent(meta::setCustomModelData);
             }
             for (Map.Entry<String, Integer> entry : reward.getEnchantments().entrySet()) {
                 Enchantment enchantment = Enchantment.getByKey(org.bukkit.NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT)));

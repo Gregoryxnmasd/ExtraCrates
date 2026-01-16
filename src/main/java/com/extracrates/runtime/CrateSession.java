@@ -128,12 +128,10 @@ public class CrateSession {
         Location displayLocation = anchor.clone().add(0, floatSettings.getHeight(), 0);
         Reward reward = rewards.get(0);
 
-        rewardDisplay = sessionManager.getDisplayPool().acquireItemDisplay(displayLocation);
-        if (rewardDisplay != null) {
-            rewardDisplay.setItemStack(ItemUtil.buildItem(reward));
-        }
-        hologram = sessionManager.getDisplayPool().acquireTextDisplay(displayLocation.clone().add(0, 0.4, 0));
-        if (hologram != null) {
+        rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
+            display.setItemStack(ItemUtil.buildItem(reward, configLoader.getResourcePackRegistry()));
+        });
+        hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
             String format = crate.getAnimation().getHologramFormat();
             String name = format.replace("%reward_name%", reward.getDisplayName());
             hologram.text(TextUtil.color(name));
@@ -270,7 +268,7 @@ public class CrateSession {
 
     private void executeReward(Reward reward) {
         player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
-        ItemStack item = ItemUtil.buildItem(reward);
+        ItemStack item = ItemUtil.buildItem(reward, configLoader.getResourcePackRegistry());
         player.getInventory().addItem(item);
         sessionManager.recordRewardGranted(player, crate, reward);
 

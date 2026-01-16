@@ -117,10 +117,8 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     String keyName = languageManager.getRaw("command.key-item-name", java.util.Map.of("crate_name", crate.getDisplayName()));
                     meta.displayName(TextUtil.color(keyName));
                     if (crate.getKeyModel() != null && !crate.getKeyModel().isEmpty()) {
-                        try {
-                            meta.setCustomModelData(Integer.parseInt(crate.getKeyModel()));
-                        } catch (NumberFormatException ignored) {
-                        }
+                        configLoader.getResourcePackRegistry().resolveCustomModelData(crate.getKeyModel())
+                                .ifPresent(meta::setCustomModelData);
                     }
                     key.setItemMeta(meta);
                 }
