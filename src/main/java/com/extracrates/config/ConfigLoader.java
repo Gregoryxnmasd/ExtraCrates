@@ -4,6 +4,7 @@ import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.RewardPool;
+import com.extracrates.resourcepack.ResourcePackRegistry;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -18,6 +19,7 @@ public class ConfigLoader {
     private final Map<String, CrateDefinition> crates = new HashMap<>();
     private final Map<String, RewardPool> rewardPools = new HashMap<>();
     private final Map<String, CutscenePath> paths = new HashMap<>();
+    private SettingsSnapshot settings;
 
     public ConfigLoader(ExtraCratesPlugin plugin) {
         this.plugin = plugin;
@@ -27,6 +29,7 @@ public class ConfigLoader {
         crates.clear();
         rewardPools.clear();
         paths.clear();
+        loadSettings();
         loadCrates();
         loadRewards();
         loadPaths();
@@ -46,6 +49,17 @@ public class ConfigLoader {
 
     public FileConfiguration getMainConfig() {
         return plugin.getConfig();
+    }
+
+    public SettingsSnapshot getSettings() {
+        if (settings == null) {
+            loadSettings();
+        }
+        return settings;
+    }
+
+    private void loadSettings() {
+        settings = SettingsSnapshot.fromConfig(plugin.getConfig());
     }
 
     private void loadCrates() {
