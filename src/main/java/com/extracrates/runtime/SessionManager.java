@@ -7,7 +7,11 @@ import com.extracrates.model.CrateType;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
-import com.extracrates.sync.SyncBridge;
+import com.extracrates.storage.CrateStorage;
+import com.extracrates.storage.LocalStorage;
+import com.extracrates.storage.SqlStorage;
+import com.extracrates.storage.StorageFallback;
+import com.extracrates.storage.StorageSettings;
 import com.extracrates.util.RewardSelector;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -20,34 +24,32 @@ import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class SessionManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private SyncBridge syncBridge;
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
-    private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
-    private final DisplayPool displayPool = new DisplayPool();
+    private final CrateStorage storage;
+    private final boolean storageEnabled;
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, SyncBridge syncBridge) {
         this.plugin = plugin;
         this.configLoader = configLoader;
-        this.syncBridge = syncBridge;
+        StorageSettings settings = StorageSettings.fromConfig(configLoader.getMainConfig());
+        this.storageEnabled = settings.enabled();
+        this.storage = initializeStorage(settings);
     }
 
     public void shutdown() {
         sessions.values().forEach(CrateSession::end);
         sessions.clear();
-        displayPool.clear();
-    }
-
-    public DisplayPool getDisplayPool() {
-        return displayPool;
-    }
-
-    public void setSyncBridge(SyncBridge syncBridge) {
-        this.syncBridge = syncBridge;
+        storage.close();
     }
 
     public boolean openCrate(Player player, CrateDefinition crate) {
@@ -99,6 +101,7 @@ public class SessionManager {
         session.start();
         recordCrateOpen(player, crate);
         applyCooldown(player, crate);
+        storage.logOpen(player.getUniqueId(), crate.getId(), reward.getId(), Bukkit.getServerName(), Instant.now());
         return true;
     }
 
@@ -117,11 +120,7 @@ public class SessionManager {
         if (crate.getCooldownSeconds() <= 0) {
             return false;
         }
-        Map<String, Instant> userCooldowns = cooldowns.get(player.getUniqueId());
-        if (userCooldowns == null) {
-            return false;
-        }
-        Instant last = userCooldowns.get(crate.getId());
+        Instant last = storage.getCooldown(player.getUniqueId(), crate.getId()).orElse(null);
         if (last == null) {
             return false;
         }
@@ -137,24 +136,13 @@ public class SessionManager {
         if (crate.getCooldownSeconds() <= 0) {
             return;
         }
-        cooldowns.computeIfAbsent(player.getUniqueId(), key -> new HashMap<>()).put(crate.getId(), timestamp);
-        if (record && syncBridge != null) {
-            syncBridge.recordCooldown(player.getUniqueId(), crate.getId());
-        }
-    }
-
-    private String normalizeOpenMode(String openMode) {
-        if (openMode == null || openMode.isBlank()) {
-            return "reward-only";
-        }
-        return openMode.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private boolean canAffordEconomy(Player player, CrateDefinition crate) {
-        return crate.getCost() <= 0;
+        storage.setCooldown(player.getUniqueId(), crate.getId(), Instant.now());
     }
 
     private boolean hasKey(Player player, CrateDefinition crate) {
+        if (storageEnabled) {
+            return storage.getKeyCount(player.getUniqueId(), crate.getId()) > 0;
+        }
         if (crate.getKeyModel() == null || crate.getKeyModel().isEmpty()) {
             return true;
         }
@@ -179,10 +167,10 @@ public class SessionManager {
     }
 
     private void consumeKey(Player player, CrateDefinition crate) {
-        consumeKey(player, crate, true);
-    }
-
-    private void consumeKey(Player player, CrateDefinition crate, boolean record) {
+        if (storageEnabled) {
+            storage.consumeKey(player.getUniqueId(), crate.getId());
+            return;
+        }
         int modelData = parseModel(crate.getKeyModel());
         ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {
@@ -203,6 +191,19 @@ public class SessionManager {
                 }
                 return;
             }
+        }
+    }
+
+    private CrateStorage initializeStorage(StorageSettings settings) {
+        if (!settings.enabled()) {
+            return new LocalStorage();
+        }
+        try {
+            SqlStorage sqlStorage = new SqlStorage(settings, plugin.getLogger());
+            return new StorageFallback(sqlStorage, new LocalStorage(), plugin.getLogger());
+        } catch (Exception ex) {
+            plugin.getLogger().warning("No se pudo inicializar SQL storage, usando modo local: " + ex.getMessage());
+            return new LocalStorage();
         }
     }
 

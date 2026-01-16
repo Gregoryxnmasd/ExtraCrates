@@ -7,14 +7,39 @@ Esta base describe todas las características esperadas, comandos y permisos par
 - Revisa [docs/PluginDesign.md](docs/PluginDesign.md) para los detalles técnicos y flujos de trabajo.
 - Consulta `config/examples/` para ejemplos de configuración inicial (crates, recompensas, rutas y ajustes globales).
 
-## Modos de apertura (`open-mode`)
-Las crates pueden definir cómo se comporta la apertura:
+## Storage SQL
 
-- `reward-only`: entrega la recompensa al instante sin cutscene.
-- `full`: reproduce la cutscene y luego entrega la recompensa.
-- `preview-only`: reproduce la cutscene pero no entrega recompensa.
+El módulo `storage` permite persistir cooldowns, llaves y aperturas en una base de datos SQL. Cuando `storage.enabled` es `true`, el plugin usa `SqlStorage` y cambia automáticamente a modo local si la base de datos no responde.
 
-El valor se define en cada crate usando `open-mode` y es sensible a texto en minúsculas.
+### Configuración
+
+```yml
+storage:
+  enabled: true
+  type: "mysql" # mysql | postgres | mariadb | sqlite
+  jdbc-url: "jdbc:mysql://localhost:3306/extracrates"
+  username: "root"
+  password: "password"
+  pool:
+    size: 10
+    timeout: 30000
+```
+
+`pool.timeout` está en milisegundos.
+
+### Migraciones
+
+Las migraciones SQL están en `docs/migrations/`:
+
+- `mysql_mariadb.sql`
+- `postgres.sql`
+- `sqlite.sql`
+
+### Ejemplos de conexión
+
+- MySQL/MariaDB: `jdbc:mysql://localhost:3306/extracrates`
+- PostgreSQL: `jdbc:postgresql://localhost:5432/extracrates`
+- SQLite: `jdbc:sqlite:plugins/ExtraCrates/extracrates.db`
 
 ## Gradle en IntelliJ (sin wrapper jar en Git)
 Por restricciones de GitHub, el repositorio no incluye `gradle/wrapper/gradle-wrapper.jar`.
