@@ -166,9 +166,7 @@ public class CrateSession {
     }
 
     private void hideFromOthers(Entity entity) {
-        ProtocolEntityHider protocolEntityHider = plugin.getProtocolEntityHider();
-        if (protocolEntityHider != null) {
-            protocolEntityHider.trackEntity(player, entity);
+        if (!configLoader.getMainConfig().getBoolean("cutscene.hide-others", true)) {
             return;
         }
         for (Player online : Bukkit.getOnlinePlayers()) {
