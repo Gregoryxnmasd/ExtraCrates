@@ -108,6 +108,10 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         return economy;
     }
 
+    public ConfigLoader getConfigLoader() {
+        return configLoader;
+    }
+
     private void setupEconomy() {
         if (getServer().getPluginManager().getPlugin("Vault") == null) {
             return;

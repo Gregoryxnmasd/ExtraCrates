@@ -74,7 +74,12 @@ public class RewardDisplayRenderer {
         int itemCount = displaySettings.getItemCount();
         for (int i = 0; i < itemCount; i++) {
             ItemDisplay display = world.spawn(baseLocation, ItemDisplay.class, entity -> {
-                entity.setItemStack(ItemUtil.buildItem(reward));
+                entity.setItemStack(ItemUtil.buildItem(
+                        reward,
+                        world,
+                        plugin.getConfigLoader(),
+                        plugin.getMapImageCache()
+                ));
                 if (animations.contains("glow")) {
                     entity.setGlowing(true);
                 }
