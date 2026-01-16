@@ -11,7 +11,9 @@ import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.*;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -32,8 +34,7 @@ public class CrateSession {
     private final HologramSettings hologramSettings;
 
     private ArmorStand cameraStand;
-    private ItemDisplay rewardDisplay;
-    private HologramInstance hologram;
+    private RewardDisplayRenderer rewardRenderer;
     private BukkitRunnable task;
     private BukkitRunnable rewardTask;
     private int rewardIndex;
@@ -125,20 +126,8 @@ public class CrateSession {
             return;
         }
         Location anchor = crate.getRewardAnchor() != null ? crate.getRewardAnchor() : player.getLocation().add(0, 1.5, 0);
-        CrateDefinition.RewardFloatSettings floatSettings = crate.getAnimation().getRewardFloatSettings();
-        Location displayLocation = anchor.clone().add(0, floatSettings.getHeight(), 0);
-        Reward reward = rewards.get(0);
-
-        rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
-            display.setItemStack(ItemUtil.buildItem(reward, configLoader.getResourcePackRegistry()));
-        });
-        Location hologramLocation = displayLocation.clone().add(hologramSettings.getOffset());
-        hologram = sessionManager.getHologramProvider().spawnHologram(hologramLocation, buildHologramText(hologramSettings), player);
-
-        hideFromOthers(rewardDisplay);
-        if (hologram != null && hologram.getEntity() != null) {
-            hideFromOthers(hologram.getEntity());
-        }
+        rewardRenderer = new RewardDisplayRenderer(plugin, player, crate, reward);
+        rewardRenderer.spawn(anchor);
     }
 
     private void hideFromOthers(Entity entity) {
@@ -162,8 +151,6 @@ public class CrateSession {
         List<Location> timeline = buildTimeline(cameraStand.getWorld(), path);
         task = new BukkitRunnable() {
             int index = 0;
-            double rotation = 0;
-
             @Override
             public void run() {
                 if (index >= timeline.size()) {
@@ -175,19 +162,8 @@ public class CrateSession {
                 cameraStand.teleport(point);
                 player.setSpectatorTarget(cameraStand);
 
-                CrateDefinition.RewardFloatSettings floatSettings = crate.getAnimation().getRewardFloatSettings();
-                rotation += floatSettings.getSpinSpeed();
-                if (rewardDisplay != null) {
-                    rewardDisplay.setRotation((float) rotation, 0);
-                }
-                if (floatSettings.isBobbing() && rewardDisplay != null) {
-                    double bob = Math.sin(index / 6.0) * 0.05;
-                    Location rewardLocation = rewardDisplay.getLocation();
-                    rewardDisplay.teleport(rewardLocation.clone().add(0, bob, 0));
-                    if (hologram != null) {
-                        Location hologramLocation = rewardLocation.clone().add(hologramSettings.getOffset()).add(0, bob, 0);
-                        hologram.teleport(hologramLocation);
-                    }
+                if (rewardRenderer != null) {
+                    rewardRenderer.tick();
                 }
             }
         };
@@ -310,11 +286,8 @@ public class CrateSession {
         if (cameraStand != null && !cameraStand.isDead()) {
             sessionManager.getDisplayPool().releaseArmorStand(cameraStand);
         }
-        if (rewardDisplay != null && !rewardDisplay.isDead()) {
-            sessionManager.getDisplayPool().releaseItemDisplay(rewardDisplay);
-        }
-        if (hologram != null) {
-            hologram.remove();
+        if (rewardRenderer != null) {
+            rewardRenderer.remove();
         }
         if (previousGameMode != null) {
             player.setGameMode(previousGameMode);
