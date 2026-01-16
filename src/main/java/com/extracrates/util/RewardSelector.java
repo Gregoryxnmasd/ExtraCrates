@@ -17,12 +17,12 @@ public final class RewardSelector {
 
     public static List<Reward> roll(RewardPool pool, Random random, RewardRollLogger logger) {
         List<Reward> results = new ArrayList<>();
-        if (pool == null || pool.getRewards().isEmpty()) {
+        if (pool == null || pool.rewards().isEmpty()) {
             return results;
         }
-        int rolls = Math.max(1, pool.getRollCount());
+        int rolls = Math.max(1, pool.rollCount());
         for (int i = 0; i < rolls; i++) {
-            RollResult result = selectOne(pool.getRewards(), random);
+            RollResult result = selectOne(pool.rewards(), random);
             results.add(result.reward());
             if (logger != null) {
                 logger.log(result.reward(), result.roll(), result.total());
@@ -32,7 +32,7 @@ public final class RewardSelector {
     }
 
     private static RollResult selectOne(List<Reward> rewards, Random random) {
-        double total = rewards.stream().mapToDouble(Reward::getChance).sum();
+        double total = rewards.stream().mapToDouble(Reward::chance).sum();
         if (total <= 0) {
             double roll = random.nextDouble();
             Reward reward = rewards.get(random.nextInt(rewards.size()));
@@ -41,7 +41,7 @@ public final class RewardSelector {
         double roll = random.nextDouble() * total;
         double current = 0;
         for (Reward reward : rewards) {
-            current += reward.getChance();
+            current += reward.chance();
             if (roll <= current) {
                 return new RollResult(reward, roll, total);
             }

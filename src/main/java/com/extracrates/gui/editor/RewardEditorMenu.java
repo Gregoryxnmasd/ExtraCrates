@@ -56,7 +56,7 @@ public class RewardEditorMenu implements Listener {
     public void openPools(Player player) {
         Inventory inventory = Bukkit.createInventory(player, 54, poolTitle);
         List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
-        pools.sort(Comparator.comparing(RewardPool::getId));
+        pools.sort(Comparator.comparing(RewardPool::id));
         int slot = 0;
         for (RewardPool pool : pools) {
             inventory.setItem(slot++, buildPoolItem(pool));
@@ -75,10 +75,10 @@ public class RewardEditorMenu implements Listener {
         RewardPool pool = configLoader.getRewardPools().get(poolId);
         Inventory inventory = Bukkit.createInventory(player, 54, TextUtil.color("&8Pool: " + poolId));
         inventory.setItem(4, buildItem(Material.COMPARATOR, "&eRoll Count", List.of(
-                "&7Actual: &f" + (pool != null ? pool.getRollCount() : 1),
+                "&7Actual: &f" + (pool != null ? pool.rollCount() : 1),
                 "&7Click para editar."
         )));
-        List<Reward> rewards = pool != null ? pool.getRewards() : List.of();
+        List<Reward> rewards = pool != null ? pool.rewards() : List.of();
         int slot = 0;
         for (Reward reward : rewards) {
             if (slot >= 45) {
@@ -98,8 +98,8 @@ public class RewardEditorMenu implements Listener {
         Reward reward = null;
         RewardPool pool = configLoader.getRewardPools().get(poolId);
         if (pool != null) {
-            for (Reward item : pool.getRewards()) {
-                if (item.getId().equalsIgnoreCase(rewardId)) {
+            for (Reward item : pool.rewards()) {
+                if (item.id().equalsIgnoreCase(rewardId)) {
                     reward = item;
                     break;
                 }
@@ -107,19 +107,19 @@ public class RewardEditorMenu implements Listener {
         }
         Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color("&8Reward: " + rewardId));
         inventory.setItem(10, buildItem(Material.NAME_TAG, "&eDisplay Name", List.of(
-                "&7Actual: &f" + (reward != null ? reward.getDisplayName() : rewardId),
+                "&7Actual: &f" + (reward != null ? reward.displayName() : rewardId),
                 "&7Click para editar."
         )));
         inventory.setItem(12, buildItem(Material.GOLD_NUGGET, "&eChance", List.of(
-                "&7Actual: &f" + (reward != null ? reward.getChance() : 0),
+                "&7Actual: &f" + (reward != null ? reward.chance() : 0),
                 "&7Click para editar."
         )));
         inventory.setItem(14, buildItem(Material.CHEST, "&eItem", List.of(
-                "&7Actual: &f" + (reward != null ? reward.getItem() : "STONE"),
+                "&7Actual: &f" + (reward != null ? reward.item() : "STONE"),
                 "&7Click para editar."
         )));
         inventory.setItem(16, buildItem(Material.PAPER, "&eAmount", List.of(
-                "&7Actual: &f" + (reward != null ? reward.getAmount() : 1),
+                "&7Actual: &f" + (reward != null ? reward.amount() : 1),
                 "&7Click para editar."
         )));
         inventory.setItem(22, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al pool.")));
@@ -164,24 +164,24 @@ public class RewardEditorMenu implements Listener {
             return;
         }
         List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
-        pools.sort(Comparator.comparing(RewardPool::getId));
+        pools.sort(Comparator.comparing(RewardPool::id));
         if (slot < 0 || slot >= pools.size() || slot >= 45) {
             return;
         }
         RewardPool pool = pools.get(slot);
         if (rightClick && shiftClick) {
-            confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar pool " + pool.getId(), () -> {
-                deletePool(pool.getId());
+            confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar pool " + pool.id(), () -> {
+                deletePool(pool.id());
                 player.sendMessage(Component.text("Pool eliminada y guardada en YAML."));
                 openPools(player);
             }, () -> openPools(player));
             return;
         }
         if (rightClick) {
-            promptClonePool(player, pool.getId());
+            promptClonePool(player, pool.id());
             return;
         }
-        openPoolDetail(player, pool.getId());
+        openPoolDetail(player, pool.id());
     }
 
     private void handlePoolDetailClick(Player player, String poolId, int slot, boolean rightClick, boolean shiftClick) {
@@ -205,24 +205,24 @@ public class RewardEditorMenu implements Listener {
         if (pool == null) {
             return;
         }
-        List<Reward> rewards = pool.getRewards();
+        List<Reward> rewards = pool.rewards();
         if (slot < 0 || slot >= rewards.size() || slot >= 45) {
             return;
         }
         Reward reward = rewards.get(slot);
         if (rightClick && shiftClick) {
-            confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar reward " + reward.getId(), () -> {
-                deleteReward(poolId, reward.getId());
+            confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar reward " + reward.id(), () -> {
+                deleteReward(poolId, reward.id());
                 player.sendMessage(Component.text("Reward eliminada y guardada en YAML."));
                 openPoolDetail(player, poolId);
             }, () -> openPoolDetail(player, poolId));
             return;
         }
         if (rightClick) {
-            promptCloneReward(player, poolId, reward.getId());
+            promptCloneReward(player, poolId, reward.id());
             return;
         }
-        openRewardDetail(player, poolId, reward.getId());
+        openRewardDetail(player, poolId, reward.id());
     }
 
     private void handleRewardDetailClick(Player player, String poolId, String rewardId, int slot) {
@@ -433,7 +433,7 @@ public class RewardEditorMenu implements Listener {
         if (pool == null) {
             return false;
         }
-        return pool.getRewards().stream().anyMatch(reward -> reward.getId().equalsIgnoreCase(rewardId));
+        return pool.rewards().stream().anyMatch(reward -> reward.id().equalsIgnoreCase(rewardId));
     }
 
     private FileConfiguration loadConfig() {
@@ -453,20 +453,20 @@ public class RewardEditorMenu implements Listener {
 
     private ItemStack buildPoolItem(RewardPool pool) {
         List<String> lore = new ArrayList<>();
-        lore.add("&7ID: &f" + pool.getId());
-        lore.add("&7Roll Count: &f" + pool.getRollCount());
-        lore.add("&7Rewards: &f" + pool.getRewards().size());
+        lore.add("&7ID: &f" + pool.id());
+        lore.add("&7Roll Count: &f" + pool.rollCount());
+        lore.add("&7Rewards: &f" + pool.rewards().size());
         lore.add("&8Click: editar | Click der: clonar | Shift+der: borrar");
-        return buildItem(Material.EMERALD, "&a" + pool.getId(), lore);
+        return buildItem(Material.EMERALD, "&a" + pool.id(), lore);
     }
 
     private ItemStack buildRewardItem(Reward reward) {
         List<String> lore = new ArrayList<>();
-        lore.add("&7ID: &f" + reward.getId());
-        lore.add("&7Chance: &f" + reward.getChance());
-        lore.add("&7Item: &f" + reward.getItem());
+        lore.add("&7ID: &f" + reward.id());
+        lore.add("&7Chance: &f" + reward.chance());
+        lore.add("&7Item: &f" + reward.item());
         lore.add("&8Click: editar | Click der: clonar | Shift+der: borrar");
-        return buildItem(Material.GOLD_INGOT, "&e" + reward.getDisplayName(), lore);
+        return buildItem(Material.GOLD_INGOT, "&e" + reward.displayName(), lore);
     }
 
     private ItemStack buildItem(Material material, String name, List<String> loreLines) {

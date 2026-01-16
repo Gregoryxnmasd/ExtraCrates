@@ -73,14 +73,14 @@ public class RouteEditorSession {
             return;
         }
         for (CutscenePoint point : points) {
-            player.spawnParticle(previewParticle, point.getX(), point.getY(), point.getZ(), 1, 0, 0, 0, 0);
+            player.spawnParticle(previewParticle, point.x(), point.y(), point.z(), 1, 0, 0, 0, 0);
         }
         double step = 0.3;
         for (int i = 0; i < points.size() - 1; i++) {
             CutscenePoint start = points.get(i);
             CutscenePoint end = points.get(i + 1);
-            Location startLoc = new Location(player.getWorld(), start.getX(), start.getY(), start.getZ());
-            Location endLoc = new Location(player.getWorld(), end.getX(), end.getY(), end.getZ());
+            Location startLoc = new Location(player.getWorld(), start.x(), start.y(), start.z());
+            Location endLoc = new Location(player.getWorld(), end.x(), end.y(), end.z());
             double distance = startLoc.distance(endLoc);
             int steps = Math.max(1, (int) Math.ceil(distance / step));
             for (int s = 0; s <= steps; s++) {

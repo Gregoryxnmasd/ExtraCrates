@@ -61,7 +61,7 @@ public class SyncBridge {
         }
         SyncEvent event = new SyncEvent(SyncEventType.CRATE_OPEN, settings.getServerId(), playerId, crateId, null, Instant.now());
         provider.publish(event);
-        store.recordCrateOpen(playerId, crateId, event.getTimestamp(), settings.getServerId());
+        store.recordCrateOpen(playerId, crateId, event.timestamp(), settings.getServerId());
     }
 
     public void recordRewardGranted(UUID playerId, String crateId, String rewardId) {
@@ -70,7 +70,7 @@ public class SyncBridge {
         }
         SyncEvent event = new SyncEvent(SyncEventType.REWARD_GRANTED, settings.getServerId(), playerId, crateId, rewardId, Instant.now());
         provider.publish(event);
-        store.recordRewardGranted(playerId, crateId, rewardId, event.getTimestamp(), settings.getServerId());
+        store.recordRewardGranted(playerId, crateId, rewardId, event.timestamp(), settings.getServerId());
     }
 
     public void recordKeyConsumed(UUID playerId, String crateId) {
@@ -79,7 +79,7 @@ public class SyncBridge {
         }
         SyncEvent event = new SyncEvent(SyncEventType.KEY_CONSUMED, settings.getServerId(), playerId, crateId, null, Instant.now());
         provider.publish(event);
-        store.recordKeyConsumed(playerId, crateId, event.getTimestamp(), settings.getServerId());
+        store.recordKeyConsumed(playerId, crateId, event.timestamp(), settings.getServerId());
     }
 
     public void recordCooldown(UUID playerId, String crateId) {
@@ -88,7 +88,7 @@ public class SyncBridge {
         }
         SyncEvent event = new SyncEvent(SyncEventType.COOLDOWN_SET, settings.getServerId(), playerId, crateId, null, Instant.now());
         provider.publish(event);
-        store.recordCooldown(playerId, crateId, event.getTimestamp(), settings.getServerId());
+        store.recordCooldown(playerId, crateId, event.timestamp(), settings.getServerId());
     }
 
     public void flush() {
@@ -139,14 +139,14 @@ public class SyncBridge {
         if (!settings.isEnabled() || degraded) {
             return;
         }
-        if (settings.getServerId().equals(event.getServerId())) {
+        if (settings.getServerId().equals(event.serverId())) {
             return;
         }
-        switch (event.getType()) {
-            case COOLDOWN_SET -> sessionManager.applyRemoteCooldown(event.getPlayerId(), event.getCrateId(), event.getTimestamp());
-            case KEY_CONSUMED -> sessionManager.applyRemoteKeyConsumed(event.getPlayerId(), event.getCrateId());
-            case CRATE_OPEN -> sessionManager.applyRemoteOpen(event.getPlayerId(), event.getCrateId());
-            case REWARD_GRANTED -> sessionManager.applyRemoteReward(event.getPlayerId(), event.getCrateId(), event.getRewardId());
+        switch (event.type()) {
+            case COOLDOWN_SET -> sessionManager.applyRemoteCooldown(event.playerId(), event.crateId(), event.timestamp());
+            case KEY_CONSUMED -> sessionManager.applyRemoteKeyConsumed(event.playerId(), event.crateId());
+            case CRATE_OPEN -> sessionManager.applyRemoteOpen(event.playerId(), event.crateId());
+            case REWARD_GRANTED -> sessionManager.applyRemoteReward(event.playerId(), event.crateId(), event.rewardId());
         }
     }
 

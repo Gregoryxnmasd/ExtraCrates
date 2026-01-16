@@ -55,7 +55,7 @@ public class CrateEditorMenu implements Listener {
     public void open(Player player) {
         Inventory inventory = Bukkit.createInventory(player, 54, title);
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
-        crates.sort(Comparator.comparing(CrateDefinition::getId));
+        crates.sort(Comparator.comparing(CrateDefinition::id));
         int slot = 0;
         for (CrateDefinition crate : crates) {
             inventory.setItem(slot++, buildCrateItem(crate));
@@ -74,19 +74,19 @@ public class CrateEditorMenu implements Listener {
         Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color("&8Crate: " + crateId));
         CrateDefinition crate = configLoader.getCrates().get(crateId);
         inventory.setItem(10, buildItem(Material.NAME_TAG, "&eDisplay Name", List.of(
-                "&7Actual: &f" + (crate != null ? crate.getDisplayName() : crateId),
+                "&7Actual: &f" + (crate != null ? crate.displayName() : crateId),
                 "&7Click para editar."
         )));
         inventory.setItem(12, buildItem(Material.CHEST_MINECART, "&eRewards Pool", List.of(
-                "&7Actual: &f" + (crate != null ? crate.getRewardsPool() : ""),
+                "&7Actual: &f" + (crate != null ? crate.rewardsPool() : ""),
                 "&7Click para editar."
         )));
         inventory.setItem(14, buildItem(Material.COMPARATOR, "&eTipo", List.of(
-                "&7Actual: &f" + (crate != null ? crate.getType().name() : "NORMAL"),
+                "&7Actual: &f" + (crate != null ? crate.type().name() : "NORMAL"),
                 "&7Click para alternar."
         )));
         inventory.setItem(16, buildItem(Material.PAPER, "&eOpen Mode", List.of(
-                "&7Actual: &f" + (crate != null ? crate.getOpenMode() : "reward-only"),
+                "&7Actual: &f" + (crate != null ? crate.openMode() : "reward-only"),
                 "&7Click para editar."
         )));
         inventory.setItem(22, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
@@ -125,24 +125,24 @@ public class CrateEditorMenu implements Listener {
             return;
         }
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
-        crates.sort(Comparator.comparing(CrateDefinition::getId));
+        crates.sort(Comparator.comparing(CrateDefinition::id));
         if (slot < 0 || slot >= crates.size() || slot >= 45) {
             return;
         }
         CrateDefinition crate = crates.get(slot);
         if (rightClick && shiftClick) {
-            confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar crate " + crate.getId(), () -> {
-                deleteCrate(crate.getId());
+            confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar crate " + crate.id(), () -> {
+                deleteCrate(crate.id());
                 player.sendMessage(Component.text("Crate eliminada y guardada en YAML."));
                 open(player);
             }, () -> open(player));
             return;
         }
         if (rightClick) {
-            promptClone(player, crate.getId());
+            promptClone(player, crate.id());
             return;
         }
-        openDetail(player, crate.getId());
+        openDetail(player, crate.id());
     }
 
     private void handleDetailClick(Player player, String crateId, int slot) {
@@ -221,7 +221,7 @@ public class CrateEditorMenu implements Listener {
 
     private void toggleType(Player player, String crateId) {
         CrateDefinition crate = configLoader.getCrates().get(crateId);
-        CrateType current = crate != null ? crate.getType() : CrateType.NORMAL;
+        CrateType current = crate != null ? crate.type() : CrateType.NORMAL;
         CrateType[] values = CrateType.values();
         CrateType next = values[(current.ordinal() + 1) % values.length];
         confirmationMenu.open(player, "&8Confirmar cambio", "Cambiar tipo a " + next.name(), () -> {
@@ -283,11 +283,11 @@ public class CrateEditorMenu implements Listener {
 
     private ItemStack buildCrateItem(CrateDefinition crate) {
         List<String> lore = new ArrayList<>();
-        lore.add("&7ID: &f" + crate.getId());
-        lore.add("&7Tipo: &f" + crate.getType().name());
-        lore.add("&7Rewards: &f" + crate.getRewardsPool());
+        lore.add("&7ID: &f" + crate.id());
+        lore.add("&7Tipo: &f" + crate.type().name());
+        lore.add("&7Rewards: &f" + crate.rewardsPool());
         lore.add("&8Click: editar | Click der: clonar | Shift+der: borrar");
-        return buildItem(Material.CHEST, crate.getDisplayName(), lore);
+        return buildItem(Material.CHEST, crate.displayName(), lore);
     }
 
     private ItemStack buildItem(Material material, String name, List<String> loreLines) {

@@ -35,9 +35,9 @@ public class RewardLogger {
         String logEntry = format.format(
                 DateTimeFormatter.ISO_INSTANT.format(timestamp),
                 player.getName(),
-                crate.getId(),
-                reward.getId(),
-                reward.getChance(),
+                crate.id(),
+                reward.id(),
+                reward.chance(),
                 seed
         );
         write(logEntry);

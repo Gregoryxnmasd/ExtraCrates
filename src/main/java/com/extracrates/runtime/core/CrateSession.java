@@ -2,7 +2,6 @@ package com.extracrates.runtime.core;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
-import com.extracrates.config.LanguageManager;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
@@ -92,7 +91,7 @@ public class CrateSession {
         elapsedTicks = 0;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
-        Location start = crate.getCameraStart() != null ? crate.getCameraStart() : player.getLocation();
+        Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
         previousGameMode = player.getGameMode();
         previousWalkSpeed = player.getWalkSpeed();
         previousFlySpeed = player.getFlySpeed();
@@ -125,7 +124,7 @@ public class CrateSession {
         player.setSpectatorTarget(cameraEntity);
 
         previousHelmet = player.getInventory().getHelmet();
-        String overlayModel = crate.getCutsceneSettings().getOverlayModel();
+        String overlayModel = crate.cutsceneSettings().overlayModel();
         if (overlayModel != null && !overlayModel.isEmpty()) {
             ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
             ItemMeta meta = pumpkin.getItemMeta();
@@ -139,10 +138,10 @@ public class CrateSession {
             player.sendEquipmentChange(player, EquipmentSlot.HEAD, pumpkin);
         }
 
-        if (crate.getCutsceneSettings().isHideHud()) {
+        if (crate.cutsceneSettings().hideHud()) {
             hudHiddenApplied = toggleHud(true);
         }
-        if (crate.getCutsceneSettings().isLockMovement()) {
+        if (crate.cutsceneSettings().lockMovement()) {
             player.setWalkSpeed(0.0f);
             player.setFlySpeed(0.0f);
         }
@@ -152,9 +151,9 @@ public class CrateSession {
         if (rewards.isEmpty()) {
             return;
         }
-        Location anchor = crate.getRewardAnchor() != null ? crate.getRewardAnchor() : player.getLocation().add(0, 1.5, 0);
-        CrateDefinition.RewardFloatSettings floatSettings = crate.getAnimation().getRewardFloatSettings();
-        Location displayLocation = anchor.clone().add(0, floatSettings.getHeight(), 0);
+        Location anchor = crate.rewardAnchor() != null ? crate.rewardAnchor() : player.getLocation().add(0, 1.5, 0);
+        CrateDefinition.RewardFloatSettings floatSettings = crate.animation().rewardFloatSettings();
+        Location displayLocation = anchor.clone().add(0, floatSettings.height(), 0);
         Reward reward = getCurrentReward();
         if (reward == null) {
             return;
@@ -164,14 +163,14 @@ public class CrateSession {
             display.setItemStack(buildRewardDisplayItem(reward, anchor.getWorld()));
         });
         hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
-            String format = reward.getHologram();
+            String format = reward.hologram();
             if (format == null || format.isEmpty()) {
-                format = crate.getAnimation().getHologramFormat();
+                format = crate.animation().hologramFormat();
             }
             if (format == null || format.isEmpty()) {
                 format = "%reward_name%";
             }
-            String name = format.replace("%reward_name%", reward.getDisplayName());
+            String name = format.replace("%reward_name%", reward.displayName());
             display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
             display.setBillboard(Display.Billboard.CENTER);
         });
@@ -239,8 +238,8 @@ public class CrateSession {
         for (int i = 0; i < points.size() - 1; i++) {
             com.extracrates.cutscene.CutscenePoint start = points.get(i);
             com.extracrates.cutscene.CutscenePoint end = points.get(i + 1);
-            Location startLoc = new Location(world, start.getX(), start.getY(), start.getZ(), start.getYaw(), start.getPitch());
-            Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ(), end.getYaw(), end.getPitch());
+            Location startLoc = new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch());
+            Location endLoc = new Location(world, end.x(), end.y(), end.z(), end.yaw(), end.pitch());
             double distance = startLoc.distance(endLoc);
             int steps = Math.max(2, (int) Math.ceil(distance / path.getStepResolution()));
             for (int s = 0; s <= steps; s++) {
@@ -310,11 +309,11 @@ public class CrateSession {
         if (isQaMode()) {
             player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
         } else {
-            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
+            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
             ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
             player.getInventory().addItem(item);
 
-            for (String command : reward.getCommands()) {
+            for (String command : reward.commands()) {
                 String parsed = command.replace("%player%", player.getName());
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
@@ -348,8 +347,8 @@ public class CrateSession {
             rewardDisplay.setItemStack(buildRewardDisplayItem(reward, rewardDisplay.getWorld()));
         }
         if (hologram != null) {
-            String format = crate.getAnimation().getHologramFormat();
-            String name = format.replace("%reward_name%", reward.getDisplayName());
+            String format = crate.animation().hologramFormat();
+            String name = format.replace("%reward_name%", reward.displayName());
             hologram.text(TextUtil.color(name));
         }
     }
@@ -360,7 +359,7 @@ public class CrateSession {
 
     private ItemStack buildRewardDisplayItem(Reward reward, World world) {
         ItemStack item = ItemUtil.buildItem(reward, world, configLoader, plugin.getMapImageCache());
-        String rewardModel = crate.getAnimation().getRewardModel();
+        String rewardModel = crate.animation().rewardModel();
         if (rewardModel == null || rewardModel.isEmpty()) {
             return item;
         }
@@ -404,7 +403,7 @@ public class CrateSession {
         if (speedModifierUuid != null) {
             sessionManager.removeSpectatorModifier(player, speedModifierUuid);
         }
-        if (crate.getCutsceneSettings().isLockMovement()) {
+        if (crate.cutsceneSettings().lockMovement()) {
             player.setWalkSpeed(previousWalkSpeed);
             player.setFlySpeed(previousFlySpeed);
         }
@@ -420,7 +419,7 @@ public class CrateSession {
     }
 
     public boolean isMovementLocked() {
-        return crate.getCutsceneSettings().isLockMovement();
+        return crate.cutsceneSettings().lockMovement();
     }
 
     public boolean isPreview() {
@@ -439,26 +438,26 @@ public class CrateSession {
     }
 
     private void startMusic() {
-        CrateDefinition.MusicSettings music = crate.getCutsceneSettings().getMusicSettings();
-        if (music == null || music.getSound().isEmpty()) {
+        CrateDefinition.MusicSettings music = crate.cutsceneSettings().musicSettings();
+        if (music == null || music.sound().isEmpty()) {
             return;
         }
-        SoundCategory category = parseCategory(music.getCategory());
-        if (music.getFadeInTicks() <= 0) {
-            player.playSound(player.getLocation(), music.getSound(), category, music.getVolume(), music.getPitch());
+        SoundCategory category = parseCategory(music.category());
+        if (music.fadeInTicks() <= 0) {
+            player.playSound(player.getLocation(), music.sound(), category, music.volume(), music.pitch());
             return;
         }
         scheduleMusicFade(music, category, true);
     }
 
     private void stopMusic() {
-        CrateDefinition.MusicSettings music = crate.getCutsceneSettings().getMusicSettings();
-        if (music == null || music.getSound().isEmpty()) {
+        CrateDefinition.MusicSettings music = crate.cutsceneSettings().musicSettings();
+        if (music == null || music.sound().isEmpty()) {
             return;
         }
-        SoundCategory category = parseCategory(music.getCategory());
-        if (music.getFadeOutTicks() <= 0) {
-            player.stopSound(music.getSound(), category);
+        SoundCategory category = parseCategory(music.category());
+        if (music.fadeOutTicks() <= 0) {
+            player.stopSound(music.sound(), category);
             return;
         }
         scheduleMusicFade(music, category, false);
@@ -468,10 +467,10 @@ public class CrateSession {
         if (musicTask != null) {
             musicTask.cancel();
         }
-        int totalTicks = Math.max(1, fadeIn ? music.getFadeInTicks() : music.getFadeOutTicks());
+        int totalTicks = Math.max(1, fadeIn ? music.fadeInTicks() : music.fadeOutTicks());
         int steps = Math.max(1, totalTicks / 4);
-        float startVolume = fadeIn ? 0.0f : music.getVolume();
-        float endVolume = fadeIn ? music.getVolume() : 0.0f;
+        float startVolume = fadeIn ? 0.0f : music.volume();
+        float endVolume = fadeIn ? music.volume() : 0.0f;
         float step = (endVolume - startVolume) / steps;
         musicTask = new BukkitRunnable() {
             int stepIndex = 0;
@@ -481,18 +480,18 @@ public class CrateSession {
             public void run() {
                 if (stepIndex > steps) {
                     if (!fadeIn) {
-                        player.stopSound(music.getSound(), category);
+                        player.stopSound(music.sound(), category);
                     }
                     cancel();
                     return;
                 }
-                current = Math.max(0.0f, Math.min(music.getVolume(), current));
+                current = Math.max(0.0f, Math.min(music.volume(), current));
                 if (current <= 0.0f && !fadeIn) {
-                    player.stopSound(music.getSound(), category);
+                    player.stopSound(music.sound(), category);
                 } else {
-                    player.stopSound(music.getSound(), category);
+                    player.stopSound(music.sound(), category);
                     float playVolume = Math.max(0.01f, current);
-                    player.playSound(player.getLocation(), music.getSound(), category, playVolume, music.getPitch());
+                    player.playSound(player.getLocation(), music.sound(), category, playVolume, music.pitch());
                 }
                 current += step;
                 stepIndex++;

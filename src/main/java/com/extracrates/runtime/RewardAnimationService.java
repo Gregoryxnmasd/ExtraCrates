@@ -40,7 +40,7 @@ public class RewardAnimationService {
             int tick,
             CrateDefinition.RewardFloatSettings floatSettings
     ) {
-        float rotation = (float) (tick * floatSettings.getSpinSpeed());
+        float rotation = (float) (tick * floatSettings.spinSpeed());
         rewardDisplay.setRotation(rotation, 0);
         rewardDisplay.teleport(baseLocation);
         if (hologram != null) {
@@ -56,9 +56,9 @@ public class RewardAnimationService {
             int tick,
             CrateDefinition.RewardFloatSettings floatSettings
     ) {
-        float rotation = (float) (tick * floatSettings.getSpinSpeed());
+        float rotation = (float) (tick * floatSettings.spinSpeed());
         rewardDisplay.setRotation(rotation, 0);
-        double bob = floatSettings.isBobbing() ? Math.sin(tick / 6.0) * 0.05 : 0.0;
+        double bob = floatSettings.bobbing() ? Math.sin(tick / 6.0) * 0.05 : 0.0;
         rewardDisplay.teleport(baseLocation.clone().add(0, bob, 0));
         if (hologram != null) {
             hologram.teleport(baseHologramLocation.clone().add(0, bob, 0));

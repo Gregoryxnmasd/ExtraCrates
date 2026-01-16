@@ -96,11 +96,11 @@ public class RouteEditorManager {
         List<Map<String, Object>> points = new ArrayList<>();
         for (CutscenePoint point : session.getPoints()) {
             Map<String, Object> values = new LinkedHashMap<>();
-            values.put("x", point.getX());
-            values.put("y", point.getY());
-            values.put("z", point.getZ());
-            values.put("yaw", point.getYaw());
-            values.put("pitch", point.getPitch());
+            values.put("x", point.x());
+            values.put("y", point.y());
+            values.put("z", point.z());
+            values.put("yaw", point.yaw());
+            values.put("pitch", point.pitch());
             points.add(values);
         }
         section.set("points", points);

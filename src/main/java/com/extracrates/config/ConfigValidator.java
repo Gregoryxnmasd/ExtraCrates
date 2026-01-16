@@ -33,30 +33,30 @@ public class ConfigValidator {
         Map<String, RewardPool> rewardPools = configLoader.getRewardPools();
 
         for (CrateDefinition crate : configLoader.getCrates().values()) {
-            String poolId = crate.getRewardsPool();
+            String poolId = crate.rewardsPool();
             if (poolId == null || poolId.isBlank()) {
-                warnings.add("La crate '" + crate.getId() + "' no tiene rewards-pool definido.");
+                warnings.add("La crate '" + crate.id() + "' no tiene rewards-pool definido.");
                 continue;
             }
             if (!rewardPools.containsKey(poolId)) {
-                warnings.add("La crate '" + crate.getId() + "' usa un rewards-pool inválido: '" + poolId + "'.");
+                warnings.add("La crate '" + crate.id() + "' usa un rewards-pool inválido: '" + poolId + "'.");
             }
         }
 
         for (RewardPool pool : rewardPools.values()) {
-            if (pool.getRewards().isEmpty()) {
-                warnings.add("El pool de recompensas '" + pool.getId() + "' está vacío.");
+            if (pool.rewards().isEmpty()) {
+                warnings.add("El pool de recompensas '" + pool.id() + "' está vacío.");
             }
-            for (Reward reward : pool.getRewards()) {
-                String itemName = reward.getItem();
+            for (Reward reward : pool.rewards()) {
+                String itemName = reward.item();
                 Material material = Material.matchMaterial(itemName.toUpperCase(Locale.ROOT));
                 if (material == null) {
-                    warnings.add("Material desconocido en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "'): '" + itemName + "'.");
+                    warnings.add("Material desconocido en recompensa '" + reward.id() + "' (pool '" + pool.id() + "'): '" + itemName + "'.");
                 }
-                for (String enchantmentKey : reward.getEnchantments().keySet()) {
+                for (String enchantmentKey : reward.enchantments().keySet()) {
                     Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(enchantmentKey.toLowerCase(Locale.ROOT)));
                     if (enchantment == null) {
-                        warnings.add("Encantamiento inválido en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "'): '" + enchantmentKey + "'.");
+                        warnings.add("Encantamiento inválido en recompensa '" + reward.id() + "' (pool '" + pool.id() + "'): '" + enchantmentKey + "'.");
                     }
                 }
             }
@@ -67,11 +67,11 @@ public class ConfigValidator {
 
     public void report(ValidationReport report) {
         Logger logger = plugin.getLogger();
-        if (report.getWarnings().isEmpty()) {
+        if (report.warnings().isEmpty()) {
             logger.info("Validación de configuración completada sin warnings.");
         } else {
-            logger.warning("Validación de configuración detectó " + report.getWarnings().size() + " warning(s):");
-            for (String warning : report.getWarnings()) {
+            logger.warning("Validación de configuración detectó " + report.warnings().size() + " warning(s):");
+            for (String warning : report.warnings()) {
                 logger.warning("- " + warning);
             }
         }
@@ -84,11 +84,11 @@ public class ConfigValidator {
         lines.add("ExtraCrates - Reporte de validación");
         lines.add("Generado: " + LocalDateTime.now());
         lines.add("");
-        if (report.getWarnings().isEmpty()) {
+        if (report.warnings().isEmpty()) {
             lines.add("Sin warnings detectados.");
         } else {
             lines.add("Warnings:");
-            for (String warning : report.getWarnings()) {
+            for (String warning : report.warnings()) {
                 lines.add("- " + warning);
             }
         }
@@ -100,15 +100,9 @@ public class ConfigValidator {
         }
     }
 
-    public static class ValidationReport {
-        private final List<String> warnings;
-
-        public ValidationReport(List<String> warnings) {
-            this.warnings = List.copyOf(warnings);
-        }
-
-        public List<String> getWarnings() {
-            return warnings;
+    public record ValidationReport(List<String> warnings) {
+        public ValidationReport {
+            warnings = List.copyOf(warnings);
         }
     }
 }
