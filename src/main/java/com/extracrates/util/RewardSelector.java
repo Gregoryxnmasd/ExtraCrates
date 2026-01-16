@@ -7,10 +7,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Utility class for rolling rewards, exposed for integrations and tests.
+ */
 public final class RewardSelector {
     private RewardSelector() {
     }
 
+    @SuppressWarnings("unused")
     public static List<Reward> roll(RewardPool pool) {
         return roll(pool, new Random(), null);
     }
@@ -46,7 +50,7 @@ public final class RewardSelector {
                 return new RollResult(reward, roll, total);
             }
         }
-        Reward reward = rewards.get(rewards.size() - 1);
+        Reward reward = rewards.getLast();
         return new RollResult(reward, roll, total);
     }
 
