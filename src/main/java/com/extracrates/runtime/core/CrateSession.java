@@ -355,6 +355,12 @@ public class CrateSession {
                 cameraEntity.remove();
             }
         }
+        if (rewardDisplay != null && !rewardDisplay.isDead()) {
+            rewardDisplay.remove();
+        }
+        if (hologram != null && !hologram.isDead()) {
+            hologram.remove();
+        }
         if (previousGameMode != null) {
             player.setGameMode(previousGameMode);
         }
