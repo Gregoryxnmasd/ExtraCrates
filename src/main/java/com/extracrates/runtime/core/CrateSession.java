@@ -7,15 +7,20 @@ import com.extracrates.model.Reward;
 import com.extracrates.util.CutsceneTimeline;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
+import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Transformation;
 
 import java.util.*;
 
@@ -36,6 +41,14 @@ public class CrateSession {
     private TextDisplay hologram;
     private BukkitRunnable task;
     private BukkitRunnable musicTask;
+
+    private int rewardIndex;
+    private int rewardSwitchTicks;
+    private int nextRewardSwitchTick;
+    private int elapsedTicks;
+    private Location rewardBaseLocation;
+    private Location hologramBaseLocation;
+    private Transformation rewardBaseTransform;
 
     private GameMode previousGameMode;
     private UUID speedModifierUuid;
@@ -311,6 +324,10 @@ public class CrateSession {
     }
 
     private void executeReward() {
+        Reward reward = getCurrentReward();
+        if (reward == null) {
+            return;
+        }
         if (isQaMode()) {
             player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
         } else {
@@ -331,6 +348,16 @@ public class CrateSession {
             nextRewardSwitchTick += rewardSwitchTicks;
             refreshRewardDisplay();
         }
+    }
+
+    private Reward getCurrentReward() {
+        if (rewards == null || rewards.isEmpty()) {
+            return null;
+        }
+        if (rewardIndex < 0 || rewardIndex >= rewards.size()) {
+            return null;
+        }
+        return rewards.get(rewardIndex);
     }
 
     private void refreshRewardDisplay() {
@@ -360,8 +387,12 @@ public class CrateSession {
             musicTask.cancel();
         }
         stopMusic();
-        if (cameraStand != null && !cameraStand.isDead()) {
-            sessionManager.getDisplayPool().releaseArmorStand(cameraStand);
+        if (cameraEntity != null && !cameraEntity.isDead()) {
+            if (cameraEntity instanceof ArmorStand armorStand) {
+                armorStand.remove();
+            } else {
+                cameraEntity.remove();
+            }
         }
         if (previousGameMode != null) {
             player.setGameMode(previousGameMode);
