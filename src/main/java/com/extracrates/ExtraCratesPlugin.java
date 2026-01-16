@@ -12,7 +12,7 @@ import com.extracrates.gui.editor.EditorInputManager;
 import com.extracrates.gui.editor.EditorMenu;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.runtime.SessionListener;
-import net.milkbowl.vault.economy.Economy;
+import com.extracrates.util.MapImageCache;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -22,7 +22,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private SessionManager sessionManager;
     private CrateGui crateGui;
-    private EconomyService economyService;
+    private MapImageCache mapImageCache;
 
     @Override
     public void onEnable() {
@@ -44,9 +44,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         routeEditorManager = new RouteEditorManager(this, configLoader);
         new RouteEditorListener(this, routeEditorManager);
         crateGui = new CrateGui(this, configLoader, sessionManager);
-        EditorInputManager inputManager = new EditorInputManager(this);
-        ConfirmationMenu confirmationMenu = new ConfirmationMenu(this);
-        editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu);
+        mapImageCache = new MapImageCache(this);
 
         PluginCommand crateCommand = getCommand("crate");
         if (crateCommand != null) {
@@ -79,5 +77,9 @@ public final class ExtraCratesPlugin extends JavaPlugin {
             return;
         }
         economy = registration.getProvider();
+    }
+
+    public MapImageCache getMapImageCache() {
+        return mapImageCache;
     }
 }

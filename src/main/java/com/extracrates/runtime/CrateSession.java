@@ -134,20 +134,7 @@ public class CrateSession {
         }
 
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
-            ItemStack displayItem = ItemUtil.buildItem(reward);
-            String rewardModel = crate.getAnimation().getRewardModel();
-            if (rewardModel != null && !rewardModel.isEmpty()) {
-                // Animation reward-model takes priority over reward custom-model for display only.
-                ItemMeta meta = displayItem.getItemMeta();
-                if (meta != null) {
-                    try {
-                        meta.setCustomModelData(Integer.parseInt(rewardModel));
-                    } catch (NumberFormatException ignored) {
-                    }
-                    displayItem.setItemMeta(meta);
-                }
-            }
-            display.setItemStack(displayItem);
+            display.setItemStack(ItemUtil.buildItem(reward, anchor.getWorld(), configLoader, plugin.getMapImageCache()));
         });
         hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
             String format = reward.getHologram();
@@ -319,12 +306,9 @@ public class CrateSession {
     }
 
     private void executeReward() {
-        if (isQaMode()) {
-            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
-        } else {
-            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
-            ItemStack item = ItemUtil.buildItem(reward);
-            player.getInventory().addItem(item);
+        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.getDisplayName())));
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+        player.getInventory().addItem(item);
 
             for (String command : reward.getCommands()) {
                 String parsed = command.replace("%player%", player.getName());
