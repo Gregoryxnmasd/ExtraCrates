@@ -2,6 +2,7 @@ package com.extracrates.command;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.ConfigValidator;
 import com.extracrates.gui.CrateGui;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.runtime.SessionManager;
@@ -84,6 +85,8 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 }
                 plugin.reloadConfig();
                 configLoader.loadAll();
+                ConfigValidator validator = new ConfigValidator(plugin, configLoader);
+                validator.report(validator.validate());
                 sender.sendMessage(Component.text("Configuraciones recargadas."));
                 return true;
             }

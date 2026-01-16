@@ -3,6 +3,7 @@ package com.extracrates;
 import com.extracrates.command.CrateCommand;
 import com.extracrates.command.SyncCommand;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.ConfigValidator;
 import com.extracrates.gui.CrateGui;
 import com.extracrates.runtime.SessionManager;
 import com.extracrates.runtime.SessionListener;
@@ -25,6 +26,8 @@ public final class ExtraCratesPlugin extends JavaPlugin {
 
         configLoader = new ConfigLoader(this);
         configLoader.loadAll();
+        ConfigValidator validator = new ConfigValidator(this, configLoader);
+        validator.report(validator.validate());
 
         sessionManager = new SessionManager(this, configLoader, null);
         syncBridge = new SyncBridge(this, configLoader, sessionManager);
