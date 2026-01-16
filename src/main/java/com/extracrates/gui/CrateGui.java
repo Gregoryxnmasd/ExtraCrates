@@ -20,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class CrateGui implements Listener {
     private static final int PAGE_SIZE = 27;
     private static final int INVENTORY_SIZE = 36;
