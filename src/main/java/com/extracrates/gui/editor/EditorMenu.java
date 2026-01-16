@@ -16,6 +16,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class EditorMenu implements Listener {
     private final ExtraCratesPlugin plugin;
     private final Component title;

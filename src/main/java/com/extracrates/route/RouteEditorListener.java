@@ -8,6 +8,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
+@SuppressWarnings("unused")
 public class RouteEditorListener implements Listener {
     private final RouteEditorManager routeEditorManager;
 
@@ -24,7 +25,7 @@ public class RouteEditorListener implements Listener {
         if (event.getClickedBlock() == null) {
             return;
         }
-        if (!routeEditorManager.hasSession(event.getPlayer())) {
+        if (routeEditorManager.hasNoSession(event.getPlayer())) {
             return;
         }
         switch (event.getAction()) {
@@ -44,7 +45,7 @@ public class RouteEditorListener implements Listener {
 
     @EventHandler
     public void onTeleport(PlayerTeleportEvent event) {
-        if (!routeEditorManager.hasSession(event.getPlayer())) {
+        if (routeEditorManager.hasNoSession(event.getPlayer())) {
             return;
         }
         routeEditorManager.endSession(event.getPlayer(), false);
