@@ -176,29 +176,116 @@ public class CrateSession {
             finish();
             return;
         }
-        List<Location> timeline = CutsceneTimeline.build(cameraStand.getWorld(), path);
+        TimelineData timelineData = buildTimeline(cameraStand.getWorld(), path);
+        List<TimelinePoint> timeline = timelineData.points();
+        if (timeline.isEmpty()) {
+            finish();
+            return;
+        }
         task = new BukkitRunnable() {
             int index = 0;
             double rotation = 0;
-            long elapsedTicks = 0;
+            int tick = 0;
+            final int totalTicks = (int) Math.max(1, path.getDurationSeconds() * 20);
 
             @Override
             public void run() {
-                if (index >= timeline.size()) {
+                if (tick > totalTicks) {
                     cancel();
                     finish();
                     return;
                 }
-                Location point = timeline.get(index++);
-                cameraEntity.teleport(point);
-                player.setSpectatorTarget(cameraEntity);
+                while (index + 1 < timeline.size() && timeline.get(index + 1).tick() <= tick) {
+                    index++;
+                }
+                Location point = timeline.get(index).location();
+                cameraStand.teleport(point);
+                player.setSpectatorTarget(cameraStand);
 
                 if (rewardRenderer != null) {
                     rewardRenderer.tick();
                 }
+                tick++;
             }
         };
-        task.runTaskTimer(plugin, 0L, period);
+        assignTicks(timeline, timelineData.totalDistance(), (int) Math.max(1, path.getDurationSeconds() * 20));
+        task.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    private TimelineData buildTimeline(World world, CutscenePath path) {
+        List<TimelinePoint> timeline = new ArrayList<>();
+        List<com.extracrates.model.CutscenePoint> points = path.getPoints();
+        if (points.size() < 2) {
+            return new TimelineData(timeline, 0.0);
+        }
+        double totalDistance = 0.0;
+        List<Double> segmentDistances = new ArrayList<>();
+        for (int i = 0; i < points.size() - 1; i++) {
+            com.extracrates.model.CutscenePoint start = points.get(i);
+            com.extracrates.model.CutscenePoint end = points.get(i + 1);
+            Location startLoc = new Location(world, start.getX(), start.getY(), start.getZ());
+            Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ());
+            double distance = startLoc.distance(endLoc);
+            segmentDistances.add(distance);
+            totalDistance += distance;
+        }
+        int segments = segmentDistances.size();
+        int uniformSteps = segments > 0
+                ? Math.max(2, (int) Math.ceil((totalDistance / Math.max(0.0001, path.getStepResolution())) / segments))
+                : 2;
+        double distanceSoFar = 0.0;
+        for (int i = 0; i < points.size() - 1; i++) {
+            com.extracrates.model.CutscenePoint start = points.get(i);
+            com.extracrates.model.CutscenePoint end = points.get(i + 1);
+            Location startLoc = new Location(world, start.getX(), start.getY(), start.getZ(), start.getYaw(), start.getPitch());
+            Location endLoc = new Location(world, end.getX(), end.getY(), end.getZ(), end.getYaw(), end.getPitch());
+            double distance = segmentDistances.get(i);
+            int steps = path.isConstantSpeed()
+                    ? Math.max(2, (int) Math.ceil(distance / Math.max(0.0001, path.getStepResolution())))
+                    : uniformSteps;
+            for (int s = 0; s <= steps; s++) {
+                double t = s / (double) steps;
+                double x = lerp(startLoc.getX(), endLoc.getX(), t);
+                double y = lerp(startLoc.getY(), endLoc.getY(), t);
+                double z = lerp(startLoc.getZ(), endLoc.getZ(), t);
+                float yaw = (float) lerp(startLoc.getYaw(), endLoc.getYaw(), t);
+                float pitch = (float) lerp(startLoc.getPitch(), endLoc.getPitch(), t);
+                timeline.add(new TimelinePoint(new Location(world, x, y, z, yaw, pitch), distanceSoFar + (distance * t), 0));
+            }
+            distanceSoFar += distance;
+        }
+        return new TimelineData(timeline, totalDistance);
+    }
+
+    private double lerp(double start, double end, double t) {
+        return start + (end - start) * t;
+    }
+
+    private void assignTicks(List<TimelinePoint> timeline, double totalDistance, int totalTicks) {
+        if (timeline.isEmpty()) {
+            return;
+        }
+        if (totalDistance <= 0.0) {
+            for (int i = 0; i < timeline.size(); i++) {
+                TimelinePoint point = timeline.get(i);
+                timeline.set(i, new TimelinePoint(point.location(), point.distance(), 0));
+            }
+            return;
+        }
+        int lastTick = 0;
+        for (int i = 0; i < timeline.size(); i++) {
+            TimelinePoint point = timeline.get(i);
+            int tick = (int) Math.round((point.distance() / totalDistance) * totalTicks);
+            tick = Math.min(totalTicks, Math.max(lastTick, tick));
+            timeline.set(i, new TimelinePoint(point.location(), point.distance(), tick));
+            lastTick = tick;
+        }
+    }
+
+    private record TimelinePoint(Location location, double distance, int tick) {
+    }
+
+    private record TimelineData(List<TimelinePoint> points, double totalDistance) {
     }
 
     private void finish() {
