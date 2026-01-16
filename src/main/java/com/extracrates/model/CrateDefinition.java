@@ -170,12 +170,20 @@ public class CrateDefinition {
         private final String rewardModel;
         private final String hologramFormat;
         private final RewardFloatSettings rewardFloatSettings;
+        private final RewardDisplaySettings rewardDisplaySettings;
 
-        public AnimationSettings(String path, String rewardModel, String hologramFormat, RewardFloatSettings rewardFloatSettings) {
+        public AnimationSettings(
+                String path,
+                String rewardModel,
+                String hologramFormat,
+                RewardFloatSettings rewardFloatSettings,
+                RewardDisplaySettings rewardDisplaySettings
+        ) {
             this.path = path;
             this.rewardModel = rewardModel;
             this.hologramFormat = hologramFormat;
             this.rewardFloatSettings = rewardFloatSettings;
+            this.rewardDisplaySettings = rewardDisplaySettings;
         }
 
         public String getPath() {
@@ -194,15 +202,26 @@ public class CrateDefinition {
             return rewardFloatSettings;
         }
 
+        public RewardDisplaySettings getRewardDisplaySettings() {
+            return rewardDisplaySettings;
+        }
+
         public static AnimationSettings fromSection(ConfigurationSection section) {
             if (section == null) {
-                return new AnimationSettings("", "", "&e%reward_name%", new RewardFloatSettings(0.8, 2.0, true));
+                return new AnimationSettings(
+                        "",
+                        "",
+                        "&e%reward_name%",
+                        new RewardFloatSettings(0.8, 2.0, true),
+                        RewardDisplaySettings.defaultSettings()
+                );
             }
             String path = section.getString("path", "");
             String rewardModel = section.getString("reward-model", "");
-            String hologram = section.getString("hologram-format", "&e%reward_name%");
+            String hologram = section.getString("hologram-format", "");
             RewardFloatSettings rewardFloatSettings = RewardFloatSettings.fromSection(section.getConfigurationSection("reward-float"));
-            return new AnimationSettings(path, rewardModel, hologram, rewardFloatSettings);
+            RewardDisplaySettings rewardDisplaySettings = RewardDisplaySettings.fromSection(section.getConfigurationSection("reward-display"));
+            return new AnimationSettings(path, rewardModel, hologram, rewardFloatSettings, rewardDisplaySettings);
         }
     }
 
