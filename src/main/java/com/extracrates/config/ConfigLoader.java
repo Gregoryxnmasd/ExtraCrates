@@ -1,6 +1,7 @@
 package com.extracrates.config;
 
 import com.extracrates.ExtraCratesPlugin;
+import com.extracrates.config.SettingsSnapshot;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.config.SettingsSnapshot;
 import com.extracrates.model.CrateDefinition;
@@ -64,6 +65,13 @@ public class ConfigLoader {
         return plugin.getConfig();
     }
 
+    public SettingsSnapshot getSettings() {
+        if (settings == null) {
+            loadSettings();
+        }
+        return settings;
+    }
+
     public Integer resolveModelData(String modelKey) {
         if (modelKey == null || modelKey.isEmpty()) {
             return null;
@@ -77,6 +85,10 @@ public class ConfigLoader {
             return section.getInt(modelKey);
         }
         return null;
+    }
+
+    private void loadSettings() {
+        settings = SettingsSnapshot.fromConfig(getMainConfig());
     }
 
     private void loadCrates() {
