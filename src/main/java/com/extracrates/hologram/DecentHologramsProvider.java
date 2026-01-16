@@ -46,8 +46,7 @@ public class DecentHologramsProvider implements HologramProvider {
                     moveIsStatic = Modifier.isStatic(moveMethod.getModifiers());
                 }
                 resolved = createMethod != null;
-            } catch (ClassNotFoundException ignored) {
-                resolved = false;
+            } catch (ReflectiveOperationException ignored) {
             }
         }
 
