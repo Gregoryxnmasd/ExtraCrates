@@ -91,6 +91,11 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(languageManager.getMessage("command.only-players"));
                     return true;
                 }
+                String permission = sub.equals("preview") ? "extracrates.preview" : "extracrates.open";
+                if (!sender.hasPermission(permission)) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
                 if (args.length < 2) {
                     sender.sendMessage(Component.text("Uso: /crate " + sub + " <id>"));
                     return true;
