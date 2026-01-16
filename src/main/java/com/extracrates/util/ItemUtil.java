@@ -1,6 +1,6 @@
 package com.extracrates.util;
 
-import com.extracrates.config.ConfigLoader;
+import com.extracrates.runtime.core.ConfigLoader;
 import com.extracrates.model.Reward;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
