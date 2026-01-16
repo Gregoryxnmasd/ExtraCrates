@@ -14,9 +14,8 @@ resourcepack:
   allow-map-images: true
   pumpkin-overlay-model: "cutscene_mask"
   models:
-    dragon_sword: 1001
-    candy_bow: 1002
-    cutscene_mask: 1003
+    legendary_key: 1001
+    legendary_reward: 1002
 cutscene:
   default-speed: 0.35
   constant-speed: true
