@@ -7,7 +7,7 @@ import com.extracrates.gui.editor.EditorMenu;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.route.RouteEditorManager;
 import com.extracrates.runtime.CutscenePreviewSession;
-import com.extracrates.runtime.core.ConfigLoader;
+import com.extracrates.config.ConfigLoader;
 import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
