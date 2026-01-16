@@ -47,7 +47,6 @@ public class DecentHologramsProvider implements HologramProvider {
                 }
                 resolved = createMethod != null;
             } catch (ReflectiveOperationException ignored) {
-                resolved = false;
             }
         }
 
@@ -103,7 +102,7 @@ public class DecentHologramsProvider implements HologramProvider {
         return new Object[]{name, location};
     }
 
-    private static Method resolveCreateMethod(Class<?> apiClass) throws ReflectiveOperationException {
+    private static Method resolveCreateMethod(Class<?> apiClass) {
         for (Method method : apiClass.getMethods()) {
             if (!method.getName().equals("createHologram")) {
                 continue;

@@ -36,7 +36,7 @@ public class MapImageCache {
 
     private Optional<BufferedImage> loadImage(String key) {
         Path path = resolvePath(key);
-        if (path == null || !Files.exists(path)) {
+        if (!Files.exists(path)) {
             plugin.getLogger().warning("No se encontró la imagen del mapa: " + key);
             return Optional.empty();
         }
