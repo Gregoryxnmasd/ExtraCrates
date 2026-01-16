@@ -38,17 +38,10 @@ public final class ItemUtil {
             String displayName = reward.getDisplayName();
             meta.displayName(TextUtil.color(displayName != null ? displayName : ""));
             applyResourcepackModel(reward, meta, settings, configLoader);
-            Map<String, Integer> enchantments = reward.getEnchantments();
-            if (enchantments != null && !enchantments.isEmpty()) {
-                for (Map.Entry<String, Integer> entry : enchantments.entrySet()) {
-                    String enchantmentKey = entry.getKey();
-                    if (enchantmentKey == null || enchantmentKey.isBlank()) {
-                        continue;
-                    }
-                    Enchantment enchantment = Registry.ENCHANTMENT.get(NamespacedKey.minecraft(enchantmentKey.toLowerCase(Locale.ROOT)));
-                    if (enchantment != null) {
-                        meta.addEnchant(enchantment, entry.getValue(), true);
-                    }
+            for (Map.Entry<String, Integer> entry : reward.getEnchantments().entrySet()) {
+                Enchantment enchantment = Registry.ENCHANTMENT.get(NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT)));
+                if (enchantment != null) {
+                    meta.addEnchant(enchantment, entry.getValue(), true);
                 }
             }
             if (reward.isGlow()) {

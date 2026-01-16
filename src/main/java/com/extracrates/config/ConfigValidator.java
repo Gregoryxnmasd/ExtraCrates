@@ -58,15 +58,7 @@ public class ConfigValidator {
                 if (material == null) {
                     warnings.add("Material desconocido en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "'): '" + itemName + "'.");
                 }
-                Map<String, Integer> enchantments = reward.getEnchantments();
-                if (enchantments == null || enchantments.isEmpty()) {
-                    continue;
-                }
-                for (String enchantmentKey : enchantments.keySet()) {
-                    if (enchantmentKey == null || enchantmentKey.isBlank()) {
-                        warnings.add("Encantamiento vacío en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "').");
-                        continue;
-                    }
+                for (String enchantmentKey : reward.getEnchantments().keySet()) {
                     Enchantment enchantment = Registry.ENCHANTMENT.get(NamespacedKey.minecraft(enchantmentKey.toLowerCase(Locale.ROOT)));
                     if (enchantment == null) {
                         warnings.add("Encantamiento inválido en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "'): '" + enchantmentKey + "'.");
