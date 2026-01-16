@@ -1,6 +1,6 @@
 package com.extracrates.util;
 
-import com.extracrates.config.ConfigLoader;
+import com.extracrates.runtime.core.ConfigLoader;
 import org.bukkit.configuration.ConfigurationSection;
 
 public final class ResourcepackModelResolver {

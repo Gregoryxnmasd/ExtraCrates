@@ -8,6 +8,7 @@ import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.runtime.CameraEntityFactory;
 import com.extracrates.util.ItemUtil;
+import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
@@ -155,7 +156,7 @@ public class CrateSession {
         }
 
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
-            display.setItemStack(ItemUtil.buildItem(reward, anchor.getWorld(), configLoader, plugin.getMapImageCache()));
+            display.setItemStack(buildRewardDisplayItem(reward, anchor.getWorld()));
         });
         hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
             String format = reward.getHologram();
@@ -331,12 +332,7 @@ public class CrateSession {
             return;
         }
         if (rewardDisplay != null) {
-            rewardDisplay.setItemStack(ItemUtil.buildItem(
-                    reward,
-                    rewardDisplay.getWorld(),
-                    configLoader,
-                    plugin.getMapImageCache()
-            ));
+            rewardDisplay.setItemStack(buildRewardDisplayItem(reward, rewardDisplay.getWorld()));
         }
         if (hologram != null) {
             String format = crate.getAnimation().getHologramFormat();
@@ -347,6 +343,24 @@ public class CrateSession {
 
     private boolean isQaMode() {
         return configLoader.getMainConfig().getBoolean("qa-mode", false);
+    }
+
+    private ItemStack buildRewardDisplayItem(Reward reward, World world) {
+        ItemStack item = ItemUtil.buildItem(reward, world, configLoader, plugin.getMapImageCache());
+        String rewardModel = crate.getAnimation().getRewardModel();
+        if (rewardModel == null || rewardModel.isEmpty()) {
+            return item;
+        }
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return item;
+        }
+        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, rewardModel);
+        if (modelData >= 0) {
+            meta.setCustomModelData(modelData);
+            item.setItemMeta(meta);
+        }
+        return item;
     }
 
     public void end() {
