@@ -6,6 +6,7 @@ import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.enchantments.Enchantment;
 
 import java.io.File;
@@ -49,12 +50,24 @@ public class ConfigValidator {
             }
             for (Reward reward : pool.getRewards()) {
                 String itemName = reward.getItem();
+                if (itemName == null || itemName.isBlank()) {
+                    warnings.add("Material vacío en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "').");
+                    continue;
+                }
                 Material material = Material.matchMaterial(itemName.toUpperCase(Locale.ROOT));
                 if (material == null) {
                     warnings.add("Material desconocido en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "'): '" + itemName + "'.");
                 }
-                for (String enchantmentKey : reward.getEnchantments().keySet()) {
-                    Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(enchantmentKey.toLowerCase(Locale.ROOT)));
+                Map<String, Integer> enchantments = reward.getEnchantments();
+                if (enchantments == null || enchantments.isEmpty()) {
+                    continue;
+                }
+                for (String enchantmentKey : enchantments.keySet()) {
+                    if (enchantmentKey == null || enchantmentKey.isBlank()) {
+                        warnings.add("Encantamiento vacío en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "').");
+                        continue;
+                    }
+                    Enchantment enchantment = Registry.ENCHANTMENT.get(NamespacedKey.minecraft(enchantmentKey.toLowerCase(Locale.ROOT)));
                     if (enchantment == null) {
                         warnings.add("Encantamiento inválido en recompensa '" + reward.getId() + "' (pool '" + pool.getId() + "'): '" + enchantmentKey + "'.");
                     }
