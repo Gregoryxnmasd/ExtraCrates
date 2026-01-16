@@ -28,7 +28,7 @@ public class CrateSession {
     private final CutscenePath path;
     private final boolean grantReward;
     private final SessionManager sessionManager;
-    private final String openMode;
+    private final boolean preview;
 
     private ArmorStand cameraStand;
     private ItemDisplay rewardDisplay;
@@ -50,8 +50,8 @@ public class CrateSession {
             CrateDefinition crate,
             List<Reward> rewards,
             CutscenePath path,
-            boolean grantReward,
-            SessionManager sessionManager
+            SessionManager sessionManager,
+            boolean preview
     ) {
         this.plugin = plugin;
         this.configLoader = configLoader;
@@ -62,7 +62,7 @@ public class CrateSession {
         this.path = path;
         this.grantReward = grantReward;
         this.sessionManager = sessionManager;
-        this.openMode = normalizeOpenMode(crate.getOpenMode());
+        this.preview = preview;
     }
 
     public void start() {
@@ -222,7 +222,10 @@ public class CrateSession {
     }
 
     private void finish() {
-        startRewardSequence();
+        if (!preview) {
+            executeReward();
+        }
+        end();
     }
 
     private void startRewardSequence() {

@@ -7,39 +7,17 @@ Esta base describe todas las características esperadas, comandos y permisos par
 - Revisa [docs/PluginDesign.md](docs/PluginDesign.md) para los detalles técnicos y flujos de trabajo.
 - Consulta `config/examples/` para ejemplos de configuración inicial (crates, recompensas, rutas y ajustes globales).
 
-## Storage SQL
+## API pública
+El plugin expone una interfaz para que otros plugins puedan abrir o previsualizar crates.
 
-El módulo `storage` permite persistir cooldowns, llaves y aperturas en una base de datos SQL. Cuando `storage.enabled` es `true`, el plugin usa `SqlStorage` y cambia automáticamente a modo local si la base de datos no responde.
-
-### Configuración
-
-```yml
-storage:
-  enabled: true
-  type: "mysql" # mysql | postgres | mariadb | sqlite
-  jdbc-url: "jdbc:mysql://localhost:3306/extracrates"
-  username: "root"
-  password: "password"
-  pool:
-    size: 10
-    timeout: 30000
+```java
+ExtraCratesPlugin extraCrates = (ExtraCratesPlugin) Bukkit.getPluginManager().getPlugin("ExtraCrates");
+ExtraCratesApi api = extraCrates.getApi();
+api.openCrate(player, "legendary", OpenMode.REWARD_ONLY);
+api.previewCrate(player, "legendary");
 ```
 
-`pool.timeout` está en milisegundos.
-
-### Migraciones
-
-Las migraciones SQL están en `docs/migrations/`:
-
-- `mysql_mariadb.sql`
-- `postgres.sql`
-- `sqlite.sql`
-
-### Ejemplos de conexión
-
-- MySQL/MariaDB: `jdbc:mysql://localhost:3306/extracrates`
-- PostgreSQL: `jdbc:postgresql://localhost:5432/extracrates`
-- SQLite: `jdbc:sqlite:plugins/ExtraCrates/extracrates.db`
+La interfaz `ExtraCratesApi` define `openCrate(Player, String, OpenMode)` y `previewCrate(Player, String)`. El enum `OpenMode` incluye `REWARD_ONLY` y `PREVIEW`.
 
 ## Gradle en IntelliJ (sin wrapper jar en Git)
 Por restricciones de GitHub, el repositorio no incluye `gradle/wrapper/gradle-wrapper.jar`.

@@ -1,6 +1,7 @@
 package com.extracrates.command;
 
 import com.extracrates.ExtraCratesPlugin;
+import com.extracrates.api.OpenMode;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.gui.CrateGui;
@@ -66,7 +67,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage(languageManager.getMessage("command.open-usage"));
+                    sender.sendMessage(Component.text("Uso: /crate " + sub + " <id>"));
                     return true;
                 }
                 CrateDefinition crate = configLoader.getCrates().get(args[1]);
@@ -74,7 +75,8 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
                     return true;
                 }
-                sessionManager.openCrate(player, crate);
+                OpenMode mode = sub.equals("preview") ? OpenMode.PREVIEW : OpenMode.REWARD_ONLY;
+                sessionManager.openCrate(player, crate, mode);
                 return true;
             }
             case "reload" -> {

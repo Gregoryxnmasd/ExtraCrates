@@ -1,5 +1,7 @@
 package com.extracrates;
 
+import com.extracrates.api.ExtraCratesApi;
+import com.extracrates.api.ExtraCratesApiImpl;
 import com.extracrates.command.CrateCommand;
 import com.extracrates.command.SyncCommand;
 import com.extracrates.config.ConfigLoader;
@@ -17,7 +19,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private SessionManager sessionManager;
     private CrateGui crateGui;
-    private RouteEditorManager routeEditorManager;
+    private ExtraCratesApi api;
 
     @Override
     public void onEnable() {
@@ -39,6 +41,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         routeEditorManager = new RouteEditorManager(this, configLoader);
         new RouteEditorListener(this, routeEditorManager);
         crateGui = new CrateGui(this, configLoader, sessionManager);
+        api = new ExtraCratesApiImpl(configLoader, sessionManager);
 
         PluginCommand crateCommand = getCommand("crate");
         if (crateCommand != null) {
@@ -60,5 +63,9 @@ public final class ExtraCratesPlugin extends JavaPlugin {
 
     public LanguageManager getLanguageManager() {
         return languageManager;
+    }
+
+    public ExtraCratesApi getApi() {
+        return api;
     }
 }
