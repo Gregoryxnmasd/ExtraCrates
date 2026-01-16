@@ -3,6 +3,7 @@ package com.extracrates.runtime;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.model.CrateDefinition;
+import com.extracrates.model.CrateType;
 import com.extracrates.model.CutscenePath;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
@@ -58,8 +59,23 @@ public class SessionManager {
             player.sendMessage(Component.text("No tienes permiso para abrir esta crate."));
             return false;
         }
-        if (crate.getType() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
+        String openMode = normalizeOpenMode(crate.getOpenMode());
+        boolean previewOnly = openMode.equals("preview-only");
+        boolean requiresKey = openMode.equals("key-required")
+                || openMode.equals("keyed")
+                || openMode.equals("key-only");
+        boolean requiresEconomy = openMode.equals("economy-required")
+                || openMode.equals("economy")
+                || openMode.equals("economy-only");
+        if (!previewOnly && !requiresKey && !requiresEconomy && crate.getType() == CrateType.KEYED) {
+            requiresKey = true;
+        }
+        if (!previewOnly && requiresKey && !hasKey(player, crate)) {
             player.sendMessage(Component.text("Necesitas una llave para esta crate."));
+            return false;
+        }
+        if (!previewOnly && requiresEconomy && !canAffordEconomy(player, crate)) {
+            player.sendMessage(Component.text("Necesitas saldo de economía para abrir esta crate."));
             return false;
         }
         if (isOnCooldown(player, crate)) {
@@ -74,9 +90,10 @@ public class SessionManager {
         }
         Reward reward = rewards.get(0);
         CutscenePath path = configLoader.getPaths().get(crate.getAnimation().getPath());
-        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, this);
+        boolean grantReward = !previewOnly;
+        CrateSession session = new CrateSession(plugin, configLoader, player, crate, reward, path, grantReward, this);
         sessions.put(player.getUniqueId(), session);
-        if (crate.getType() == com.extracrates.model.CrateType.KEYED) {
+        if (!previewOnly && requiresKey) {
             consumeKey(player, crate);
         }
         session.start();
@@ -124,6 +141,17 @@ public class SessionManager {
         if (record && syncBridge != null) {
             syncBridge.recordCooldown(player.getUniqueId(), crate.getId());
         }
+    }
+
+    private String normalizeOpenMode(String openMode) {
+        if (openMode == null || openMode.isBlank()) {
+            return "reward-only";
+        }
+        return openMode.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean canAffordEconomy(Player player, CrateDefinition crate) {
+        return crate.getCost() <= 0;
     }
 
     private boolean hasKey(Player player, CrateDefinition crate) {
