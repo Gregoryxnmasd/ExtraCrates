@@ -112,11 +112,12 @@ public class CrateSession {
 
     private void applySpectatorMode() {
         FileConfiguration config = configLoader.getMainConfig();
-        String keyText = config.getString("cutscene.speed-modifier-uuid", "extracrates:cutscene_speed_modifier");
-        speedModifierKey = NamespacedKey.fromString(keyText);
-        if (speedModifierKey == null) {
-            speedModifierKey = new NamespacedKey(plugin, "cutscene_speed_modifier");
+        String keyText = config.getString("cutscene.speed-modifier-key");
+        if (keyText == null || keyText.isBlank()) {
+            keyText = config.getString("cutscene.speed-modifier-uuid", "crate-cutscene");
         }
+        NamespacedKey parsedKey = NamespacedKey.fromString(keyText.toLowerCase(Locale.ROOT), plugin);
+        speedModifierKey = parsedKey != null ? parsedKey : new NamespacedKey(plugin, "crate-cutscene");
         previousGameMode = player.getGameMode();
         double modifierValue = config.getDouble("cutscene.slowdown-modifier", -10.0);
         sessionManager.applySpectator(player, speedModifierKey, modifierValue);
