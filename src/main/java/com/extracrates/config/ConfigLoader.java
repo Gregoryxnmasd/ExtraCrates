@@ -1,10 +1,9 @@
-package com.extracrates.runtime.core;
+package com.extracrates.config;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.RewardPool;
-import com.extracrates.resourcepack.ResourcePackRegistry;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
