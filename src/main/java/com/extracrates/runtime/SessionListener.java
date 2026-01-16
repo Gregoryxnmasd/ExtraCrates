@@ -1,6 +1,7 @@
 package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
+import com.extracrates.runtime.core.CrateSession;
 import com.extracrates.runtime.core.SessionManager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -20,7 +21,6 @@ public class SessionListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         sessionManager.endSession(event.getPlayer().getUniqueId());
-        sessionManager.endPreview(event.getPlayer().getUniqueId());
     }
 
     @EventHandler(ignoreCancelled = true)

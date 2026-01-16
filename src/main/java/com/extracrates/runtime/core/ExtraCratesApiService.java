@@ -1,6 +1,7 @@
 package com.extracrates.runtime.core;
 
 import com.extracrates.api.ExtraCratesApi;
+import com.extracrates.config.ConfigLoader;
 import com.extracrates.model.CrateDefinition;
 import org.bukkit.entity.Player;
 

@@ -2,6 +2,7 @@ package com.extracrates;
 
 import com.extracrates.api.ExtraCratesApi;
 import com.extracrates.command.CrateCommand;
+import com.extracrates.command.SyncCommand;
 import com.extracrates.config.ConfigValidator;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.economy.EconomyService;
@@ -13,10 +14,12 @@ import com.extracrates.route.RouteEditorListener;
 import com.extracrates.route.RouteEditorManager;
 import com.extracrates.runtime.ProtocolEntityHider;
 import com.extracrates.runtime.SessionListener;
-import com.extracrates.runtime.core.ConfigLoader;
+import com.extracrates.config.ConfigLoader;
 import com.extracrates.runtime.core.ExtraCratesApiService;
 import com.extracrates.runtime.core.SessionManager;
+import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.MapImageCache;
+import com.extracrates.util.ResourcepackModelResolver;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.command.PluginCommand;
@@ -34,6 +37,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private ProtocolEntityHider protocolEntityHider;
     private EditorMenu editorMenu;
     private Economy economy;
+    private SyncBridge syncBridge;
 
     @Override
     public void onEnable() {
@@ -55,6 +59,8 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         setupEconomy();
         EconomyService economyService = new EconomyService(this);
         sessionManager = new SessionManager(this, configLoader, economyService);
+        syncBridge = new SyncBridge(this, configLoader, sessionManager);
+        SyncCommand syncCommand = new SyncCommand(this, configLoader, syncBridge);
         apiService = new ExtraCratesApiService(configLoader, sessionManager);
         getServer().getServicesManager().register(ExtraCratesApi.class, apiService, this, ServicePriority.Normal);
         new SessionListener(this, sessionManager);
@@ -69,7 +75,17 @@ public final class ExtraCratesPlugin extends JavaPlugin {
 
         PluginCommand crateCommand = getCommand("crate");
         if (crateCommand != null) {
-            CrateCommand executor = new CrateCommand(this, configLoader, sessionManager, crateGui, editorMenu);
+            CrateCommand executor = new CrateCommand(
+                    this,
+                    configLoader,
+                    languageManager,
+                    sessionManager,
+                    crateGui,
+                    editorMenu,
+                    syncCommand,
+                    routeEditorManager,
+                    ResourcepackModelResolver.getInstance()
+            );
             crateCommand.setExecutor(executor);
             crateCommand.setTabCompleter(executor);
         }
@@ -85,6 +101,9 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         }
         if (protocolEntityHider != null) {
             protocolEntityHider.shutdown();
+        }
+        if (syncBridge != null) {
+            syncBridge.shutdown();
         }
     }
 
