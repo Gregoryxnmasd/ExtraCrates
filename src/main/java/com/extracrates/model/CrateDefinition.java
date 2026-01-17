@@ -147,6 +147,252 @@ public record CrateDefinition(
         }
     }
 
+    public record RewardDisplaySettings(
+            int itemCount,
+            double textLineSpacing,
+            double orbitRadius,
+            double orbitSpeed,
+            double wobbleSpeed,
+            double wobbleAmplitude,
+            double pulseSpeed,
+            double pulseScale,
+            double glowScale,
+            ParticleSettings particles,
+            TrailSettings trail
+    ) {
+        public static RewardDisplaySettings defaultSettings() {
+            return new RewardDisplaySettings(
+                    1,
+                    0.25,
+                    0.6,
+                    0.08,
+                    0.08,
+                    0.12,
+                    0.12,
+                    0.08,
+                    0.2,
+                    ParticleSettings.defaultSettings(),
+                    TrailSettings.defaultSettings()
+            );
+        }
+
+        public static RewardDisplaySettings fromSection(ConfigurationSection section) {
+            RewardDisplaySettings defaults = defaultSettings();
+            if (section == null) {
+                return defaults;
+            }
+            return new RewardDisplaySettings(
+                    section.getInt("item-count", defaults.itemCount()),
+                    section.getDouble("text-line-spacing", defaults.textLineSpacing()),
+                    section.getDouble("orbit-radius", defaults.orbitRadius()),
+                    section.getDouble("orbit-speed", defaults.orbitSpeed()),
+                    section.getDouble("wobble-speed", defaults.wobbleSpeed()),
+                    section.getDouble("wobble-amplitude", defaults.wobbleAmplitude()),
+                    section.getDouble("pulse-speed", defaults.pulseSpeed()),
+                    section.getDouble("pulse-scale", defaults.pulseScale()),
+                    section.getDouble("glow-scale", defaults.glowScale()),
+                    ParticleSettings.fromSection(section.getConfigurationSection("particles"), defaults.particles()),
+                    TrailSettings.fromSection(section.getConfigurationSection("trail"), defaults.trail())
+            );
+        }
+
+        public int getItemCount() {
+            return itemCount;
+        }
+
+        public double getTextLineSpacing() {
+            return textLineSpacing;
+        }
+
+        public double getOrbitRadius() {
+            return orbitRadius;
+        }
+
+        public double getOrbitSpeed() {
+            return orbitSpeed;
+        }
+
+        public double getWobbleSpeed() {
+            return wobbleSpeed;
+        }
+
+        public double getWobbleAmplitude() {
+            return wobbleAmplitude;
+        }
+
+        public double getPulseSpeed() {
+            return pulseSpeed;
+        }
+
+        public double getPulseScale() {
+            return pulseScale;
+        }
+
+        public double getGlowScale() {
+            return glowScale;
+        }
+
+        public ParticleSettings getParticles() {
+            return particles;
+        }
+
+        public TrailSettings getTrail() {
+            return trail;
+        }
+    }
+
+    public record ParticleSettings(
+            String type,
+            int count,
+            double spread,
+            double speed,
+            double radius,
+            double yOffset,
+            int interval,
+            boolean enabled
+    ) {
+        public static ParticleSettings defaultSettings() {
+            return new ParticleSettings(
+                    "END_ROD",
+                    2,
+                    0.05,
+                    0.01,
+                    0.6,
+                    0.1,
+                    4,
+                    true
+            );
+        }
+
+        public static ParticleSettings fromSection(ConfigurationSection section) {
+            return fromSection(section, defaultSettings());
+        }
+
+        public static ParticleSettings fromSection(ConfigurationSection section, ParticleSettings defaults) {
+            if (section == null) {
+                return defaults;
+            }
+            return new ParticleSettings(
+                    section.getString("type", defaults.type()),
+                    section.getInt("count", defaults.count()),
+                    section.getDouble("spread", defaults.spread()),
+                    section.getDouble("speed", defaults.speed()),
+                    section.getDouble("radius", defaults.radius()),
+                    section.getDouble("y-offset", defaults.yOffset()),
+                    section.getInt("interval", defaults.interval()),
+                    section.getBoolean("enabled", defaults.enabled())
+            );
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public double getSpread() {
+            return spread;
+        }
+
+        public double getSpeed() {
+            return speed;
+        }
+
+        public double getRadius() {
+            return radius;
+        }
+
+        public double getYOffset() {
+            return yOffset;
+        }
+
+        public int getInterval() {
+            return interval;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+    }
+
+    public record TrailSettings(
+            String type,
+            int count,
+            double spread,
+            double speed,
+            int interval,
+            double spacing,
+            int length,
+            boolean enabled
+    ) {
+        public static TrailSettings defaultSettings() {
+            return new TrailSettings(
+                    "END_ROD",
+                    1,
+                    0.02,
+                    0.01,
+                    2,
+                    0.15,
+                    12,
+                    false
+            );
+        }
+
+        public static TrailSettings fromSection(ConfigurationSection section) {
+            return fromSection(section, defaultSettings());
+        }
+
+        public static TrailSettings fromSection(ConfigurationSection section, TrailSettings defaults) {
+            if (section == null) {
+                return defaults;
+            }
+            return new TrailSettings(
+                    section.getString("type", defaults.type()),
+                    section.getInt("count", defaults.count()),
+                    section.getDouble("spread", defaults.spread()),
+                    section.getDouble("speed", defaults.speed()),
+                    section.getInt("interval", defaults.interval()),
+                    section.getDouble("spacing", defaults.spacing()),
+                    section.getInt("length", defaults.length()),
+                    section.getBoolean("enabled", defaults.enabled())
+            );
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public double getSpread() {
+            return spread;
+        }
+
+        public double getSpeed() {
+            return speed;
+        }
+
+        public int getInterval() {
+            return interval;
+        }
+
+        public double getSpacing() {
+            return spacing;
+        }
+
+        public int getLength() {
+            return length;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+    }
+
     public record CutsceneSettings(String overlayModel, boolean lockMovement, boolean hideHud, MusicSettings musicSettings) {
         public static CutsceneSettings fromSections(ConfigurationSection section, ConfigurationSection defaults) {
             String overlayModel = readString(section, "overlay-model", defaults, "overlay-model", "pumpkin-model", "");
