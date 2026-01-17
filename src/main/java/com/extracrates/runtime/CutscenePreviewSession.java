@@ -1,7 +1,7 @@
 package com.extracrates.runtime;
 
 import com.extracrates.ExtraCratesPlugin;
-import com.extracrates.model.CutscenePath;
+import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.util.CutsceneTimeline;
 import org.bukkit.Location;
 import org.bukkit.Particle;
