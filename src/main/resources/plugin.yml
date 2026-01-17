@@ -4,6 +4,7 @@ version: ${project.version}
 description: Base scaffolding for a complex crates plugin.
 author: Savaduki
 api-version: '1.21'
+softdepend: [ProtocolLib]
 commands:
   crate:
     description: Gestiona crates y sus opciones principales.
