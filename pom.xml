@@ -63,8 +63,9 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.comphenix.protocol</groupId>
+            <groupId>com.github.dmulloy2</groupId>
             <artifactId>ProtocolLib</artifactId>
+            <!-- Resolve from JitPack using the 5.4.0 tag. -->
             <version>5.4.0</version>
             <scope>provided</scope>
         </dependency>
