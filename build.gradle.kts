@@ -12,14 +12,14 @@ tasks.withType<JavaCompile> {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
-    maven("https://jitpack.io")
     maven("https://repo.dmulloy2.net/repository/public/")
+    maven("https://jitpack.io")
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
     compileOnly("com.github.milkbowl:vaultapi:1.7.1")
-    compileOnly("com.github.dmulloy2:ProtocolLib:5.4.0")
+    compileOnly("com.comphenix.protocol:ProtocolLib:5.4.0")
 }
 
 java {

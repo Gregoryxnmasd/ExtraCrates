@@ -25,12 +25,12 @@
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
         <repository>
-            <id>jitpack-repo</id>
-            <url>https://jitpack.io</url>
-        </repository>
-        <repository>
             <id>dmulloy2-repo</id>
             <url>https://repo.dmulloy2.net/repository/public/</url>
+        </repository>
+        <repository>
+            <id>jitpack-repo</id>
+            <url>https://jitpack.io</url>
         </repository>
     </repositories>
 
@@ -63,9 +63,8 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.dmulloy2</groupId>
+            <groupId>com.comphenix.protocol</groupId>
             <artifactId>ProtocolLib</artifactId>
-            <!-- Resolve from JitPack using the 5.4.0 tag. -->
             <version>5.4.0</version>
             <scope>provided</scope>
         </dependency>
