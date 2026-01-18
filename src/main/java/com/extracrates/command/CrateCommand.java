@@ -130,6 +130,32 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(languageManager.getMessage("command.reload-success"));
                 return true;
             }
+            case "debug" -> {
+                if (!sender.hasPermission("extracrates.reload")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                if (args.length < 3 || !args[1].equalsIgnoreCase("verbose")) {
+                    sender.sendMessage(Component.text("Uso: /crate debug verbose <on|off|toggle>"));
+                    return true;
+                }
+                boolean current = plugin.getConfig().getBoolean("debug.verbose", false);
+                String action = args[2].toLowerCase(Locale.ROOT);
+                boolean next;
+                switch (action) {
+                    case "on", "true", "enable" -> next = true;
+                    case "off", "false", "disable" -> next = false;
+                    case "toggle" -> next = !current;
+                    default -> {
+                        sender.sendMessage(Component.text("Uso: /crate debug verbose <on|off|toggle>"));
+                        return true;
+                    }
+                }
+                plugin.getConfig().set("debug.verbose", next);
+                plugin.saveConfig();
+                sender.sendMessage(Component.text("Debug verbose " + (next ? "activado" : "desactivado") + "."));
+                return true;
+            }
             case "sync" -> {
                 return syncCommand.handle(sender, args);
             }
@@ -260,6 +286,19 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Component.text("Haz clic en bloques para marcar puntos. Usa /crate route editor stop para guardar."));
                 return true;
             }
+            case "sessions" -> {
+                if (!sender.hasPermission("extracrates.sessions")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                if (args.length < 2 || !args[1].equalsIgnoreCase("check")) {
+                    sender.sendMessage(Component.text("Uso: /crate sessions check"));
+                    return true;
+                }
+                int cleaned = sessionManager.cleanupInactiveSessions();
+                sender.sendMessage(Component.text("Sesiones inactivas cerradas: " + cleaned));
+                return true;
+            }
             default -> {
                 sender.sendMessage(languageManager.getMessage("command.unknown-subcommand"));
                 return true;
@@ -282,6 +321,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("preview");
             results.add("cutscene");
             results.add("reload");
+            results.add("debug");
             results.add("sync");
             results.add("givekey");
             results.add("route");
