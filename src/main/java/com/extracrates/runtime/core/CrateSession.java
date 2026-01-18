@@ -43,11 +43,17 @@ public class CrateSession {
     private TextDisplay hologram;
     private BukkitRunnable task;
     private BukkitRunnable musicTask;
+    private BukkitRunnable watchdogTask;
 
     private int rewardIndex;
     private int rewardSwitchTicks;
     private int nextRewardSwitchTick;
     private int elapsedTicks;
+    private int maxDurationTicks;
+    private long sessionStartMillis;
+    private long lastTaskTickMillis;
+    private boolean ending;
+    private boolean ended;
     private Location rewardBaseLocation;
     private Location hologramBaseLocation;
     private Transformation rewardBaseTransform;
@@ -91,6 +97,9 @@ public class CrateSession {
         elapsedTicks = 0;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
+        maxDurationTicks = Math.max(0, configLoader.getMainConfig().getInt("sessions.max-duration-ticks", 0));
+        sessionStartMillis = System.currentTimeMillis();
+        lastTaskTickMillis = sessionStartMillis;
         Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
         previousGameMode = player.getGameMode();
         previousWalkSpeed = player.getWalkSpeed();
@@ -100,6 +109,7 @@ public class CrateSession {
         spawnRewardDisplay();
         startMusic();
         startCutscene();
+        startWatchdog();
     }
 
     private void spawnCamera(Location start) {
@@ -206,19 +216,24 @@ public class CrateSession {
         }
         task = new BukkitRunnable() {
             int tick = 0;
-            final int totalTicks = Math.max(0, timeline.size() - 1);
+            final int totalTicks = resolveTotalTicks(timeline);
+            final int lastIndex = timeline.size() - 1;
 
             @Override
             public void run() {
-                if (tick > totalTicks) {
+                if (tick >= totalTicks) {
                     cancel();
                     finish();
                     return;
                 }
-                Location point = timeline.get(tick++);
+                double progress = totalTicks <= 1 ? 1.0 : tick / (double) (totalTicks - 1);
+                int index = lastIndex <= 0 ? 0 : (int) Math.round(progress * lastIndex);
+                Location point = timeline.get(Math.min(lastIndex, Math.max(0, index)));
+                tick++;
                 cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
                 elapsedTicks++;
+                lastTaskTickMillis = System.currentTimeMillis();
                 if (rewards.size() > 1 && rewardSwitchTicks > 0) {
                     while (elapsedTicks >= nextRewardSwitchTick && rewardIndex < rewards.size() - 1) {
                         rewardIndex++;
@@ -229,6 +244,47 @@ public class CrateSession {
             }
         };
         task.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    private int resolveTotalTicks(List<Location> timeline) {
+        if (path != null) {
+            int durationTicks = (int) Math.round(path.getDurationSeconds() * 20.0);
+            if (durationTicks > 0) {
+                return durationTicks;
+            }
+        }
+        return Math.max(1, timeline.size());
+    }
+
+    private void startWatchdog() {
+        if (watchdogTask != null) {
+            watchdogTask.cancel();
+        }
+        watchdogTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (ending || ended) {
+                    cancel();
+                    return;
+                }
+                long now = System.currentTimeMillis();
+                if (maxDurationTicks > 0) {
+                    long elapsedRealTicks = (now - sessionStartMillis) / 50L;
+                    if (elapsedRealTicks > maxDurationTicks) {
+                        finish();
+                        return;
+                    }
+                }
+                if (task == null || task.isCancelled()) {
+                    end();
+                    return;
+                }
+                if (now - lastTaskTickMillis > 2000L) {
+                    end();
+                }
+            }
+        };
+        watchdogTask.runTaskTimer(plugin, 20L, 20L);
     }
 
     private List<Location> buildTimeline(World world, CutscenePath path) {
@@ -295,6 +351,10 @@ public class CrateSession {
     }
 
     private void finish() {
+        if (ending || ended) {
+            return;
+        }
+        ending = true;
         if (!preview) {
             executeReward();
         }
@@ -376,11 +436,19 @@ public class CrateSession {
     }
 
     public void end() {
+        if (ended) {
+            return;
+        }
+        ended = true;
+        ending = true;
         if (task != null) {
             task.cancel();
         }
         if (musicTask != null) {
             musicTask.cancel();
+        }
+        if (watchdogTask != null) {
+            watchdogTask.cancel();
         }
         stopMusic();
         if (cameraEntity != null && !cameraEntity.isDead()) {
