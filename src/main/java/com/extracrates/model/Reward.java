@@ -18,6 +18,8 @@ public record Reward(
         List<String> commands,
         RewardMessage message,
         RewardEffects effects,
+        CrateDefinition.RewardFloatSettings rewardFloatSettings,
+        CrateDefinition.RewardDisplaySettings rewardDisplaySettings,
         String hologram,
         String mapImage
 ) {
@@ -48,9 +50,33 @@ public record Reward(
         List<String> commands = section.getStringList("commands");
         RewardMessage message = RewardMessage.fromSection(section.getConfigurationSection("messages"));
         RewardEffects effects = RewardEffects.fromSection(section.getConfigurationSection("effects"));
+        ConfigurationSection floatSection = section.getConfigurationSection("reward-float");
+        CrateDefinition.RewardFloatSettings rewardFloatSettings = floatSection != null
+                ? CrateDefinition.RewardFloatSettings.fromSection(floatSection)
+                : null;
+        ConfigurationSection displaySection = section.getConfigurationSection("reward-display");
+        CrateDefinition.RewardDisplaySettings rewardDisplaySettings = displaySection != null
+                ? CrateDefinition.RewardDisplaySettings.fromSection(displaySection)
+                : null;
         String hologram = section.getString("hologram", "");
         String mapImage = section.getString("map-image", "");
-        return new Reward(id, chance, displayName, item, amount, customModel, glow, enchantments, commands, message, effects, hologram, mapImage);
+        return new Reward(
+                id,
+                chance,
+                displayName,
+                item,
+                amount,
+                customModel,
+                glow,
+                enchantments,
+                commands,
+                message,
+                effects,
+                rewardFloatSettings,
+                rewardDisplaySettings,
+                hologram,
+                mapImage
+        );
     }
 
     public record RewardMessage(String title, String subtitle) {

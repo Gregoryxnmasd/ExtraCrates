@@ -3,10 +3,12 @@ package com.extracrates.gui.editor;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.cutscene.CutscenePath;
+import com.extracrates.runtime.CutscenePreviewSession;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -23,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -35,6 +38,7 @@ public class PathEditorMenu implements Listener {
     private final EditorMenu parent;
     private final Component title;
     private final Map<UUID, String> activePath = new HashMap<>();
+    private final Map<UUID, CutscenePreviewSession> previewSessions = new HashMap<>();
 
     public PathEditorMenu(
             ExtraCratesPlugin plugin,
@@ -75,27 +79,35 @@ public class PathEditorMenu implements Listener {
         refreshPathCache();
         CutscenePath path = configLoader.getPaths().get(pathId);
         Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color("&8Path: " + pathId));
-        inventory.setItem(10, buildItem(Material.CLOCK, "&eDuración", List.of(
+        inventory.setItem(10, buildItem(Material.MAP, "&eEditar puntos", List.of(
+                "&7Click para iniciar el editor.",
+                "&7Guarda con &f/crate route editor stop&7."
+        )));
+        inventory.setItem(12, buildItem(Material.CLOCK, "&eDuración", List.of(
                 "&7Actual: &f" + (path != null ? path.getDurationSeconds() : 4.0),
                 "&7Click para editar."
         )));
-        inventory.setItem(12, buildItem(Material.REPEATER, "&eConstant Speed", List.of(
-                "&7Actual: &f" + (path != null && path.isConstantSpeed()),
-                "&7Click para alternar."
-        )));
-        inventory.setItem(14, buildItem(Material.COMPARATOR, "&eStep Resolution", List.of(
-                "&7Actual: &f" + (path != null ? path.getStepResolution() : 0.15),
-                "&7Click para editar."
-        )));
-        inventory.setItem(16, buildItem(Material.PAPER, "&eSmoothing", List.of(
+        inventory.setItem(14, buildItem(Material.PAPER, "&eSmoothing", List.of(
                 "&7Actual: &f" + (path != null ? path.getSmoothing() : "linear"),
                 "&7Click para editar."
         )));
-        inventory.setItem(22, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
-        inventory.setItem(24, buildItem(Material.FIREWORK_STAR, "&eParticle Preview", List.of(
+        inventory.setItem(16, buildItem(Material.FIREWORK_STAR, "&ePartículas", List.of(
                 "&7Actual: &f" + (path != null ? path.getParticlePreview() : ""),
                 "&7Click para editar."
         )));
+        inventory.setItem(20, buildItem(Material.REPEATER, "&eConstant Speed", List.of(
+                "&7Actual: &f" + (path != null && path.isConstantSpeed()),
+                "&7Click para alternar."
+        )));
+        inventory.setItem(22, buildItem(Material.ENDER_EYE, "&ePreview", List.of(
+                "&7Click para previsualizar.",
+                "&7Muestra partículas sobre la ruta."
+        )));
+        inventory.setItem(24, buildItem(Material.COMPARATOR, "&eStep Resolution", List.of(
+                "&7Actual: &f" + (path != null ? path.getStepResolution() : 0.15),
+                "&7Click para editar."
+        )));
+        inventory.setItem(26, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
         player.openInventory(inventory);
     }
 
@@ -154,12 +166,14 @@ public class PathEditorMenu implements Listener {
 
     private void handleDetailClick(Player player, String pathId, int slot) {
         switch (slot) {
-            case 10 -> promptField(player, pathId, "duration-seconds", "Duración en segundos");
-            case 12 -> toggleConstantSpeed(player, pathId);
-            case 14 -> promptField(player, pathId, "step-resolution", "Step resolution");
-            case 16 -> promptField(player, pathId, "smoothing", "Smoothing (linear, catmull-rom, etc)");
-            case 22 -> open(player);
-            case 24 -> promptField(player, pathId, "particle-preview", "Particle preview");
+            case 10 -> startPointEditing(player, pathId);
+            case 12 -> promptField(player, pathId, "duration-seconds", "Duración en segundos");
+            case 14 -> promptField(player, pathId, "smoothing", "Smoothing (linear, catmull-rom, etc)");
+            case 16 -> promptField(player, pathId, "particle-preview", "Particle preview");
+            case 20 -> toggleConstantSpeed(player, pathId);
+            case 22 -> togglePreview(player, pathId);
+            case 24 -> promptField(player, pathId, "step-resolution", "Step resolution");
+            case 26 -> open(player);
             default -> {
             }
         }
@@ -239,6 +253,54 @@ public class PathEditorMenu implements Listener {
             player.sendMessage(Component.text("Constant speed actualizado y guardado en YAML."));
             openDetail(player, pathId);
         }, () -> openDetail(player, pathId));
+    }
+
+    private void startPointEditing(Player player, String pathId) {
+        boolean started = plugin.getRouteEditorManager().startSession(player, pathId);
+        if (!started) {
+            player.sendMessage(Component.text("Ya tienes una sesión de rutas activa."));
+            return;
+        }
+        player.closeInventory();
+        player.sendMessage(Component.text("Editor iniciado. Haz clic en bloques para marcar puntos."));
+        player.sendMessage(Component.text("Usa /crate route editor stop para guardar o /crate route editor cancel para salir."));
+    }
+
+    private void togglePreview(Player player, String pathId) {
+        CutscenePreviewSession running = previewSessions.remove(player.getUniqueId());
+        if (running != null) {
+            running.end();
+            player.sendMessage(Component.text("Preview detenida."));
+            return;
+        }
+        CutscenePath path = configLoader.getPaths().get(pathId);
+        if (path == null) {
+            player.sendMessage(Component.text("No existe la ruta seleccionada."));
+            return;
+        }
+        Particle particle = resolvePreviewParticle(path);
+        CutscenePreviewSession preview = new CutscenePreviewSession(plugin, player, path, particle, () -> {
+            previewSessions.remove(player.getUniqueId());
+            player.sendMessage(Component.text("Preview finalizada."));
+        });
+        previewSessions.put(player.getUniqueId(), preview);
+        preview.start();
+        player.sendMessage(Component.text("Preview iniciada."));
+    }
+
+    private Particle resolvePreviewParticle(CutscenePath path) {
+        String particleName = configLoader.getMainConfig().getString("particles-default", "end_rod");
+        if (path != null) {
+            String preview = path.getParticlePreview();
+            if (preview != null && !preview.isEmpty()) {
+                particleName = preview;
+            }
+        }
+        try {
+            return Particle.valueOf(particleName.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ignored) {
+            return Particle.END_ROD;
+        }
     }
 
     private void createPath(String id) {
