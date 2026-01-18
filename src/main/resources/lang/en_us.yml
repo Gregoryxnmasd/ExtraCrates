@@ -15,4 +15,8 @@ session:
   key-required: "&cYou need a key for this crate."
   cooldown: "&cThis crate is on cooldown."
   no-rewards: "&cNo rewards configured."
+  open-mode-reward-only: "&7This crate opens instantly without a cutscene."
+  open-mode-preview-only: "&cThis crate is preview-only. Use /crate preview."
+  open-mode-cinematic: "&7This crate opens with a cinematic cutscene."
+  preview-reward: "&ePreview reward: %reward%"
   reward-received: "&aYou received: %reward%"

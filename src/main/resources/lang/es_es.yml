@@ -15,4 +15,8 @@ session:
   key-required: "&cNecesitas una llave para esta crate."
   cooldown: "&cEsta crate está en enfriamiento."
   no-rewards: "&cNo hay recompensas configuradas."
+  open-mode-reward-only: "&7Esta crate se abre al instante sin cinemática."
+  open-mode-preview-only: "&cEsta crate es solo preview. Usa /crate preview."
+  open-mode-cinematic: "&7Esta crate se abre con cinemática completa."
+  preview-reward: "&ePreview de recompensa: %reward%"
   reward-received: "&aHas recibido: %reward%"

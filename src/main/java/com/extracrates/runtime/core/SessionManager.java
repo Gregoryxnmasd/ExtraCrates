@@ -15,6 +15,7 @@ import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
 import com.extracrates.storage.StorageSettings;
 import com.extracrates.sync.SyncBridge;
+import com.extracrates.util.ItemUtil;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
 import net.kyori.adventure.text.Component;
@@ -33,6 +34,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
@@ -79,21 +81,28 @@ public class SessionManager {
 
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
-            player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
+            player.sendMessage(languageManager.getMessage("session.already-in-progress"));
             return false;
         }
-        CutscenePath path = resolveCutscenePath(crate, player);
+        String openMode = normalizeOpenMode(crate.openMode());
+        boolean rewardOnly = openMode.equals("reward-only");
+        boolean previewOnly = openMode.equals("preview-only");
+        boolean cinematic = openMode.equals("full") || openMode.equals("cinematic");
+        if (previewOnly && !preview) {
+            player.sendMessage(languageManager.getMessage("session.open-mode-preview-only"));
+            return false;
+        }
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
             player.sendMessage(Component.text("No se encontró el pool de recompensas para esta crate."));
             return false;
         }
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
-            player.sendMessage(Component.text("Necesitas una llave para esta crate."));
+            player.sendMessage(languageManager.getMessage("session.key-required"));
             return false;
         }
         if (!preview && isOnCooldown(player, crate)) {
-            player.sendMessage(Component.text("Esta crate está en cooldown."));
+            player.sendMessage(languageManager.getMessage("session.cooldown"));
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
@@ -102,6 +111,24 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
+        if (rewardOnly) {
+            player.sendMessage(languageManager.getMessage("session.open-mode-reward-only"));
+            Reward reward = rewards.get(0);
+            if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
+                consumeKey(player, crate);
+            }
+            if (preview) {
+                player.sendMessage(languageManager.getMessage("session.preview-reward", Map.of("reward", reward.displayName())));
+            } else {
+                deliverReward(player, reward);
+                applyCooldown(player, crate);
+            }
+            return true;
+        }
+        if (cinematic) {
+            player.sendMessage(languageManager.getMessage("session.open-mode-cinematic"));
+        }
+        CutscenePath path = resolveCutscenePath(crate, player);
         CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview);
         sessions.put(player.getUniqueId(), session);
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
@@ -175,6 +202,30 @@ public class SessionManager {
             return null;
         }
         return configLoader.getRewardPools().get(crate.rewardsPool());
+    }
+
+    private String normalizeOpenMode(String openMode) {
+        if (openMode == null || openMode.isBlank()) {
+            return "reward-only";
+        }
+        return openMode.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private void deliverReward(Player player, Reward reward) {
+        if (reward == null) {
+            return;
+        }
+        if (configLoader.getMainConfig().getBoolean("qa-mode", false)) {
+            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
+            return;
+        }
+        player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.displayName())));
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+        player.getInventory().addItem(item);
+        for (String command : reward.commands()) {
+            String parsed = command.replace("%player%", player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        }
     }
 
     private boolean isOnCooldown(Player player, CrateDefinition crate) {
