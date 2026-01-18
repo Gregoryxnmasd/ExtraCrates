@@ -1,5 +1,5 @@
 command:
-  usage: "&cUsa /crate gui|open|preview|reload|givekey"
+  usage: "&cUsa /crate gui|open|preview|reroll|reload|givekey"
   only-players: "&cSolo para jugadores."
   no-permission: "&cNo tienes permiso."
   open-usage: "&cUso: /crate open <id>"
@@ -12,7 +12,9 @@ command:
 session:
   already-in-progress: "&cYa tienes una cinemática en progreso."
   no-permission: "&cNo tienes permiso para abrir esta crate."
+  no-active: "&cNo tienes una crate activa."
   key-required: "&cNecesitas una llave para esta crate."
   cooldown: "&cEsta crate está en enfriamiento."
   no-rewards: "&cNo hay recompensas configuradas."
   reward-received: "&aHas recibido: %reward%"
+  reroll-no-balance: "&cNecesitas %amount% para hacer reroll."

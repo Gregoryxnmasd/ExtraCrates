@@ -33,7 +33,7 @@ public class CrateSession {
     private final LanguageManager languageManager;
     private final Player player;
     private final CrateDefinition crate;
-    private final List<Reward> rewards;
+    private List<Reward> rewards;
     private final CutscenePath path;
     private final SessionManager sessionManager;
     private final boolean preview;
@@ -100,6 +100,10 @@ public class CrateSession {
         spawnRewardDisplay();
         startMusic();
         startCutscene();
+    }
+
+    public CrateDefinition getCrate() {
+        return crate;
     }
 
     private void spawnCamera(Location start) {
@@ -326,6 +330,17 @@ public class CrateSession {
             nextRewardSwitchTick += rewardSwitchTicks;
             refreshRewardDisplay();
         }
+    }
+
+    public void reroll(List<Reward> newRewards) {
+        if (newRewards == null || newRewards.isEmpty()) {
+            return;
+        }
+        this.rewards = new ArrayList<>(newRewards);
+        rewardIndex = 0;
+        elapsedTicks = 0;
+        nextRewardSwitchTick = rewardSwitchTicks;
+        refreshRewardDisplay();
     }
 
     private Reward getCurrentReward() {
