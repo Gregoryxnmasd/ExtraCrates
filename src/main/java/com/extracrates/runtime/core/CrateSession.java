@@ -308,15 +308,24 @@ public class CrateSession {
         }
         if (isQaMode()) {
             player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
-        } else {
-            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
-            ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-            player.getInventory().addItem(item);
+            return;
+        }
+        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+        player.getInventory().addItem(item);
 
-            for (String command : reward.commands()) {
-                String parsed = command.replace("%player%", player.getName());
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        boolean debugRewardCommands = configLoader.getMainConfig().getBoolean("debug.reward-commands", false);
+        for (String command : reward.commands()) {
+            String parsed = command.replace("%player%", player.getName());
+            if (debugRewardCommands) {
+                plugin.getLogger().info(String.format(
+                        "Reward command player=%s crate=%s command=%s",
+                        player.getName(),
+                        crate.id(),
+                        parsed
+                ));
             }
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
         }
         if (rewardIndex >= rewards.size() - 1) {
             return;
