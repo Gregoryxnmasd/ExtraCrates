@@ -25,6 +25,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
 
+import java.time.Instant;
 import java.util.*;
 
 public class CrateSession {
@@ -58,6 +59,7 @@ public class CrateSession {
     private boolean hudHiddenApplied;
     private float previousWalkSpeed;
     private float previousFlySpeed;
+    private Instant lastActivity;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -87,6 +89,7 @@ public class CrateSession {
             finish();
             return;
         }
+        lastActivity = Instant.now();
         rewardIndex = 0;
         elapsedTicks = 0;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
@@ -215,6 +218,7 @@ public class CrateSession {
                     finish();
                     return;
                 }
+                lastActivity = Instant.now();
                 Location point = timeline.get(tick++);
                 cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
@@ -424,6 +428,18 @@ public class CrateSession {
 
     public boolean isPreview() {
         return preview;
+    }
+
+    public Instant getLastActivity() {
+        return lastActivity;
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public String getCrateId() {
+        return crate.id();
     }
 
     private boolean toggleHud(boolean hidden) {

@@ -30,7 +30,7 @@ import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
@@ -392,5 +392,37 @@ public class SessionManager {
 
     public void flushSyncCaches() {
         cooldowns.clear();
+    }
+
+    public int cleanupInactiveSessions() {
+        long maxTicks = configLoader.getMainConfig().getLong("sessions.max-duration-ticks", 600);
+        if (maxTicks <= 0) {
+            return 0;
+        }
+        Duration maxIdle = Duration.ofMillis(maxTicks * 50L);
+        Instant now = Instant.now();
+        List<CrateSession> activeSessions = new ArrayList<>(sessions.values());
+        int cleaned = 0;
+        for (CrateSession session : activeSessions) {
+            Instant lastActivity = session.getLastActivity();
+            if (lastActivity == null) {
+                continue;
+            }
+            Duration idleTime = Duration.between(lastActivity, now);
+            if (idleTime.compareTo(maxIdle) <= 0) {
+                continue;
+            }
+            Player player = session.getPlayer();
+            plugin.getLogger().warning(() -> String.format(
+                    "Sesión inactiva forzada: player=%s uuid=%s crate=%s idleSeconds=%d",
+                    player.getName(),
+                    player.getUniqueId(),
+                    session.getCrateId(),
+                    idleTime.getSeconds()
+            ));
+            session.end();
+            cleaned++;
+        }
+        return cleaned;
     }
 }
