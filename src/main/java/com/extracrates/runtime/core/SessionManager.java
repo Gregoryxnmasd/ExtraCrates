@@ -11,13 +11,14 @@ import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.storage.CrateStorage;
+import com.extracrates.storage.CrateOpenEntry;
 import com.extracrates.storage.LocalStorage;
-import com.extracrates.storage.PendingReward;
+import com.extracrates.storage.OpenHistoryFilter;
 import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
 import com.extracrates.storage.StorageSettings;
 import com.extracrates.sync.SyncBridge;
-import com.extracrates.util.ItemUtil;
+import com.extracrates.sync.SyncSettings;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
@@ -51,6 +52,7 @@ public class SessionManager {
     private final CrateStorage storage;
     private final SyncBridge syncBridge;
     private final boolean storageEnabled;
+    private final String serverId;
     // Stores both preview and normal crate sessions. Preview sessions are marked in CrateSession.
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
@@ -66,6 +68,7 @@ public class SessionManager {
         this.storageEnabled = storageSettings.enabled();
         this.storage = initializeStorage(storageSettings);
         this.syncBridge = new SyncBridge(plugin, configLoader, this);
+        this.serverId = SyncSettings.fromConfig(configLoader.getMainConfig()).getServerId();
     }
 
     public void shutdown() {
@@ -469,113 +472,25 @@ public class SessionManager {
     }
 
     public void recordRewardGranted(Player player, CrateDefinition crate, Reward reward) {
-        clearPendingReward(player.getUniqueId(), crate.id());
+        recordCrateOpen(player, crate, reward);
+    }
+
+    public void recordCrateOpen(Player player, CrateDefinition crate, Reward reward) {
+        Instant timestamp = Instant.now();
+        if (storage != null) {
+            storage.logOpen(player.getUniqueId(), crate.id(), reward.id(), serverId, timestamp);
+        }
         if (syncBridge != null) {
-            String rewardId = resolveHistoryRewardId(crate, reward);
-            syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), rewardId);
+            syncBridge.recordCrateOpen(player.getUniqueId(), crate.id());
+            syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), reward.id());
         }
     }
 
-    public void recordPendingReward(UUID playerId, String crateId, String rewardId) {
-        if (rewardId == null || rewardId.isBlank()) {
-            return;
-        }
-        pendingRewards.computeIfAbsent(playerId, key -> new HashMap<>()).put(crateId, rewardId);
-        if (syncBridge != null) {
-            syncBridge.recordPendingReward(playerId, crateId, rewardId);
-        }
-    }
-
-    public void clearPendingReward(UUID playerId, String crateId) {
-        Map<String, String> playerPending = pendingRewards.get(playerId);
-        if (playerPending == null) {
-            return;
-        }
-        playerPending.remove(crateId);
-        if (playerPending.isEmpty()) {
-            pendingRewards.remove(playerId);
-        }
-    }
-
-    public boolean hasPendingReward(Player player) {
-        return storage != null && storage.getPendingReward(player.getUniqueId()).isPresent();
-    }
-
-    public void setPendingReward(Player player, CrateDefinition crate, Reward reward) {
+    public List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset) {
         if (storage == null) {
-            return;
+            return List.of();
         }
-        PendingReward pendingReward = new PendingReward(crate.id(), reward.id(), Instant.now());
-        storage.setPendingReward(player.getUniqueId(), pendingReward);
-    }
-
-    public void clearPendingReward(Player player) {
-        if (storage == null) {
-            return;
-        }
-        storage.clearPendingReward(player.getUniqueId());
-    }
-
-    public boolean claimPendingReward(Player player, boolean discard) {
-        if (storage == null) {
-            player.sendMessage(Component.text("No hay storage disponible para recompensas pendientes."));
-            return false;
-        }
-        PendingReward pendingReward = storage.getPendingReward(player.getUniqueId()).orElse(null);
-        if (pendingReward == null) {
-            player.sendMessage(Component.text("No tienes recompensas pendientes."));
-            return false;
-        }
-        if (discard) {
-            storage.clearPendingReward(player.getUniqueId());
-            player.sendMessage(Component.text("Recompensa pendiente descartada."));
-            return true;
-        }
-        CrateDefinition crate = configLoader.getCrates().get(pendingReward.crateId());
-        Reward reward = resolvePendingReward(crate, pendingReward.rewardId());
-        if (reward == null) {
-            storage.clearPendingReward(player.getUniqueId());
-            player.sendMessage(Component.text("No se encontró la recompensa pendiente. Se descartó."));
-            return false;
-        }
-        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-        player.getInventory().addItem(item);
-        for (String command : reward.commands()) {
-            String parsed = command.replace("%player%", player.getName());
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
-        }
-        storage.clearPendingReward(player.getUniqueId());
-        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
-        if (crate != null) {
-            recordRewardGranted(player, crate, reward);
-        }
-        return true;
-    }
-
-    private Reward resolvePendingReward(CrateDefinition crate, String rewardId) {
-        Reward reward = null;
-        if (crate != null && crate.rewardsPool() != null) {
-            RewardPool pool = configLoader.getRewardPools().get(crate.rewardsPool());
-            if (pool != null) {
-                reward = pool.rewards().stream()
-                        .filter(entry -> entry.id().equalsIgnoreCase(rewardId))
-                        .findFirst()
-                        .orElse(null);
-            }
-        }
-        if (reward != null) {
-            return reward;
-        }
-        for (RewardPool pool : configLoader.getRewardPools().values()) {
-            reward = pool.rewards().stream()
-                    .filter(entry -> entry.id().equalsIgnoreCase(rewardId))
-                    .findFirst()
-                    .orElse(null);
-            if (reward != null) {
-                return reward;
-            }
-        }
-        return null;
+        return storage.getOpenHistory(playerId, filter, limit, offset);
     }
 
     public void applyRemoteCooldown(UUID playerId, String crateId, Instant timestamp) {

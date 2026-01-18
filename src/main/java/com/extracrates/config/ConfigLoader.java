@@ -3,6 +3,7 @@ package com.extracrates.config;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.model.CrateDefinition;
+import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -12,8 +13,7 @@ import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
-import java.util.logging.Logger;
+import java.util.Optional;
 
 public class ConfigLoader {
     private final Supplier<FileConfiguration> mainConfigSupplier;
@@ -58,13 +58,18 @@ public class ConfigLoader {
         return Collections.unmodifiableMap(rewardPools);
     }
 
-    public void removeCratesById(Set<String> crateIds) {
-        if (crateIds == null || crateIds.isEmpty()) {
-            return;
+    public Optional<Reward> findRewardById(String rewardId) {
+        if (rewardId == null || rewardId.isEmpty()) {
+            return Optional.empty();
         }
-        for (String crateId : crateIds) {
-            crates.remove(crateId);
+        for (RewardPool pool : rewardPools.values()) {
+            for (Reward reward : pool.rewards()) {
+                if (reward.id().equalsIgnoreCase(rewardId)) {
+                    return Optional.of(reward);
+                }
+            }
         }
+        return Optional.empty();
     }
 
     public Map<String, CutscenePath> getPaths() {

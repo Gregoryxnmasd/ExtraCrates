@@ -7,6 +7,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
@@ -153,6 +155,52 @@ public class SqlStorage implements CrateStorage {
                 statement.executeUpdate();
             }
             return null;
+        });
+    }
+
+    @Override
+    public List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        OpenHistoryFilter safeFilter = filter != null ? filter : OpenHistoryFilter.none();
+        StringBuilder sql = new StringBuilder(
+                "SELECT crate_id, reward_id, server_id, opened_at FROM crate_opens WHERE player_uuid=?"
+        );
+        List<Object> params = new ArrayList<>();
+        params.add(playerId.toString());
+        if (safeFilter.crateId() != null && !safeFilter.crateId().isEmpty()) {
+            sql.append(" AND crate_id=?");
+            params.add(safeFilter.crateId());
+        }
+        if (safeFilter.from() != null) {
+            sql.append(" AND opened_at>=?");
+            params.add(safeFilter.from().toEpochMilli());
+        }
+        if (safeFilter.to() != null) {
+            sql.append(" AND opened_at<=?");
+            params.add(safeFilter.to().toEpochMilli());
+        }
+        sql.append(" ORDER BY opened_at DESC LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(Math.max(0, offset));
+        return withConnection(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+                for (int i = 0; i < params.size(); i++) {
+                    statement.setObject(i + 1, params.get(i));
+                }
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    List<CrateOpenEntry> entries = new ArrayList<>();
+                    while (resultSet.next()) {
+                        String crateId = resultSet.getString("crate_id");
+                        String rewardId = resultSet.getString("reward_id");
+                        String serverId = resultSet.getString("server_id");
+                        long openedAt = resultSet.getLong("opened_at");
+                        entries.add(new CrateOpenEntry(playerId, crateId, rewardId, serverId, Instant.ofEpochMilli(openedAt)));
+                    }
+                    return entries;
+                }
+            }
         });
     }
 

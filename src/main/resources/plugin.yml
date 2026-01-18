@@ -8,10 +8,13 @@ softdepend: [ProtocolLib]
 commands:
   crate:
     description: Gestiona crates y sus opciones principales.
-    usage: /<command> <gui|open|preview|cutscene|reload|givekey|route|sync|mass>
+    usage: /<command> <gui|history|open|preview|cutscene|reload|givekey|route|sync>
 permissions:
   extracrates.gui:
     description: Permite abrir el GUI de crates.
+    default: true
+  extracrates.history:
+    description: Permite ver el historial de aperturas.
     default: true
   extracrates.open:
     description: Permite abrir crates.
