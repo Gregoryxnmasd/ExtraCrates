@@ -1,5 +1,6 @@
 # Opciones globales
 language: es_es
+accessibility-mode: true
 particles-default: "crit"
 hologram-font: "resourcepack:cutscene_font"
 gui:
@@ -24,6 +25,23 @@ gui:
         - "&7Nombre: &f%crate_name%"
         - "&7Cooldown: &f%cooldown%"
         - "&7Permiso: &f%permission%"
+sounds:
+  reroll:
+    sound: "ui.button.click"
+    volume: 0.8
+    pitch: 1.0
+  claim:
+    sound: "entity.player.levelup"
+    volume: 1.0
+    pitch: 1.0
+  error:
+    sound: "entity.villager.no"
+    volume: 1.0
+    pitch: 1.0
+  preview:
+    sound: "block.note_block.pling"
+    volume: 0.8
+    pitch: 1.2
 resourcepack:
   use-custom-model-data: true
   allow-animated-items: true
@@ -44,18 +62,28 @@ cutscene:
   armorstand-invisible: true
   camera-entity: "armor_stand"
   speed-modifier-uuid: "c0c0a1f2-7a89-4a2c-88a7-9f53b0d6f8b1"
+  on-start:
+    - "say %player% inició la cutscene de %crate_id%"
+  on-end:
+    - "say %player% terminó la cutscene de %crate_id% y obtuvo %reward_name%"
   locks:
     movement: true
     hud: true
 sessions:
   max-duration-ticks: 600
   cleanup-on-quit: true
+guide:
+  enabled: true
+  step-duration-ticks: 60
 holograms:
   provider: "display"
   name-format: "&e%reward_name%"
   height-offset: 0.8
 permissions:
   use-per-crate: true
+rewards:
+  normalize-chances: false
+  warning-threshold: 0
 storage:
   enabled: false
   type: "mysql"
