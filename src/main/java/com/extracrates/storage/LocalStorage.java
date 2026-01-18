@@ -3,6 +3,7 @@ package com.extracrates.storage;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -13,7 +14,7 @@ public class LocalStorage implements CrateStorage {
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Map<String, Integer>> keys = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> locks = new HashMap<>();
-    private final Map<UUID, List<CrateOpenEntry>> openHistory = new HashMap<>();
+    private final Map<UUID, Map<String, Map<String, DeliveryRecord>>> deliveries = new HashMap<>();
 
     @Override
     public Optional<Instant> getCooldown(UUID playerId, String crateId) {
@@ -112,6 +113,49 @@ public class LocalStorage implements CrateStorage {
     }
 
     @Override
+    public Optional<PendingReward> getPendingReward(UUID playerId, String crateId) {
+        Map<String, PendingReward> userPending = pendingRewards.get(playerId);
+        if (userPending == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(userPending.get(crateId));
+    }
+
+    @Override
+    public List<PendingReward> getPendingRewards(UUID playerId) {
+        Map<String, PendingReward> userPending = pendingRewards.get(playerId);
+        if (userPending == null || userPending.isEmpty()) {
+            return List.of();
+        }
+        return new ArrayList<>(userPending.values());
+    }
+
+    @Override
+    public void setPendingReward(UUID playerId, String crateId, String rewardId, Instant timestamp) {
+        pendingRewards.computeIfAbsent(playerId, key -> new HashMap<>())
+                .put(crateId, new PendingReward(crateId, rewardId, RewardDeliveryStatus.PENDING, timestamp));
+    }
+
+    @Override
+    public boolean markRewardDelivered(UUID playerId, String crateId, String rewardId, Instant timestamp) {
+        Map<String, PendingReward> userPending = pendingRewards.computeIfAbsent(playerId, key -> new HashMap<>());
+        PendingReward existing = userPending.get(crateId);
+        if (existing != null && existing.status() == RewardDeliveryStatus.DELIVERED) {
+            return false;
+        }
+        userPending.put(crateId, new PendingReward(crateId, rewardId, RewardDeliveryStatus.DELIVERED, timestamp));
+        return true;
+    }
+
+    @Override
+    public void recordDelivery(UUID playerId, String crateId, String rewardId, DeliveryStatus status, int attempt, Instant timestamp) {
+        deliveries
+                .computeIfAbsent(playerId, key -> new HashMap<>())
+                .computeIfAbsent(crateId, key -> new HashMap<>())
+                .put(rewardId, new DeliveryRecord(status, attempt, timestamp));
+    }
+
+    @Override
     public boolean acquireLock(UUID playerId, String crateId) {
         Map<String, Instant> userLocks = locks.computeIfAbsent(playerId, key -> new HashMap<>());
         if (userLocks.containsKey(crateId)) {
@@ -130,25 +174,13 @@ public class LocalStorage implements CrateStorage {
     }
 
     @Override
-    public Optional<PendingReward> getPendingReward(UUID playerId) {
-        return Optional.ofNullable(pendingRewards.get(playerId));
-    }
-
-    @Override
-    public void setPendingReward(UUID playerId, PendingReward pendingReward) {
-        pendingRewards.put(playerId, pendingReward);
-    }
-
-    @Override
-    public void clearPendingReward(UUID playerId) {
-        pendingRewards.remove(playerId);
-    }
-
-    @Override
     public void close() {
         cooldowns.clear();
         keys.clear();
         locks.clear();
-        pendingRewards.clear();
+        deliveries.clear();
+    }
+
+    private record DeliveryRecord(DeliveryStatus status, int attempt, Instant timestamp) {
     }
 }

@@ -13,6 +13,9 @@ import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.SoundUtil;
 import com.extracrates.util.TextUtil;
+import net.kyori.adventure.bossbar.BossBar;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Display;
@@ -48,20 +51,28 @@ public class CrateSession {
 
     private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
-    private Entity hologram;
+    private TextDisplay hologram;
+    private final Set<Entity> visibleEntities = new LinkedHashSet<>();
     private BukkitRunnable task;
     private BukkitRunnable musicTask;
-    private BukkitRunnable uiTask;
+    private BukkitRunnable watchdogTask;
 
     private int rewardIndex;
     private int rerollsUsed;
     private int rewardSwitchTicks;
     private int nextRewardSwitchTick;
     private int elapsedTicks;
-    private int totalTicks;
+    private int maxDurationTicks;
+    private long sessionStartMillis;
+    private long lastTaskTickMillis;
+    private boolean ending;
+    private boolean ended;
     private Location rewardBaseLocation;
     private Location hologramBaseLocation;
     private Transformation rewardBaseTransform;
+    private int rerollEnabledAtTick;
+    private boolean rerollLocked;
+    private int selectedRewardIndex;
 
     private GameMode previousGameMode;
     private Entity previousSpectatorTarget;
@@ -102,28 +113,33 @@ public class CrateSession {
             finish();
             return;
         }
-        if (isAccessibilityMode()) {
-            startAccessibilitySession();
-            return;
+        if (preview) {
+            player.sendMessage(Component.text("Modo vista previa: solo vista previa."));
         }
-        sendActionBar("session.actionbar-start", Collections.emptyMap());
         rewardIndex = 0;
-        rerollsUsed = 0;
+        selectedRewardIndex = -1;
+        rerollLocked = false;
         elapsedTicks = 0;
+        lastInputTick = -1;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
-        resolveUiSettings();
+        rerollEnabledAtTick = rewardSwitchTicks;
+        rerollLocked = false;
+        selectedRewardIndex = -1;
         Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
+        previousGameMode = player.getGameMode();
+        gamemodeSnapshotTaken = true;
+        previousWalkSpeed = player.getWalkSpeed();
+        previousFlySpeed = player.getFlySpeed();
+        speedSnapshotTaken = true;
         spawnCamera(start);
         applySpectatorMode();
         spawnRewardDisplay();
-        if (preview) {
-            languageManager.sendActionBar(player, "session.preview-actionbar");
-        }
-        sendRerollActionBar();
+        setupRerollHud();
         startMusic();
-        scheduleUiMessage();
+        scheduleTimeout();
         startCutscene();
+        startWatchdog();
     }
 
     public CrateDefinition getCrate() {
@@ -135,9 +151,7 @@ public class CrateSession {
         String cameraEntityType = config.getString("cutscene.camera-entity", "armorstand");
         boolean armorStandInvisible = config.getBoolean("cutscene.armorstand-invisible", true);
         cameraEntity = CameraEntityFactory.spawn(start, cameraEntityType, armorStandInvisible);
-        trackEntity(cameraEntity);
-        hideFromOthers(cameraEntity);
-        logVerbose("Camara creada: tipo=%s invisible=%s", cameraEntityType, armorStandInvisible);
+        registerVisibleEntity(cameraEntity);
     }
 
     private void applySpectatorMode() {
@@ -152,6 +166,8 @@ public class CrateSession {
         sessionManager.applySpectator(player, speedModifierKey, modifierValue);
         player.setSpectatorTarget(cameraEntity);
 
+        previousHelmet = player.getInventory().getHelmet();
+        helmetSnapshotTaken = true;
         String overlayModel = crate.cutsceneSettings().overlayModel();
         if (overlayModel != null && !overlayModel.isEmpty()) {
             ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
@@ -192,13 +208,13 @@ public class CrateSession {
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
             display.setItemStack(buildRewardDisplayItem(reward, anchor.getWorld()));
         });
-        hologram = spawnHologramEntity(displayLocation.clone().add(0, 0.4, 0), reward);
+        hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
+            display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(buildHologramText(reward))));
+            display.setBillboard(Display.Billboard.CENTER);
+        });
 
-        trackEntity(rewardDisplay);
-        trackEntity(hologram);
-
-        hideFromOthers(rewardDisplay);
-        hideFromOthers(hologram);
+        registerVisibleEntity(rewardDisplay);
+        registerVisibleEntity(hologram);
 
         rewardBaseLocation = rewardDisplay.getLocation().clone();
         hologramBaseLocation = hologram.getLocation().clone();
@@ -266,8 +282,17 @@ public class CrateSession {
         }
     }
 
-    private void hideFromOthers(Entity entity) {
+    private void registerVisibleEntity(Entity entity) {
+        if (entity == null) {
+            return;
+        }
         if (!configLoader.getMainConfig().getBoolean("cutscene.hide-others", true)) {
+            return;
+        }
+        visibleEntities.add(entity);
+        ProtocolEntityHider protocolEntityHider = plugin.getProtocolEntityHider();
+        if (protocolEntityHider != null) {
+            protocolEntityHider.trackEntity(player, entity);
             return;
         }
         for (Player online : Bukkit.getOnlinePlayers()) {
@@ -311,42 +336,79 @@ public class CrateSession {
         double minTeleportDistanceSquared = minTeleportDistance * minTeleportDistance;
         task = new BukkitRunnable() {
             int tick = 0;
-            final int totalTicks = Math.max(0, timeline.size() - 1);
-            Location lastTeleportLocation = cameraEntity.getLocation();
+            final int totalTicks = resolveTotalTicks(timeline);
+            final int lastIndex = timeline.size() - 1;
 
             @Override
             public void run() {
-                if (tick > totalTicks) {
-                    logVerbose("Cutscene completa: tick=%d total=%d", tick, totalTicks);
+                if (tick >= totalTicks) {
                     cancel();
                     finish();
                     return;
                 }
-                int currentTick = tick;
-                Location point = timeline.get(tick++);
-                if (lastTeleportLocation == null || lastTeleportLocation.distanceSquared(point) >= minTeleportDistanceSquared) {
-                    cameraEntity.teleport(point);
-                    lastTeleportLocation = point;
-                }
+                double progress = totalTicks <= 1 ? 1.0 : tick / (double) (totalTicks - 1);
+                int index = lastIndex <= 0 ? 0 : (int) Math.round(progress * lastIndex);
+                Location point = timeline.get(Math.min(lastIndex, Math.max(0, index)));
+                tick++;
+                cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
                 elapsedTicks++;
-                logVerbose("Tick sesion=%d/%d elapsed=%d rewardIndex=%d nextSwitch=%d", currentTick, totalTicks, elapsedTicks, rewardIndex, nextRewardSwitchTick);
-                if (rewards.size() > 1 && rewardSwitchTicks > 0) {
+                updateRerollDisplay();
+                if (!rerollLocked && rewards.size() > 1 && rewardSwitchTicks > 0) {
                     while (elapsedTicks >= nextRewardSwitchTick && rewardIndex < rewards.size() - 1) {
                         rewardIndex++;
                         nextRewardSwitchTick += rewardSwitchTicks;
                         refreshRewardDisplay();
                         if (!preview) {
-                            Reward reward = getCurrentReward();
-                            if (reward != null) {
-                                sessionManager.recordPendingReward(player.getUniqueId(), crate.id(), reward.id());
-                            }
+                            sessionManager.updatePendingReward(player, crate, getCurrentReward());
                         }
                     }
                 }
+                updateRerollHud();
             }
         };
         task.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    private int resolveTotalTicks(List<Location> timeline) {
+        if (path != null) {
+            int durationTicks = (int) Math.round(path.getDurationSeconds() * 20.0);
+            if (durationTicks > 0) {
+                return durationTicks;
+            }
+        }
+        return Math.max(1, timeline.size());
+    }
+
+    private void startWatchdog() {
+        if (watchdogTask != null) {
+            watchdogTask.cancel();
+        }
+        watchdogTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (ending || ended) {
+                    cancel();
+                    return;
+                }
+                long now = System.currentTimeMillis();
+                if (maxDurationTicks > 0) {
+                    long elapsedRealTicks = (now - sessionStartMillis) / 50L;
+                    if (elapsedRealTicks > maxDurationTicks) {
+                        finish();
+                        return;
+                    }
+                }
+                if (task == null || task.isCancelled()) {
+                    end();
+                    return;
+                }
+                if (now - lastTaskTickMillis > 2000L) {
+                    end();
+                }
+            }
+        };
+        watchdogTask.runTaskTimer(plugin, 20L, 20L);
     }
 
     private List<Location> buildTimeline(World world, CutscenePath path) {
@@ -413,36 +475,44 @@ public class CrateSession {
     }
 
     private void finish() {
-        end();
+        if (rerollLocked && selectedRewardIndex >= 0 && selectedRewardIndex < rewards.size()) {
+            rewardIndex = selectedRewardIndex;
+        }
         if (!preview) {
             executeReward();
         }
     }
 
     private void executeReward() {
+        if (preview) {
+            return;
+        }
         Reward reward = getCurrentReward();
         if (reward == null) {
             return;
         }
-        CrateRewardEvent rewardEvent = new CrateRewardEvent(player, crate, reward, preview);
-        Bukkit.getPluginManager().callEvent(rewardEvent);
-        if (rewardEvent.isCancelled()) {
-            return;
-        }
-        reward = rewardEvent.getReward();
-        if (reward == null) {
-            return;
-        }
-        if (isQaMode()) {
-            player.sendMessage(languageManager.getMessage("session.error.qa-mode"));
-        } else {
-            player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.displayName())));
-            ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-            player.getInventory().addItem(item);
-
-            for (String command : reward.commands()) {
-                String parsed = command.replace("%player%", player.getName());
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        boolean delivered = false;
+        int attempt = 0;
+        int maxAttempts = 2;
+        while (!delivered && attempt < maxAttempts) {
+            attempt++;
+            if (!preview) {
+                sessionManager.recordDeliveryStarted(player, crate, reward, attempt);
+            }
+            try {
+                deliverReward(reward);
+                delivered = true;
+            } catch (Exception ex) {
+                plugin.getLogger().warning(String.format(
+                        "No se pudo entregar recompensa %s para %s (intento %d): %s",
+                        reward.id(),
+                        player.getName(),
+                        attempt,
+                        ex.getMessage()
+                ));
+                if (attempt >= maxAttempts && !preview) {
+                    sessionManager.recordDeliveryPending(player, crate, reward, attempt);
+                }
             }
         }
         rewardDelivered = true;
@@ -458,15 +528,19 @@ public class CrateSession {
         }
     }
 
-    public void reroll(List<Reward> newRewards) {
-        if (newRewards == null || newRewards.isEmpty()) {
+    private void deliverReward(Reward reward) {
+        if (isQaMode()) {
+            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
             return;
         }
-        this.rewards = new ArrayList<>(newRewards);
-        rewardIndex = 0;
-        elapsedTicks = 0;
-        nextRewardSwitchTick = rewardSwitchTicks;
-        refreshRewardDisplay();
+        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+        player.getInventory().addItem(item);
+
+        for (String command : reward.commands()) {
+            String parsed = command.replace("%player%", player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        }
     }
 
     private Reward getCurrentReward() {
@@ -574,44 +648,30 @@ public class CrateSession {
             rewardDisplay.setItemStack(buildRewardDisplayItem(reward, rewardDisplay.getWorld()));
         }
         if (hologram != null) {
-            Component textComponent = buildHologramComponent(reward);
-            if (hologram instanceof ArmorStand armorStand) {
-                armorStand.setCustomName(TextUtil.serializeLegacy(textComponent));
-                armorStand.setCustomNameVisible(true);
-            } else {
-                setTextDisplayText(hologram, textComponent);
-            }
+            hologram.text(configLoader.getSettings().applyHologramFont(TextUtil.color(buildHologramText(reward))));
         }
-        sendRerollActionBar();
+    }
+
+    public void handleRerollInput(boolean shift) {
+        if (rewards == null || rewards.size() <= 1) {
+            return;
+        }
+        if (elapsedTicks < rerollEnabledAtTick || rerollLocked) {
+            return;
+        }
+        if (shift) {
+            rerollLocked = true;
+            selectedRewardIndex = rewardIndex;
+            updateRerollDisplay();
+            return;
+        }
+        rewardIndex = (rewardIndex + 1) % rewards.size();
+        refreshRewardDisplay();
+        updateRerollDisplay();
     }
 
     private boolean isQaMode() {
         return configLoader.getMainConfig().getBoolean("qa-mode", false);
-    }
-
-    private void executeCutsceneCommands(String key, Reward reward) {
-        if (!crate.cutsceneSettings().commandsEnabled()) {
-            return;
-        }
-        List<String> commands = configLoader.getMainConfig().getStringList("cutscene." + key);
-        if (commands == null || commands.isEmpty()) {
-            return;
-        }
-        String rewardId = reward != null ? reward.id() : "";
-        String rewardName = reward != null ? reward.displayName() : "";
-        for (String command : commands) {
-            if (command == null || command.isBlank()) {
-                continue;
-            }
-            String parsed = command
-                    .replace("%player%", player.getName())
-                    .replace("%player_uuid%", player.getUniqueId().toString())
-                    .replace("%crate_id%", crate.id())
-                    .replace("%crate_name%", crate.displayName())
-                    .replace("%reward_id%", rewardId)
-                    .replace("%reward_name%", rewardName);
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
-        }
     }
 
     private ItemStack buildRewardDisplayItem(Reward reward, World world) {
@@ -658,31 +718,35 @@ public class CrateSession {
         return item;
     }
 
-    public static void clearRewardDisplayCache() {
-        REWARD_DISPLAY_CACHE.clear();
-    }
-
-    private void logTiming(RewardDisplayCacheKey cacheKey, boolean cacheHit, long start) {
-        double ms = (System.nanoTime() - start) / 1_000_000.0;
-        plugin.getLogger().info(String.format(
-                "CrateSession.buildRewardDisplayItem reward=%s world=%s model=%s cache=%s timeMs=%.3f",
-                cacheKey.rewardId(),
-                cacheKey.world(),
-                cacheKey.model(),
-                cacheHit ? "hit" : "miss",
-                ms
-        ));
+    private String buildHologramText(Reward reward) {
+        String format = reward.hologram();
+        if (format == null || format.isEmpty()) {
+            format = crate.animation().hologramFormat();
+        }
+        if (format == null || format.isEmpty()) {
+            format = "%reward_name%";
+        }
+        String name = format.replace("%reward_name%", reward.displayName());
+        if (preview) {
+            name = name + "\n&7(solo vista previa)";
+        }
+        return name;
     }
 
     public void end() {
+        if (ended) {
+            return;
+        }
+        ended = true;
+        ending = true;
         if (task != null) {
             task.cancel();
         }
         if (musicTask != null) {
             musicTask.cancel();
         }
-        if (uiTask != null) {
-            uiTask.cancel();
+        if (watchdogTask != null) {
+            watchdogTask.cancel();
         }
         stopMusic();
         untrackEntity(cameraEntity);
@@ -701,8 +765,17 @@ public class CrateSession {
         if (hologram != null && !hologram.isDead()) {
             hologram.remove();
         }
-        restoreInventory();
-        restorePlayerState();
+        ProtocolEntityHider protocolEntityHider = plugin.getProtocolEntityHider();
+        if (protocolEntityHider != null) {
+            for (Entity entity : visibleEntities) {
+                protocolEntityHider.untrackEntity(entity);
+            }
+        }
+        visibleEntities.clear();
+        if (previousGameMode != null) {
+            player.setGameMode(previousGameMode);
+        }
+        player.setSpectatorTarget(null);
         if (speedModifierKey != null) {
             sessionManager.removeSpectatorModifier(player, speedModifierKey);
         }
@@ -933,11 +1006,25 @@ public class CrateSession {
         }
     }
 
-    private record RewardDisplayCacheKey(String rewardId, String world, String model) {
-        private RewardDisplayCacheKey {
-            rewardId = rewardId != null ? rewardId : "unknown";
-            world = world != null ? world : "unknown";
-            model = model != null ? model : "";
+    private void updateRerollDisplay() {
+        if (rewards == null || rewards.size() <= 1) {
+            return;
         }
+        Component message;
+        if (rerollLocked) {
+            message = Component.text("Recompensa seleccionada", NamedTextColor.YELLOW);
+        } else if (elapsedTicks >= rerollEnabledAtTick) {
+            message = Component.text("Clic para reroll \u2022 Shift para reclamar", NamedTextColor.YELLOW);
+        } else {
+            message = Component.text("Reroll disponible pronto...", NamedTextColor.YELLOW);
+        }
+        player.sendActionBar(message);
+    }
+
+    private void clearRerollDisplay() {
+        if (rewards == null || rewards.size() <= 1) {
+            return;
+        }
+        player.sendActionBar(Component.empty());
     }
 }

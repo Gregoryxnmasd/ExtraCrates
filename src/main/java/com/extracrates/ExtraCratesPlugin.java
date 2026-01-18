@@ -21,7 +21,6 @@ import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.storage.PendingRewardStore;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.MapImageCache;
-import com.extracrates.util.ResourcepackModelResolver;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.command.PluginCommand;
@@ -92,9 +91,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
                     openHistoryGui,
                     editorMenu,
                     syncCommand,
-                    routeEditorManager,
-                    ResourcepackModelResolver.getInstance(),
-                    pendingRewardStore
+                    routeEditorManager
             );
             crateCommand.setExecutor(executor);
             crateCommand.setTabCompleter(executor);

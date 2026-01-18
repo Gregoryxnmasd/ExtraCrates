@@ -16,9 +16,8 @@ public record CrateDefinition(
         double cost,
         double rerollCost,
         String permission,
-        Integer rerollEnableTicks,
-        String uiMode,
-        String actionbarMessage,
+        java.util.List<String> allowedWorlds,
+        java.util.List<String> blockedWorlds,
         Location cameraStart,
         Location rewardAnchor,
         AllowedArea allowedArea,
@@ -58,9 +57,8 @@ public record CrateDefinition(
         double cost = section.getDouble("cost", 0);
         double rerollCost = section.getDouble("reroll-cost", 0);
         String permission = section.getString("permission", "extracrates.open");
-        Integer rerollEnableTicks = readOptionalInt(section, "reroll-enable-ticks");
-        String uiMode = readOptionalString(section, "ui-mode");
-        String actionbarMessage = readOptionalString(section, "actionbar-message");
+        java.util.List<String> allowedWorlds = section.getStringList("allowed-worlds");
+        java.util.List<String> blockedWorlds = section.getStringList("blocked-worlds");
 
         ConfigurationSection locations = section.getConfigurationSection("locations");
         Location cameraStart = null;
@@ -114,9 +112,8 @@ public record CrateDefinition(
                 cost,
                 rerollCost,
                 permission,
-                rerollEnableTicks,
-                uiMode,
-                actionbarMessage,
+                allowedWorlds,
+                blockedWorlds,
                 cameraStart,
                 rewardAnchor,
                 allowedArea,
