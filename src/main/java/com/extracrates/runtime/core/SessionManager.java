@@ -307,7 +307,7 @@ public class SessionManager {
         player.setGameMode(GameMode.SPECTATOR);
         AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
         if (attribute != null) {
-            AttributeModifier modifier = new AttributeModifier(modifierKey, modifierValue, AttributeModifier.Operation.ADD_NUMBER);
+            AttributeModifier modifier = new AttributeModifier(modifierKey.getKey(), modifierValue, AttributeModifier.Operation.ADD_NUMBER);
             attribute.addModifier(modifier);
         }
     }
@@ -316,7 +316,7 @@ public class SessionManager {
         AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
         if (attribute != null) {
             attribute.getModifiers().stream()
-                    .filter(mod -> mod.getKey().equals(modifierKey))
+                    .filter(mod -> mod.getName().equals(modifierKey.getKey()))
                     .forEach(attribute::removeModifier);
         }
     }
