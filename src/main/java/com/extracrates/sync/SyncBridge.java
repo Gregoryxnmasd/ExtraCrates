@@ -76,6 +76,14 @@ public class SyncBridge {
         store.recordRewardGranted(playerId, crateId, rewardId, event.timestamp(), settings.getServerId());
     }
 
+    public void recordPendingReward(UUID playerId, String crateId, String rewardId) {
+        if (!settings.isEnabled() || degraded) {
+            return;
+        }
+        SyncEvent event = new SyncEvent(SyncEventType.PENDING_REWARD, settings.getServerId(), playerId, crateId, rewardId, Instant.now());
+        provider.publish(event);
+    }
+
     public void recordKeyConsumed(UUID playerId, String crateId) {
         if (!settings.isEnabled() || degraded) {
             return;
@@ -153,6 +161,7 @@ public class SyncBridge {
             case KEY_CONSUMED -> sessionManager.applyRemoteKeyConsumed(event.playerId(), event.crateId());
             case CRATE_OPEN -> sessionManager.applyRemoteOpen(event.playerId(), event.crateId());
             case REWARD_GRANTED -> sessionManager.applyRemoteReward(event.playerId(), event.crateId(), event.rewardId());
+            case PENDING_REWARD -> sessionManager.applyRemotePendingReward(event.playerId(), event.crateId(), event.rewardId());
         }
     }
 
