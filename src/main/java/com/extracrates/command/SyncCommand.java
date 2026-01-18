@@ -2,7 +2,9 @@ package com.extracrates.command;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.runtime.core.CrateSession;
 import com.extracrates.sync.SyncBridge;
+import com.extracrates.util.ItemUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 
@@ -12,40 +14,44 @@ public class SyncCommand {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final SyncBridge syncBridge;
+    private final LanguageManager languageManager;
 
-    public SyncCommand(ExtraCratesPlugin plugin, ConfigLoader configLoader, SyncBridge syncBridge) {
+    public SyncCommand(ExtraCratesPlugin plugin, ConfigLoader configLoader, SyncBridge syncBridge, LanguageManager languageManager) {
         this.plugin = plugin;
         this.configLoader = configLoader;
         this.syncBridge = syncBridge;
+        this.languageManager = languageManager;
     }
 
     public boolean handle(CommandSender sender, String[] args) {
         if (!sender.hasPermission("extracrates.sync")) {
-            sender.sendMessage(Component.text("Sin permiso."));
+            sender.sendMessage(languageManager.getMessage("command.no-permission"));
             return true;
         }
         if (args.length < 2) {
-            sender.sendMessage(Component.text("Uso: /crate sync <status|reload|flush>"));
+            sender.sendMessage(languageManager.getMessage("command.sync-usage"));
             return true;
         }
         switch (args[1].toLowerCase()) {
             case "status" -> {
                 for (String line : syncBridge.getStatusLines()) {
-                    sender.sendMessage(Component.text(line));
+                    sender.sendMessage(languageManager.getMessage("command.sync-status-line", java.util.Map.of("line", line)));
                 }
             }
             case "reload" -> {
                 plugin.reloadConfig();
                 configLoader.loadAll();
                 syncBridge.reload();
+                ItemUtil.clearItemCache();
+                CrateSession.clearRewardDisplayCache();
                 sender.sendMessage(Component.text("Sync recargado."));
             }
             case "flush" -> {
                 syncBridge.flush();
-                sender.sendMessage(Component.text("Caches de sync limpiadas."));
+                sender.sendMessage(languageManager.getMessage("command.sync-flushed"));
             }
             default -> {
-                sender.sendMessage(Component.text("Subcomando desconocido."));
+                sender.sendMessage(languageManager.getMessage("command.unknown-subcommand"));
             }
         }
         return true;
