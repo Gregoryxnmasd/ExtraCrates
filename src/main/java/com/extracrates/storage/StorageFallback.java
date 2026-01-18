@@ -1,6 +1,7 @@
 package com.extracrates.storage;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -122,10 +123,26 @@ public class StorageFallback implements CrateStorage {
     }
 
     @Override
-    public boolean markFirstOpen(UUID playerId) {
+    public Optional<PendingReward> getPendingReward(UUID playerId) {
         return callWithFallback(
-                () -> primary.markFirstOpen(playerId),
-                () -> fallback.markFirstOpen(playerId)
+                () -> primary.getPendingReward(playerId),
+                () -> fallback.getPendingReward(playerId)
+        );
+    }
+
+    @Override
+    public void setPendingReward(UUID playerId, String crateId, String rewardId) {
+        runWithFallback(
+                () -> primary.setPendingReward(playerId, crateId, rewardId),
+                () -> fallback.setPendingReward(playerId, crateId, rewardId)
+        );
+    }
+
+    @Override
+    public void markRewardDelivered(UUID playerId, String crateId, String rewardId) {
+        runWithFallback(
+                () -> primary.markRewardDelivered(playerId, crateId, rewardId),
+                () -> fallback.markRewardDelivered(playerId, crateId, rewardId)
         );
     }
 
@@ -133,5 +150,13 @@ public class StorageFallback implements CrateStorage {
     public void close() {
         primary.close();
         fallback.close();
+    }
+
+    CrateStorage activeStorage() {
+        return usingFallback ? fallback : primary;
+    }
+
+    boolean isUsingFallback() {
+        return usingFallback;
     }
 }

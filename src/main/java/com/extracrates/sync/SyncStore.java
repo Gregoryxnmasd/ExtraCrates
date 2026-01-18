@@ -14,6 +14,10 @@ public interface SyncStore {
 
     void recordRewardGranted(UUID playerId, String crateId, String rewardId, Instant timestamp, String serverId);
 
+    void recordEvent(UUID playerId, String crateId, SyncEventType type, String rewardId, Instant timestamp, String serverId);
+
+    java.util.List<CrateHistoryEntry> getHistory(UUID playerId, String crateId, int limit, int offset);
+
     void flush();
 
     boolean isHealthy();

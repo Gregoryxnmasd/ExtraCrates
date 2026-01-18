@@ -3,9 +3,11 @@ language: es_es
 accessibility-mode: true
 particles-default: "crit"
 hologram-font: "resourcepack:cutscene_font"
+ui-mode: "bossbar"
 gui:
   title: "&8ExtraCrates"
   editor-title: "&0Editor de Crates"
+  history-title: "&8Historial de Crates"
   preview-enabled: true
   click-sounds: true
   crates:
@@ -54,8 +56,10 @@ cutscene:
   default-speed: 0.35
   constant-speed: true
   smooth-tick: 2
+  reroll-enable-ticks: 0
   pumpkin-model: "cutscene_mask"
   slowdown-modifier: -10.0
+  min-teleport-distance: 0.05
   hide-others: true
   spectator-lock: true
   fake-equip: true

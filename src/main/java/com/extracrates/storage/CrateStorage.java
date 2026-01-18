@@ -1,6 +1,7 @@
 package com.extracrates.storage;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,7 +24,11 @@ public interface CrateStorage {
 
     void releaseLock(UUID playerId, String crateId);
 
-    boolean markFirstOpen(UUID playerId);
+    Optional<PendingReward> getPendingReward(UUID playerId);
+
+    void setPendingReward(UUID playerId, String crateId, String rewardId);
+
+    void markRewardDelivered(UUID playerId, String crateId, String rewardId);
 
     void close();
 }

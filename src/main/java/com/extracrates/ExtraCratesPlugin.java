@@ -7,6 +7,7 @@ import com.extracrates.config.ConfigValidator;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.economy.EconomyService;
 import com.extracrates.gui.CrateGui;
+import com.extracrates.gui.OpenHistoryGui;
 import com.extracrates.gui.editor.ConfirmationMenu;
 import com.extracrates.gui.editor.EditorInputManager;
 import com.extracrates.gui.editor.EditorMenu;
@@ -17,6 +18,7 @@ import com.extracrates.runtime.SessionListener;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.runtime.core.ExtraCratesApiService;
 import com.extracrates.runtime.core.SessionManager;
+import com.extracrates.storage.PendingRewardStore;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.MapImageCache;
 import com.extracrates.util.ResourcepackModelResolver;
@@ -31,6 +33,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private SessionManager sessionManager;
     private CrateGui crateGui;
+    private OpenHistoryGui openHistoryGui;
     private ExtraCratesApi apiService;
     private RouteEditorManager routeEditorManager;
     private MapImageCache mapImageCache;
@@ -38,6 +41,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private EditorMenu editorMenu;
     private Economy economy;
     private SyncBridge syncBridge;
+    private PendingRewardStore pendingRewardStore;
 
     @Override
     public void onEnable() {
@@ -51,7 +55,9 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         configLoader = new ConfigLoader(this);
         configLoader.loadAll();
         ConfigValidator validator = new ConfigValidator(this, configLoader);
-        validator.report(validator.validate());
+        ConfigValidator.ValidationReport report = validator.validate();
+        validator.report(report);
+        configLoader.setConfigValid(report.isValid());
 
         languageManager = new LanguageManager(this);
         languageManager.load();
@@ -67,11 +73,13 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         routeEditorManager = new RouteEditorManager(this, configLoader);
         new RouteEditorListener(this, routeEditorManager);
         crateGui = new CrateGui(this, configLoader, sessionManager);
+        openHistoryGui = new OpenHistoryGui(this, configLoader, sessionManager);
         mapImageCache = new MapImageCache(this);
         protocolEntityHider = ProtocolEntityHider.createIfPresent(this);
+        pendingRewardStore = new PendingRewardStore(this);
         EditorInputManager inputManager = new EditorInputManager(this);
         ConfirmationMenu confirmationMenu = new ConfirmationMenu(this);
-        editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu);
+        editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu, sessionManager);
 
         PluginCommand crateCommand = getCommand("crate");
         if (crateCommand != null) {
@@ -81,10 +89,12 @@ public final class ExtraCratesPlugin extends JavaPlugin {
                     languageManager,
                     sessionManager,
                     crateGui,
+                    openHistoryGui,
                     editorMenu,
                     syncCommand,
                     routeEditorManager,
-                    ResourcepackModelResolver.getInstance()
+                    ResourcepackModelResolver.getInstance(),
+                    pendingRewardStore
             );
             crateCommand.setExecutor(executor);
             crateCommand.setTabCompleter(executor);
