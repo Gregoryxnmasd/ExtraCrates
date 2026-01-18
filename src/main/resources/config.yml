@@ -5,6 +5,7 @@ hologram-font: "resourcepack:cutscene_font"
 gui:
   title: "&8ExtraCrates"
   editor-title: "&0Editor de Crates"
+  history-title: "&8Historial de Crates"
   preview-enabled: true
   click-sounds: true
   crates:

@@ -3,6 +3,7 @@ package com.extracrates.command;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.gui.CrateGui;
+import com.extracrates.gui.OpenHistoryGui;
 import com.extracrates.gui.editor.EditorMenu;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.route.RouteEditorManager;
@@ -33,6 +34,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
     private final LanguageManager languageManager;
     private final SessionManager sessionManager;
     private final CrateGui crateGui;
+    private final OpenHistoryGui openHistoryGui;
     private final EditorMenu editorMenu;
     private final SyncCommand syncCommand;
     private final RouteEditorManager routeEditorManager;
@@ -44,6 +46,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             LanguageManager languageManager,
             SessionManager sessionManager,
             CrateGui crateGui,
+            OpenHistoryGui openHistoryGui,
             EditorMenu editorMenu,
             SyncCommand syncCommand,
             RouteEditorManager routeEditorManager,
@@ -54,6 +57,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         this.languageManager = languageManager;
         this.sessionManager = sessionManager;
         this.crateGui = crateGui;
+        this.openHistoryGui = openHistoryGui;
         this.editorMenu = editorMenu;
         this.syncCommand = syncCommand;
         this.routeEditorManager = routeEditorManager;
@@ -68,7 +72,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             @NotNull String[] args
     ) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route"));
+            sender.sendMessage(Component.text("Usa /crate gui|history|editor|open|preview|cutscene|reload|sync|givekey|route"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -83,6 +87,18 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 crateGui.open(player);
+                return true;
+            }
+            case "history" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage(languageManager.getMessage("command.only-players"));
+                    return true;
+                }
+                if (!sender.hasPermission("extracrates.history")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                openHistoryGui.open(player);
                 return true;
             }
             case "editor" -> {
@@ -247,6 +263,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         List<String> results = new ArrayList<>();
         if (args.length == 1) {
             results.add("gui");
+            results.add("history");
             results.add("editor");
             results.add("open");
             results.add("preview");

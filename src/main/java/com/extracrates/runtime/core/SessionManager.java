@@ -10,11 +10,14 @@ import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.storage.CrateStorage;
+import com.extracrates.storage.CrateOpenEntry;
 import com.extracrates.storage.LocalStorage;
+import com.extracrates.storage.OpenHistoryFilter;
 import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
 import com.extracrates.storage.StorageSettings;
 import com.extracrates.sync.SyncBridge;
+import com.extracrates.sync.SyncSettings;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
 import net.kyori.adventure.text.Component;
@@ -45,6 +48,7 @@ public class SessionManager {
     private final CrateStorage storage;
     private final SyncBridge syncBridge;
     private final boolean storageEnabled;
+    private final String serverId;
     // Stores both preview and normal crate sessions. Preview sessions are marked in CrateSession.
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
@@ -59,6 +63,7 @@ public class SessionManager {
         this.storageEnabled = storageSettings.enabled();
         this.storage = initializeStorage(storageSettings);
         this.syncBridge = new SyncBridge(plugin, configLoader, this);
+        this.serverId = SyncSettings.fromConfig(configLoader.getMainConfig()).getServerId();
     }
 
     public void shutdown() {
@@ -322,9 +327,25 @@ public class SessionManager {
     }
 
     public void recordRewardGranted(Player player, CrateDefinition crate, Reward reward) {
+        recordCrateOpen(player, crate, reward);
+    }
+
+    public void recordCrateOpen(Player player, CrateDefinition crate, Reward reward) {
+        Instant timestamp = Instant.now();
+        if (storage != null) {
+            storage.logOpen(player.getUniqueId(), crate.id(), reward.id(), serverId, timestamp);
+        }
         if (syncBridge != null) {
+            syncBridge.recordCrateOpen(player.getUniqueId(), crate.id());
             syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), reward.id());
         }
+    }
+
+    public List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset) {
+        if (storage == null) {
+            return List.of();
+        }
+        return storage.getOpenHistory(playerId, filter, limit, offset);
     }
 
     public void applyRemoteCooldown(UUID playerId, String crateId, Instant timestamp) {

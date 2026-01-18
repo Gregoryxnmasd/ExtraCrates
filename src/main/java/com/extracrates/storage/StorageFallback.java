@@ -1,6 +1,7 @@
 package com.extracrates.storage;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -90,6 +91,14 @@ public class StorageFallback implements CrateStorage {
         runWithFallback(
                 () -> primary.logOpen(playerId, crateId, rewardId, serverId, timestamp),
                 () -> fallback.logOpen(playerId, crateId, rewardId, serverId, timestamp)
+        );
+    }
+
+    @Override
+    public List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset) {
+        return callWithFallback(
+                () -> primary.getOpenHistory(playerId, filter, limit, offset),
+                () -> fallback.getOpenHistory(playerId, filter, limit, offset)
         );
     }
 

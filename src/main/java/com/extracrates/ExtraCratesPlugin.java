@@ -7,6 +7,7 @@ import com.extracrates.config.ConfigValidator;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.economy.EconomyService;
 import com.extracrates.gui.CrateGui;
+import com.extracrates.gui.OpenHistoryGui;
 import com.extracrates.gui.editor.ConfirmationMenu;
 import com.extracrates.gui.editor.EditorInputManager;
 import com.extracrates.gui.editor.EditorMenu;
@@ -31,6 +32,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private SessionManager sessionManager;
     private CrateGui crateGui;
+    private OpenHistoryGui openHistoryGui;
     private ExtraCratesApi apiService;
     private RouteEditorManager routeEditorManager;
     private MapImageCache mapImageCache;
@@ -67,6 +69,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         routeEditorManager = new RouteEditorManager(this, configLoader);
         new RouteEditorListener(this, routeEditorManager);
         crateGui = new CrateGui(this, configLoader, sessionManager);
+        openHistoryGui = new OpenHistoryGui(this, configLoader, sessionManager);
         mapImageCache = new MapImageCache(this);
         protocolEntityHider = ProtocolEntityHider.createIfPresent(this);
         EditorInputManager inputManager = new EditorInputManager(this);
@@ -81,6 +84,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
                     languageManager,
                     sessionManager,
                     crateGui,
+                    openHistoryGui,
                     editorMenu,
                     syncCommand,
                     routeEditorManager,
