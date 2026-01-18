@@ -10,6 +10,8 @@ import com.extracrates.config.LanguageManager;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
+import com.extracrates.runtime.UiMode;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -58,6 +60,7 @@ public class CrateSession {
     private boolean hudHiddenApplied;
     private float previousWalkSpeed;
     private float previousFlySpeed;
+    private Boolean bossBarSupported;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -318,6 +321,7 @@ public class CrateSession {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
         }
+        showRewardMessage(reward);
         if (rewardIndex >= rewards.size() - 1) {
             return;
         }
@@ -336,6 +340,92 @@ public class CrateSession {
             return null;
         }
         return rewards.get(rewardIndex);
+    }
+
+    private void showRewardMessage(Reward reward) {
+        if (reward == null || reward.message() == null) {
+            return;
+        }
+        String title = sanitizeMessage(reward.message().title());
+        String subtitle = sanitizeMessage(reward.message().subtitle());
+        if (title.isEmpty() && subtitle.isEmpty()) {
+            return;
+        }
+        UiMode mode = UiMode.fromConfig(configLoader.getMainConfig());
+        if ((mode == UiMode.BOSSBAR || mode == UiMode.BOTH) && !isBossBarSupported()) {
+            mode = UiMode.ACTIONBAR;
+        }
+        switch (mode) {
+            case NONE -> {
+                return;
+            }
+            case ACTIONBAR -> sendActionBarMessage(title, subtitle);
+            case BOSSBAR -> showBossBarMessage(title, subtitle);
+            case BOTH -> {
+                showBossBarMessage(title, subtitle);
+                sendActionBarMessage(title, subtitle);
+            }
+        }
+    }
+
+    private void showBossBarMessage(String title, String subtitle) {
+        String text = !title.isEmpty() ? title : subtitle;
+        if (text.isEmpty()) {
+            return;
+        }
+        BossBar bar = BossBar.bossBar(TextUtil.color(text), 1.0f, BossBar.Color.YELLOW, BossBar.Overlay.PROGRESS);
+        try {
+            player.showBossBar(bar);
+        } catch (RuntimeException | NoSuchMethodError ex) {
+            player.sendActionBar(TextUtil.color(text));
+            return;
+        }
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                player.hideBossBar(bar);
+            }
+        }.runTaskLater(plugin, 60L);
+    }
+
+    private void sendActionBarMessage(String title, String subtitle) {
+        String text = joinMessage(title, subtitle);
+        if (text.isEmpty()) {
+            return;
+        }
+        player.sendActionBar(TextUtil.color(text));
+    }
+
+    private boolean isBossBarSupported() {
+        if (bossBarSupported != null) {
+            return bossBarSupported;
+        }
+        try {
+            player.getClass().getMethod("showBossBar", BossBar.class);
+            player.getClass().getMethod("hideBossBar", BossBar.class);
+            bossBarSupported = true;
+        } catch (NoSuchMethodException | SecurityException | NoClassDefFoundError ex) {
+            bossBarSupported = false;
+        }
+        return bossBarSupported;
+    }
+
+    private String sanitizeMessage(String value) {
+        if (value == null) {
+            return "";
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? "" : trimmed;
+    }
+
+    private String joinMessage(String title, String subtitle) {
+        if (title.isEmpty()) {
+            return subtitle;
+        }
+        if (subtitle.isEmpty()) {
+            return title;
+        }
+        return title + " " + subtitle;
     }
 
     private void refreshRewardDisplay() {
