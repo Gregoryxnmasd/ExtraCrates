@@ -1,12 +1,13 @@
 package com.extracrates.config;
 
 import com.extracrates.ExtraCratesPlugin;
-import com.extracrates.model.CrateDefinition;
-import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,6 +25,13 @@ import java.util.logging.Logger;
 public class ConfigValidator {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private static final Set<String> OPEN_MODES = Set.of(
+            "reward-only",
+            "preview-only",
+            "key-required",
+            "economy-required",
+            "full"
+    );
 
     public ConfigValidator(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
         this.plugin = plugin;
@@ -31,62 +39,57 @@ public class ConfigValidator {
     }
 
     public ValidationReport validate() {
-        List<String> warnings = new ArrayList<>();
+        List<ValidationIssue> errors = new ArrayList<>();
+        List<ValidationIssue> warnings = new ArrayList<>();
         Map<String, RewardPool> rewardPools = configLoader.getRewardPools();
         Set<String> uiModes = Set.of("actionbar", "chat", "none");
 
-        for (CrateDefinition crate : configLoader.getCrates().values()) {
-            String poolId = crate.rewardsPool();
-            if (poolId == null || poolId.isBlank()) {
-                warnings.add("La crate '" + crate.id() + "' no tiene rewards-pool definido.");
-                continue;
-            }
-            if (!rewardPools.containsKey(poolId)) {
-                warnings.add("La crate '" + crate.id() + "' usa un rewards-pool inválido: '" + poolId + "'.");
-            }
-            Integer rerollTicks = crate.rerollEnableTicks();
-            if (rerollTicks != null && rerollTicks < 0) {
-                warnings.add("La crate '" + crate.id() + "' tiene reroll-enable-ticks negativo: " + rerollTicks + ".");
-            }
-            String uiMode = crate.uiMode();
-            if (uiMode != null && !uiMode.isBlank()) {
-                String normalized = uiMode.trim().toLowerCase(Locale.ROOT);
-                if (!uiModes.contains(normalized)) {
-                    warnings.add("La crate '" + crate.id() + "' usa ui-mode inválido: '" + uiMode + "'.");
+        File cratesFile = new File(plugin.getDataFolder(), "crates.yml");
+        FileConfiguration cratesConfig = YamlConfiguration.loadConfiguration(cratesFile);
+        ConfigurationSection cratesSection = cratesConfig.getConfigurationSection("crates");
+        if (cratesSection == null) {
+            errors.add(new ValidationIssue(
+                    "crates.yml:crates",
+                    "No se encontró la sección 'crates'.",
+                    "Agrega la sección 'crates' con al menos una crate definida."
+            ));
+        } else {
+            for (String crateId : cratesSection.getKeys(false)) {
+                ConfigurationSection crateSection = cratesSection.getConfigurationSection(crateId);
+                if (crateSection == null) {
+                    continue;
                 }
-                String actionbarMessage = crate.actionbarMessage();
-                if (!"none".equals(normalized) && (actionbarMessage == null || actionbarMessage.isBlank())) {
-                    warnings.add("La crate '" + crate.id() + "' tiene ui-mode sin actionbar-message definido.");
+                String openMode = crateSection.getString("open-mode", "reward-only");
+                if (!OPEN_MODES.contains(openMode)) {
+                    errors.add(new ValidationIssue(
+                            "crates.yml:crates." + crateId + ".open-mode",
+                            "open-mode inválido: '" + openMode + "'.",
+                            "Usa uno de: " + String.join(", ", OPEN_MODES) + "."
+                    ));
                 }
-            }
-            String actionbarMessage = crate.actionbarMessage();
-            if (actionbarMessage != null && actionbarMessage.isBlank()) {
-                warnings.add("La crate '" + crate.id() + "' tiene actionbar-message vacío.");
-            }
-        }
-
-        for (RewardPool pool : rewardPools.values()) {
-            boolean poolInvalid = false;
-            if (pool.rewards().isEmpty()) {
-                warnings.add("El pool de recompensas '" + pool.id() + "' está vacío.");
-                poolInvalid = true;
-            }
-            for (Reward reward : pool.rewards()) {
-                List<String> issues = new ArrayList<>();
-                String itemName = reward.item();
-                if (itemName == null || itemName.isBlank()) {
-                    issues.add("item vacío");
-                } else {
-                    Material material = Material.matchMaterial(itemName.toUpperCase(Locale.ROOT));
-                    if (material == null) {
-                        issues.add("item desconocido '" + itemName + "'");
-                    }
+                String poolId = crateSection.getString("rewards-pool", "");
+                if (poolId == null || poolId.isBlank()) {
+                    errors.add(new ValidationIssue(
+                            "crates.yml:crates." + crateId + ".rewards-pool",
+                            "La crate no tiene rewards-pool definido.",
+                            "Configura un rewards-pool válido existente en rewards.yml."
+                    ));
+                } else if (!rewardPools.containsKey(poolId)) {
+                    errors.add(new ValidationIssue(
+                            "crates.yml:crates." + crateId + ".rewards-pool",
+                            "Rewards-pool inválido: '" + poolId + "'.",
+                            "Define el pool en rewards.yml o corrige el ID."
+                    ));
                 }
-                List<String> invalidEnchantments = new ArrayList<>();
-                for (String enchantmentKey : reward.enchantments().keySet()) {
-                    Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(enchantmentKey.toLowerCase(Locale.ROOT)));
-                    if (enchantment == null) {
-                        invalidEnchantments.add(enchantmentKey);
+                ConfigurationSection animationSection = crateSection.getConfigurationSection("animation");
+                if (animationSection != null) {
+                    String pathId = animationSection.getString("path", "");
+                    if (pathId != null && !pathId.isBlank() && !configLoader.getPaths().containsKey(pathId)) {
+                        errors.add(new ValidationIssue(
+                                "crates.yml:crates." + crateId + ".animation.path",
+                                "Ruta de cutscene inexistente: '" + pathId + "'.",
+                                "Crea la ruta en paths.yml o corrige el ID."
+                        ));
                     }
                 }
                 if (!invalidEnchantments.isEmpty()) {
@@ -106,37 +109,138 @@ public class ConfigValidator {
             }
         }
 
-        for (CrateDefinition crate : new ArrayList<>(configLoader.getCrates().values())) {
-            String poolId = crate.rewardsPool();
-            if (poolId == null || poolId.isBlank()) {
-                warnings.add("La crate '" + crate.id() + "' no tiene rewards-pool definido.");
-                invalidCrates.add(crate.id());
-                continue;
-            }
-            if (!rewardPools.containsKey(poolId)) {
-                warnings.add("La crate '" + crate.id() + "' usa un rewards-pool inexistente: '" + poolId + "'.");
-                invalidCrates.add(crate.id());
-                continue;
-            }
-            if (invalidPools.contains(poolId)) {
-                warnings.add("La crate '" + crate.id() + "' fue bloqueada por usar el pool inválido '" + poolId + "'.");
-                invalidCrates.add(crate.id());
+        File rewardsFile = new File(plugin.getDataFolder(), "rewards.yml");
+        FileConfiguration rewardsConfig = YamlConfiguration.loadConfiguration(rewardsFile);
+        ConfigurationSection poolsSection = rewardsConfig.getConfigurationSection("pools");
+        if (poolsSection == null) {
+            errors.add(new ValidationIssue(
+                    "rewards.yml:pools",
+                    "No se encontró la sección 'pools'.",
+                    "Agrega la sección 'pools' con al menos un rewards-pool."
+            ));
+        } else {
+            for (String poolId : poolsSection.getKeys(false)) {
+                ConfigurationSection poolSection = poolsSection.getConfigurationSection(poolId);
+                if (poolSection == null) {
+                    continue;
+                }
+                ConfigurationSection rewardsSection = poolSection.getConfigurationSection("rewards");
+                if (rewardsSection == null || rewardsSection.getKeys(false).isEmpty()) {
+                    errors.add(new ValidationIssue(
+                            "rewards.yml:pools." + poolId + ".rewards",
+                            "El pool de recompensas está vacío.",
+                            "Agrega al menos una recompensa en el pool."
+                    ));
+                    continue;
+                }
+                for (String rewardId : rewardsSection.getKeys(false)) {
+                    ConfigurationSection rewardSection = rewardsSection.getConfigurationSection(rewardId);
+                    if (rewardSection == null) {
+                        continue;
+                    }
+                    String itemName = rewardSection.getString("item", "");
+                    if (itemName == null || itemName.isBlank()) {
+                        errors.add(new ValidationIssue(
+                                "rewards.yml:pools." + poolId + ".rewards." + rewardId + ".item",
+                                "La recompensa no tiene item definido.",
+                                "Define un item válido (por ejemplo: DIAMOND)."
+                        ));
+                    } else {
+                        Material material = Material.matchMaterial(itemName.toUpperCase(Locale.ROOT));
+                        if (material == null) {
+                            errors.add(new ValidationIssue(
+                                    "rewards.yml:pools." + poolId + ".rewards." + rewardId + ".item",
+                                    "Material desconocido: '" + itemName + "'.",
+                                    "Usa un material válido de Minecraft."
+                            ));
+                        }
+                    }
+                    double chance = rewardSection.getDouble("chance", 0);
+                    if (chance <= 0) {
+                        errors.add(new ValidationIssue(
+                                "rewards.yml:pools." + poolId + ".rewards." + rewardId + ".chance",
+                                "Chance inválida: " + chance + ".",
+                                "Usa un valor mayor a 0."
+                        ));
+                    }
+                    ConfigurationSection enchantmentSection = rewardSection.getConfigurationSection("enchantments");
+                    if (enchantmentSection != null) {
+                        for (String enchantmentKey : enchantmentSection.getKeys(false)) {
+                            Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(enchantmentKey.toLowerCase(Locale.ROOT)));
+                            if (enchantment == null) {
+                                errors.add(new ValidationIssue(
+                                        "rewards.yml:pools." + poolId + ".rewards." + rewardId + ".enchantments." + enchantmentKey,
+                                        "Encantamiento inválido: '" + enchantmentKey + "'.",
+                                        "Usa un encantamiento válido de Minecraft."
+                                ));
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        configLoader.removeCratesById(invalidCrates);
+        File pathsFile = new File(plugin.getDataFolder(), "paths.yml");
+        FileConfiguration pathsConfig = YamlConfiguration.loadConfiguration(pathsFile);
+        ConfigurationSection pathsSection = pathsConfig.getConfigurationSection("paths");
+        if (pathsSection == null) {
+            errors.add(new ValidationIssue(
+                    "paths.yml:paths",
+                    "No se encontró la sección 'paths'.",
+                    "Agrega la sección 'paths' con al menos una ruta."
+            ));
+        } else {
+            for (String pathId : pathsSection.getKeys(false)) {
+                ConfigurationSection pathSection = pathsSection.getConfigurationSection(pathId);
+                if (pathSection == null) {
+                    continue;
+                }
+                List<?> points = pathSection.getList("points", List.of());
+                if (points.size() < 2) {
+                    errors.add(new ValidationIssue(
+                            "paths.yml:paths." + pathId + ".points",
+                            "La ruta necesita al menos 2 puntos.",
+                            "Define dos o más puntos en la lista de points."
+                    ));
+                }
+                double duration = pathSection.getDouble("duration-seconds", 4.0);
+                if (duration <= 0) {
+                    errors.add(new ValidationIssue(
+                            "paths.yml:paths." + pathId + ".duration-seconds",
+                            "duration-seconds inválido: " + duration + ".",
+                            "Usa un valor mayor a 0."
+                    ));
+                }
+                double stepResolution = pathSection.getDouble("step-resolution", 0.15);
+                if (stepResolution <= 0) {
+                    errors.add(new ValidationIssue(
+                            "paths.yml:paths." + pathId + ".step-resolution",
+                            "step-resolution inválido: " + stepResolution + ".",
+                            "Usa un valor mayor a 0."
+                    ));
+                }
+            }
+        }
 
-        return new ValidationReport(warnings);
+        return new ValidationReport(errors, warnings);
     }
 
     public void report(ValidationReport report) {
         Logger logger = plugin.getLogger();
-        if (report.warnings().isEmpty()) {
-            logger.info("Validación de configuración completada sin warnings.");
+        if (report.errors().isEmpty() && report.warnings().isEmpty()) {
+            logger.info("Validación de configuración completada sin errores ni warnings.");
         } else {
-            logger.warning("Validación de configuración detectó " + report.warnings().size() + " warning(s):");
-            for (String warning : report.warnings()) {
-                logger.warning("- " + warning);
+            if (!report.errors().isEmpty()) {
+                logger.severe("Validación de configuración detectó " + report.errors().size() + " error(es):");
+                for (ValidationIssue error : report.errors()) {
+                    logger.severe("- " + formatIssue(error));
+                }
+            }
+            if (!report.warnings().isEmpty()) {
+                logger.warning("Validación de configuración detectó " + report.warnings().size() + " warning(s):");
+                for (ValidationIssue warning : report.warnings()) {
+                    logger.warning("- " + formatIssue(warning));
+                }
             }
         }
         writeReport(report);
@@ -148,12 +252,21 @@ public class ConfigValidator {
         lines.add("ExtraCrates - Reporte de validación");
         lines.add("Generado: " + LocalDateTime.now());
         lines.add("");
-        if (report.warnings().isEmpty()) {
-            lines.add("Sin warnings detectados.");
+        if (report.errors().isEmpty() && report.warnings().isEmpty()) {
+            lines.add("Sin errores ni warnings detectados.");
         } else {
-            lines.add("Warnings:");
-            for (String warning : report.warnings()) {
-                lines.add("- " + warning);
+            if (!report.errors().isEmpty()) {
+                lines.add("Errores:");
+                for (ValidationIssue error : report.errors()) {
+                    lines.add("- " + formatIssue(error));
+                }
+                lines.add("");
+            }
+            if (!report.warnings().isEmpty()) {
+                lines.add("Warnings:");
+                for (ValidationIssue warning : report.warnings()) {
+                    lines.add("- " + formatIssue(warning));
+                }
             }
         }
         try {
@@ -164,9 +277,21 @@ public class ConfigValidator {
         }
     }
 
-    public record ValidationReport(List<String> warnings) {
+    private String formatIssue(ValidationIssue issue) {
+        return issue.path() + " -> " + issue.message() + " Sugerencia: " + issue.suggestion();
+    }
+
+    public record ValidationIssue(String path, String message, String suggestion) {
+    }
+
+    public record ValidationReport(List<ValidationIssue> errors, List<ValidationIssue> warnings) {
         public ValidationReport {
+            errors = List.copyOf(errors);
             warnings = List.copyOf(warnings);
+        }
+
+        public boolean isValid() {
+            return errors.isEmpty();
         }
     }
 }

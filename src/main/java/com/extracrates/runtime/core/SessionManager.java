@@ -94,6 +94,10 @@ public class SessionManager {
     }
 
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
+        if (!configLoader.isConfigValid()) {
+            player.sendMessage(Component.text("La configuración es inválida. Revisa el reporte de validación."));
+            return false;
+        }
         if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(languageManager.getMessage("session.already-in-progress"));
             return false;
