@@ -15,4 +15,5 @@ session:
   key-required: "&cNecesitas una llave para esta crate."
   cooldown: "&cEsta crate está en enfriamiento."
   no-rewards: "&cNo hay recompensas configuradas."
+  duplicate-reroll: "&eLa recompensa es única, se aplicó un re-roll forzado."
   reward-received: "&aHas recibido: %reward%"
