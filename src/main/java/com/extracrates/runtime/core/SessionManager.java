@@ -17,6 +17,7 @@ import com.extracrates.storage.StorageSettings;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
+import com.extracrates.util.SoundUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -80,26 +81,31 @@ public class SessionManager {
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
+            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
             return false;
         }
         CutscenePath path = resolveCutscenePath(crate, player);
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
             player.sendMessage(Component.text("No se encontró el pool de recompensas para esta crate."));
+            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
             return false;
         }
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
             player.sendMessage(Component.text("Necesitas una llave para esta crate."));
+            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
             return false;
         }
         if (!preview && isOnCooldown(player, crate)) {
             player.sendMessage(Component.text("Esta crate está en cooldown."));
+            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
         List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
         if (rewards.isEmpty()) {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
+            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
             return false;
         }
         CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview);
@@ -108,6 +114,9 @@ public class SessionManager {
             consumeKey(player, crate);
         }
         session.start();
+        if (preview) {
+            SoundUtil.play(player, configLoader.getSettings().getSounds().preview());
+        }
         if (!preview) {
             applyCooldown(player, crate);
         }

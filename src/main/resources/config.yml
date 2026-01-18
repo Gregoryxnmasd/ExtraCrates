@@ -24,6 +24,23 @@ gui:
         - "&7Nombre: &f%crate_name%"
         - "&7Cooldown: &f%cooldown%"
         - "&7Permiso: &f%permission%"
+sounds:
+  reroll:
+    sound: "ui.button.click"
+    volume: 0.8
+    pitch: 1.0
+  claim:
+    sound: "entity.player.levelup"
+    volume: 1.0
+    pitch: 1.0
+  error:
+    sound: "entity.villager.no"
+    volume: 1.0
+    pitch: 1.0
+  preview:
+    sound: "block.note_block.pling"
+    volume: 0.8
+    pitch: 1.2
 resourcepack:
   use-custom-model-data: true
   allow-animated-items: true

@@ -9,6 +9,7 @@ import com.extracrates.runtime.CameraEntityFactory;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
+import com.extracrates.util.SoundUtil;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
@@ -318,6 +319,7 @@ public class CrateSession {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
         }
+        SoundUtil.play(player, configLoader.getSettings().getSounds().claim());
         if (rewardIndex >= rewards.size() - 1) {
             return;
         }
@@ -351,6 +353,7 @@ public class CrateSession {
             String name = format.replace("%reward_name%", reward.displayName());
             hologram.text(TextUtil.color(name));
         }
+        SoundUtil.play(player, configLoader.getSettings().getSounds().reroll());
     }
 
     private boolean isQaMode() {
