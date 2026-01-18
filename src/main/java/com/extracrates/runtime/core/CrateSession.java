@@ -87,6 +87,9 @@ public class CrateSession {
             finish();
             return;
         }
+        if (preview) {
+            player.sendMessage(Component.text("Modo vista previa: solo vista previa."));
+        }
         rewardIndex = 0;
         elapsedTicks = 0;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
@@ -163,15 +166,7 @@ public class CrateSession {
             display.setItemStack(buildRewardDisplayItem(reward, anchor.getWorld()));
         });
         hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
-            String format = reward.hologram();
-            if (format == null || format.isEmpty()) {
-                format = crate.animation().hologramFormat();
-            }
-            if (format == null || format.isEmpty()) {
-                format = "%reward_name%";
-            }
-            String name = format.replace("%reward_name%", reward.displayName());
-            display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
+            display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(buildHologramText(reward))));
             display.setBillboard(Display.Billboard.CENTER);
         });
 
@@ -302,6 +297,9 @@ public class CrateSession {
     }
 
     private void executeReward() {
+        if (preview) {
+            return;
+        }
         Reward reward = getCurrentReward();
         if (reward == null) {
             return;
@@ -347,9 +345,7 @@ public class CrateSession {
             rewardDisplay.setItemStack(buildRewardDisplayItem(reward, rewardDisplay.getWorld()));
         }
         if (hologram != null) {
-            String format = crate.animation().hologramFormat();
-            String name = format.replace("%reward_name%", reward.displayName());
-            hologram.text(TextUtil.color(name));
+            hologram.text(configLoader.getSettings().applyHologramFont(TextUtil.color(buildHologramText(reward))));
         }
     }
 
@@ -373,6 +369,21 @@ public class CrateSession {
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    private String buildHologramText(Reward reward) {
+        String format = reward.hologram();
+        if (format == null || format.isEmpty()) {
+            format = crate.animation().hologramFormat();
+        }
+        if (format == null || format.isEmpty()) {
+            format = "%reward_name%";
+        }
+        String name = format.replace("%reward_name%", reward.displayName());
+        if (preview) {
+            name = name + "\n&7(solo vista previa)";
+        }
+        return name;
     }
 
     public void end() {
