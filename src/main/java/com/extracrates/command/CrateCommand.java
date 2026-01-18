@@ -11,12 +11,14 @@ import com.extracrates.route.RouteEditorManager;
 import com.extracrates.runtime.CutscenePreviewSession;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.runtime.core.SessionManager;
-import com.extracrates.runtime.core.CrateSession;
+import com.extracrates.sync.CrateHistoryEntry;
+import com.extracrates.sync.SyncEventType;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Material;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -31,8 +33,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.File;
-import java.io.IOException;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -100,7 +102,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             @NotNull String[] args
     ) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usa /crate gui|history|editor|open|preview|cutscene|reload|sync|givekey|route"));
+            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route|history"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -353,21 +355,69 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(languageManager.getMessage("command.route-instructions"));
                 return true;
             }
-            case "sessions" -> {
-                if (!sender.hasPermission("extracrates.sessions")) {
+            case "history" -> {
+                if (!sender.hasPermission("extracrates.history")) {
                     sender.sendMessage(languageManager.getMessage("command.no-permission"));
                     return true;
                 }
-                if (args.length < 2 || !args[1].equalsIgnoreCase("check")) {
-                    sender.sendMessage(Component.text("Uso: /crate sessions check"));
+                if (args.length < 2) {
+                    sender.sendMessage(Component.text("Uso: /crate history <player> [crate] [page]"));
                     return true;
                 }
-                int cleaned = sessionManager.cleanupInactiveSessions();
-                sender.sendMessage(Component.text("Sesiones inactivas cerradas: " + cleaned));
+                OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+                if (target == null || (!target.isOnline() && !target.hasPlayedBefore())) {
+                    sender.sendMessage(Component.text("Jugador no encontrado."));
+                    return true;
+                }
+                String crateId = null;
+                int page = 1;
+                if (args.length >= 3) {
+                    if (isInteger(args[2])) {
+                        page = parsePage(args[2]);
+                    } else {
+                        crateId = args[2];
+                    }
+                }
+                if (args.length >= 4) {
+                    crateId = args[2];
+                    if (!isInteger(args[3])) {
+                        sender.sendMessage(Component.text("Página inválida."));
+                        return true;
+                    }
+                    page = parsePage(args[3]);
+                }
+                if (crateId != null && !configLoader.getCrates().containsKey(crateId)) {
+                    sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
+                    return true;
+                }
+                int pageSize = 10;
+                int offset = Math.max(0, page - 1) * pageSize;
+                List<CrateHistoryEntry> history = sessionManager.getHistory(target.getUniqueId(), crateId, pageSize + 1, offset);
+                boolean hasNext = history.size() > pageSize;
+                if (hasNext) {
+                    history = history.subList(0, pageSize);
+                }
+                if (history.isEmpty()) {
+                    sender.sendMessage(Component.text("Sin historial para este jugador."));
+                    return true;
+                }
+                String header = "Historial de crates de " + target.getName()
+                        + (crateId != null ? " (" + crateId + ")" : "")
+                        + " - Página " + page;
+                sender.sendMessage(Component.text(header));
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
+                for (CrateHistoryEntry entry : history) {
+                    String line = "- [" + formatter.format(entry.timestamp()) + "] "
+                            + formatEvent(entry.type(), entry.crateId(), entry.rewardId());
+                    sender.sendMessage(Component.text(line));
+                }
+                if (page > 1) {
+                    sender.sendMessage(Component.text("Anterior: " + buildHistoryCommand(args[1], crateId, page - 1)));
+                }
+                if (hasNext) {
+                    sender.sendMessage(Component.text("Siguiente: " + buildHistoryCommand(args[1], crateId, page + 1)));
+                }
                 return true;
-            }
-            case "mass" -> {
-                return handleMass(sender, args);
             }
             default -> {
                 sender.sendMessage(languageManager.getMessage("command.unknown-subcommand"));
@@ -398,20 +448,21 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("sync");
             results.add("givekey");
             results.add("route");
-            results.add("mass");
+            results.add("history");
             return results;
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("mass")) {
-            results.add("set");
+        if (args.length == 2 && args[0].equalsIgnoreCase("history")) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                results.add(player.getName());
+            }
             return results;
         }
-        if (args.length == 3 && args[0].equalsIgnoreCase("mass") && args[1].equalsIgnoreCase("set")) {
-            results.addAll(MASS_FIELDS.keySet());
-            return results;
+        if (args.length == 3 && args[0].equalsIgnoreCase("history")) {
+            results.addAll(configLoader.getCrates().keySet());
+            results.add("1");
         }
-        if (args.length == 5 && args[0].equalsIgnoreCase("mass") && args[1].equalsIgnoreCase("set")) {
-            results.addAll(List.of("type=", "open-mode=", "rewards-pool="));
-            return results;
+        if (args.length == 4 && args[0].equalsIgnoreCase("history")) {
+            results.add("1");
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {
             results.add("editor");
@@ -528,211 +579,44 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    private FileConfiguration loadCratesConfig() {
-        File file = new File(plugin.getDataFolder(), "crates.yml");
-        return YamlConfiguration.loadConfiguration(file);
-    }
-
-    private void saveCratesConfig(FileConfiguration config) {
-        File file = new File(plugin.getDataFolder(), "crates.yml");
+    private boolean isInteger(String value) {
         try {
-            config.save(file);
-            configLoader.loadAll();
-        } catch (IOException ex) {
-            plugin.getLogger().warning("No se pudo guardar crates.yml: " + ex.getMessage());
+            Integer.parseInt(value);
+            return true;
+        } catch (NumberFormatException ex) {
+            return false;
         }
     }
 
-    private ParsedValue parseValue(String field, FieldType fieldType, String rawValue) {
-        return switch (fieldType) {
-            case STRING -> new ParsedValue(rawValue, rawValue);
-            case INTEGER -> {
-                try {
-                    int parsed = Integer.parseInt(rawValue);
-                    if (parsed < 0) {
-                        yield null;
-                    }
-                    yield new ParsedValue(parsed, String.valueOf(parsed));
-                } catch (NumberFormatException ex) {
-                    yield null;
-                }
-            }
-            case DECIMAL -> {
-                try {
-                    double parsed = Double.parseDouble(rawValue);
-                    if (parsed < 0) {
-                        yield null;
-                    }
-                    yield new ParsedValue(parsed, String.valueOf(parsed));
-                } catch (NumberFormatException ex) {
-                    yield null;
-                }
-            }
-            case MATERIAL -> {
-                Material material = Material.matchMaterial(rawValue);
-                if (material == null) {
-                    yield null;
-                }
-                String name = material.name();
-                yield new ParsedValue(name, name);
-            }
-            case CRATE_TYPE -> {
-                CrateType type = parseCrateTypeStrict(rawValue);
-                if (type == null) {
-                    yield null;
-                }
-                String normalized = type.name().toLowerCase(Locale.ROOT);
-                yield new ParsedValue(normalized, normalized);
-            }
-            case OPEN_MODE -> {
-                String normalized = normalizeRequiredString(rawValue);
-                if (normalized == null) {
-                    yield null;
-                }
-                yield new ParsedValue(normalized, normalized);
-            }
-            case REWARDS_POOL -> {
-                String normalized = normalizeNullableString(rawValue);
-                if (!normalized.isEmpty() && !configLoader.getRewardPools().containsKey(normalized)) {
-                    yield null;
-                }
-                yield new ParsedValue(normalized, normalized);
-            }
+    private int parsePage(String value) {
+        try {
+            int parsed = Integer.parseInt(value);
+            return Math.max(parsed, 1);
+        } catch (NumberFormatException ex) {
+            return 1;
+        }
+    }
+
+    private String formatEvent(SyncEventType type, String crateId, String rewardId) {
+        String label = switch (type) {
+            case CRATE_OPEN -> "Apertura";
+            case REWARD_GRANTED -> "Recompensa";
+            case KEY_CONSUMED -> "Llave usada";
+            case COOLDOWN_SET -> "Cooldown";
         };
+        String detail = "crate=" + crateId;
+        if (rewardId != null && !rewardId.isBlank() && type == SyncEventType.REWARD_GRANTED) {
+            detail += " reward=" + rewardId;
+        }
+        return label + " " + detail;
     }
 
-    private FilterSpec parseFilter(String rawFilter) {
-        String[] parts = rawFilter.split("[:=]", 2);
-        if (parts.length != 2) {
-            return null;
+    private String buildHistoryCommand(String playerName, String crateId, int page) {
+        StringBuilder command = new StringBuilder("/crate history ").append(playerName);
+        if (crateId != null && !crateId.isBlank()) {
+            command.append(" ").append(crateId);
         }
-        String key = parts[0].toLowerCase(Locale.ROOT);
-        String value = parts[1];
-        return switch (key) {
-            case "type" -> {
-                CrateType type = parseCrateTypeStrict(value);
-                yield type == null ? null : FilterSpec.type(type);
-            }
-            case "open-mode" -> {
-                String normalized = normalizeRequiredString(value);
-                yield normalized == null ? null : FilterSpec.openMode(normalized);
-            }
-            case "rewards-pool" -> {
-                String normalized = normalizeNullableString(value);
-                if (!normalized.isEmpty() && !configLoader.getRewardPools().containsKey(normalized)) {
-                    yield null;
-                }
-                yield FilterSpec.rewardsPool(normalized);
-            }
-            default -> null;
-        };
-    }
-
-    private CrateType parseCrateTypeStrict(String value) {
-        if (value == null) {
-            return null;
-        }
-        return Arrays.stream(CrateType.values())
-                .filter(type -> type.name().equalsIgnoreCase(value.trim()))
-                .findFirst()
-                .orElse(null);
-    }
-
-    private String normalizeRequiredString(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private String normalizeNullableString(String value) {
-        if (value == null) {
-            return "";
-        }
-        String trimmed = value.trim();
-        if (trimmed.equalsIgnoreCase("none") || trimmed.equalsIgnoreCase("null")) {
-            return "";
-        }
-        return trimmed;
-    }
-
-    private Object getCurrentValue(CrateDefinition crate, FieldType fieldType, String field) {
-        return switch (fieldType) {
-            case STRING -> switch (field) {
-                case "display-name" -> Optional.ofNullable(crate.displayName()).orElse("");
-                case "key-model" -> Optional.ofNullable(crate.keyModel()).orElse("");
-                case "permission" -> Optional.ofNullable(crate.permission()).orElse("");
-                default -> "";
-            };
-            case INTEGER -> crate.cooldownSeconds();
-            case DECIMAL -> crate.cost();
-            case MATERIAL -> crate.keyMaterial().name();
-            case CRATE_TYPE -> crate.type().name().toLowerCase(Locale.ROOT);
-            case OPEN_MODE -> Optional.ofNullable(crate.openMode()).orElse("");
-            case REWARDS_POOL -> Optional.ofNullable(crate.rewardsPool()).orElse("");
-        };
-    }
-
-    private boolean valuesEqual(Object currentValue, Object newValue) {
-        if (currentValue instanceof Double currentDouble && newValue instanceof Double newDouble) {
-            return Double.compare(currentDouble, newDouble) == 0;
-        }
-        return Objects.equals(currentValue, newValue);
-    }
-
-    private String formatValue(Object value) {
-        if (value == null) {
-            return "";
-        }
-        if (value instanceof Double doubleValue) {
-            return String.valueOf(doubleValue);
-        }
-        return String.valueOf(value);
-    }
-
-    private enum FieldType {
-        STRING,
-        INTEGER,
-        DECIMAL,
-        MATERIAL,
-        CRATE_TYPE,
-        OPEN_MODE,
-        REWARDS_POOL
-    }
-
-    private record ParsedValue(Object value, String displayValue) {
-    }
-
-    private record FilterSpec(FilterType type, String stringValue, CrateType crateType) {
-        static FilterSpec type(CrateType type) {
-            return new FilterSpec(FilterType.CRATE_TYPE, null, type);
-        }
-
-        static FilterSpec openMode(String mode) {
-            return new FilterSpec(FilterType.OPEN_MODE, mode, null);
-        }
-
-        static FilterSpec rewardsPool(String pool) {
-            return new FilterSpec(FilterType.REWARDS_POOL, pool, null);
-        }
-
-        boolean matches(CrateDefinition crate) {
-            return switch (type) {
-                case CRATE_TYPE -> crate.type() == crateType;
-                case OPEN_MODE -> normalize(crate.openMode()).equalsIgnoreCase(normalize(stringValue));
-                case REWARDS_POOL -> normalize(crate.rewardsPool()).equalsIgnoreCase(normalize(stringValue));
-            };
-        }
-
-        private String normalize(String value) {
-            return value == null ? "" : value.trim();
-        }
-    }
-
-    private enum FilterType {
-        CRATE_TYPE,
-        OPEN_MODE,
-        REWARDS_POOL
+        command.append(" ").append(page);
+        return command.toString();
     }
 }

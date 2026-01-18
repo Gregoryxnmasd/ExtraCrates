@@ -58,48 +58,44 @@ public class SyncBridge {
         }
     }
 
-    public void recordCrateOpen(UUID playerId, String crateId) {
+    public void recordCrateOpen(UUID playerId, String crateId, Instant timestamp) {
         if (!settings.isEnabled() || degraded) {
             return;
         }
-        SyncEvent event = new SyncEvent(SyncEventType.CRATE_OPEN, settings.getServerId(), playerId, crateId, null, Instant.now());
+        SyncEvent event = new SyncEvent(SyncEventType.CRATE_OPEN, settings.getServerId(), playerId, crateId, null, timestamp);
         provider.publish(event);
         store.recordCrateOpen(playerId, crateId, event.timestamp(), settings.getServerId());
+        store.recordEvent(playerId, crateId, SyncEventType.CRATE_OPEN, null, event.timestamp(), settings.getServerId());
     }
 
-    public void recordRewardGranted(UUID playerId, String crateId, String rewardId) {
+    public void recordRewardGranted(UUID playerId, String crateId, String rewardId, Instant timestamp) {
         if (!settings.isEnabled() || degraded) {
             return;
         }
-        SyncEvent event = new SyncEvent(SyncEventType.REWARD_GRANTED, settings.getServerId(), playerId, crateId, rewardId, Instant.now());
+        SyncEvent event = new SyncEvent(SyncEventType.REWARD_GRANTED, settings.getServerId(), playerId, crateId, rewardId, timestamp);
         provider.publish(event);
         store.recordRewardGranted(playerId, crateId, rewardId, event.timestamp(), settings.getServerId());
+        store.recordEvent(playerId, crateId, SyncEventType.REWARD_GRANTED, rewardId, event.timestamp(), settings.getServerId());
     }
 
-    public void recordPendingReward(UUID playerId, String crateId, String rewardId) {
+    public void recordKeyConsumed(UUID playerId, String crateId, Instant timestamp) {
         if (!settings.isEnabled() || degraded) {
             return;
         }
-        SyncEvent event = new SyncEvent(SyncEventType.PENDING_REWARD, settings.getServerId(), playerId, crateId, rewardId, Instant.now());
-        provider.publish(event);
-    }
-
-    public void recordKeyConsumed(UUID playerId, String crateId) {
-        if (!settings.isEnabled() || degraded) {
-            return;
-        }
-        SyncEvent event = new SyncEvent(SyncEventType.KEY_CONSUMED, settings.getServerId(), playerId, crateId, null, Instant.now());
+        SyncEvent event = new SyncEvent(SyncEventType.KEY_CONSUMED, settings.getServerId(), playerId, crateId, null, timestamp);
         provider.publish(event);
         store.recordKeyConsumed(playerId, crateId, event.timestamp(), settings.getServerId());
+        store.recordEvent(playerId, crateId, SyncEventType.KEY_CONSUMED, null, event.timestamp(), settings.getServerId());
     }
 
-    public void recordCooldown(UUID playerId, String crateId) {
+    public void recordCooldown(UUID playerId, String crateId, Instant timestamp) {
         if (!settings.isEnabled() || degraded) {
             return;
         }
-        SyncEvent event = new SyncEvent(SyncEventType.COOLDOWN_SET, settings.getServerId(), playerId, crateId, null, Instant.now());
+        SyncEvent event = new SyncEvent(SyncEventType.COOLDOWN_SET, settings.getServerId(), playerId, crateId, null, timestamp);
         provider.publish(event);
         store.recordCooldown(playerId, crateId, event.timestamp(), settings.getServerId());
+        store.recordEvent(playerId, crateId, SyncEventType.COOLDOWN_SET, null, event.timestamp(), settings.getServerId());
     }
 
     public void flush() {
@@ -113,6 +109,17 @@ public class SyncBridge {
 
     public SyncStore getStore() {
         return store;
+    }
+
+    public List<CrateHistoryEntry> getHistory(UUID playerId, String crateId, int limit, int offset) {
+        if (!settings.isEnabled() || store == null) {
+            return List.of();
+        }
+        return store.getHistory(playerId, crateId, limit, offset);
+    }
+
+    public boolean isHistoryAvailable() {
+        return settings.isEnabled() && store != null && store.isHealthy();
     }
 
     @SuppressWarnings("unused")
@@ -158,10 +165,9 @@ public class SyncBridge {
         }
         switch (event.type()) {
             case COOLDOWN_SET -> sessionManager.applyRemoteCooldown(event.playerId(), event.crateId(), event.timestamp());
-            case KEY_CONSUMED -> sessionManager.applyRemoteKeyConsumed(event.playerId(), event.crateId());
-            case CRATE_OPEN -> sessionManager.applyRemoteOpen(event.playerId(), event.crateId());
-            case REWARD_GRANTED -> sessionManager.applyRemoteReward(event.playerId(), event.crateId(), event.rewardId());
-            case PENDING_REWARD -> sessionManager.applyRemotePendingReward(event.playerId(), event.crateId(), event.rewardId());
+            case KEY_CONSUMED -> sessionManager.applyRemoteKeyConsumed(event.playerId(), event.crateId(), event.timestamp());
+            case CRATE_OPEN -> sessionManager.applyRemoteOpen(event.playerId(), event.crateId(), event.timestamp());
+            case REWARD_GRANTED -> sessionManager.applyRemoteReward(event.playerId(), event.crateId(), event.rewardId(), event.timestamp());
         }
     }
 
@@ -208,6 +214,15 @@ public class SyncBridge {
 
         @Override
         public void recordRewardGranted(UUID playerId, String crateId, String rewardId, Instant timestamp, String serverId) {
+        }
+
+        @Override
+        public void recordEvent(UUID playerId, String crateId, SyncEventType type, String rewardId, Instant timestamp, String serverId) {
+        }
+
+        @Override
+        public List<CrateHistoryEntry> getHistory(UUID playerId, String crateId, int limit, int offset) {
+            return List.of();
         }
 
         @Override

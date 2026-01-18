@@ -17,8 +17,9 @@ import com.extracrates.storage.OpenHistoryFilter;
 import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
 import com.extracrates.storage.StorageSettings;
+import com.extracrates.sync.CrateHistoryEntry;
 import com.extracrates.sync.SyncBridge;
-import com.extracrates.sync.SyncSettings;
+import com.extracrates.sync.SyncEventType;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
 import net.kyori.adventure.bossbar.BossBar;
@@ -35,7 +36,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
@@ -59,8 +60,8 @@ public class SessionManager {
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Random> sessionRandoms = new HashMap<>();
-    private final Map<UUID, BossBar> cooldownBars = new HashMap<>();
-    private final Map<UUID, BukkitRunnable> cooldownTasks = new HashMap<>();
+    private final Map<UUID, Deque<CrateHistoryEntry>> history = new HashMap<>();
+    private static final int HISTORY_LIMIT = 200;
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, EconomyService economyService) {
         this.plugin = plugin;
@@ -130,6 +131,13 @@ public class SessionManager {
         sessions.put(player.getUniqueId(), session);
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
             consumeKey(player, crate);
+        }
+        if (!preview) {
+            Instant openedAt = Instant.now();
+            recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.CRATE_OPEN, openedAt);
+            if (syncBridge != null) {
+                syncBridge.recordCrateOpen(player.getUniqueId(), crate.id(), openedAt);
+            }
         }
         session.start();
         if (!preview) {
@@ -341,7 +349,10 @@ public class SessionManager {
             storage.setCooldown(player.getUniqueId(), cooldownKey, appliedAt);
         }
         if (record && syncBridge != null) {
-            syncBridge.recordCooldown(player.getUniqueId(), cooldownKey);
+            recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.COOLDOWN_SET, appliedAt);
+            syncBridge.recordCooldown(player.getUniqueId(), crate.id(), appliedAt);
+        } else if (record) {
+            recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.COOLDOWN_SET, appliedAt);
         }
     }
 
@@ -397,7 +408,11 @@ public class SessionManager {
         if (storageEnabled) {
             boolean consumed = storage.consumeKey(player.getUniqueId(), crate.id());
             if (consumed && record && syncBridge != null) {
-                syncBridge.recordKeyConsumed(player.getUniqueId(), crate.id());
+                Instant timestamp = Instant.now();
+                recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.KEY_CONSUMED, timestamp);
+                syncBridge.recordKeyConsumed(player.getUniqueId(), crate.id(), timestamp);
+            } else if (consumed && record) {
+                recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.KEY_CONSUMED, Instant.now());
             }
             return;
         }
@@ -420,7 +435,11 @@ public class SessionManager {
                 }
                 player.getInventory().setContents(contents);
                 if (record && syncBridge != null) {
-                    syncBridge.recordKeyConsumed(player.getUniqueId(), crate.id());
+                    Instant timestamp = Instant.now();
+                    recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.KEY_CONSUMED, timestamp);
+                    syncBridge.recordKeyConsumed(player.getUniqueId(), crate.id(), timestamp);
+                } else if (record) {
+                    recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.KEY_CONSUMED, Instant.now());
                 }
                 return;
             }
@@ -459,17 +478,10 @@ public class SessionManager {
     }
 
     public void recordRewardGranted(Player player, CrateDefinition crate, Reward reward) {
-        recordCrateOpen(player, crate, reward);
-    }
-
-    public void recordCrateOpen(Player player, CrateDefinition crate, Reward reward) {
         Instant timestamp = Instant.now();
-        if (storage != null) {
-            storage.logOpen(player.getUniqueId(), crate.id(), reward.id(), serverId, timestamp);
-        }
+        recordHistory(player.getUniqueId(), crate.id(), reward.id(), SyncEventType.REWARD_GRANTED, timestamp);
         if (syncBridge != null) {
-            syncBridge.recordCrateOpen(player.getUniqueId(), crate.id());
-            syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), reward.id());
+            syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), reward.id(), timestamp);
         }
     }
 
@@ -482,9 +494,10 @@ public class SessionManager {
 
     public void applyRemoteCooldown(UUID playerId, String crateId, Instant timestamp) {
         cooldowns.computeIfAbsent(playerId, key -> new HashMap<>()).put(crateId, timestamp);
+        recordHistory(playerId, crateId, null, SyncEventType.COOLDOWN_SET, timestamp);
     }
 
-    public void applyRemoteKeyConsumed(UUID playerId, String crateId) {
+    public void applyRemoteKeyConsumed(UUID playerId, String crateId, Instant timestamp) {
         CrateDefinition crate = configLoader.getCrates().get(crateId);
         if (crate == null) {
             return;
@@ -493,15 +506,17 @@ public class SessionManager {
         if (player != null) {
             consumeKey(player, crate, false);
         }
+        recordHistory(playerId, crateId, null, SyncEventType.KEY_CONSUMED, timestamp);
     }
 
-    public void applyRemoteOpen(UUID playerId, String crateId) {
+    public void applyRemoteOpen(UUID playerId, String crateId, Instant timestamp) {
         plugin.getLogger().info(() -> "[Sync] Apertura remota registrada " + playerId + " en crate " + crateId);
+        recordHistory(playerId, crateId, null, SyncEventType.CRATE_OPEN, timestamp);
     }
 
-    public void applyRemoteReward(UUID playerId, String crateId, String rewardId) {
-        clearPendingReward(playerId, crateId);
+    public void applyRemoteReward(UUID playerId, String crateId, String rewardId, Instant timestamp) {
         plugin.getLogger().info(() -> "[Sync] Recompensa remota registrada " + rewardId + " para " + playerId);
+        recordHistory(playerId, crateId, rewardId, SyncEventType.REWARD_GRANTED, timestamp);
     }
 
     public void applyRemotePendingReward(UUID playerId, String crateId, String rewardId) {
@@ -595,6 +610,45 @@ public class SessionManager {
         BukkitRunnable task = cooldownTasks.remove(playerId);
         if (task != null) {
             task.cancel();
+        }
+    }
+
+    public List<CrateHistoryEntry> getHistory(UUID playerId, String crateId, int limit, int offset) {
+        if (syncBridge != null && syncBridge.isHistoryAvailable()) {
+            return syncBridge.getHistory(playerId, crateId, limit, offset);
+        }
+        return getLocalHistory(playerId, crateId, limit, offset);
+    }
+
+    private List<CrateHistoryEntry> getLocalHistory(UUID playerId, String crateId, int limit, int offset) {
+        Deque<CrateHistoryEntry> entries = history.get(playerId);
+        if (entries == null || entries.isEmpty()) {
+            return List.of();
+        }
+        int skipped = 0;
+        List<CrateHistoryEntry> result = new java.util.ArrayList<>();
+        for (CrateHistoryEntry entry : entries) {
+            if (crateId != null && !crateId.isBlank() && !crateId.equalsIgnoreCase(entry.crateId())) {
+                continue;
+            }
+            if (skipped < offset) {
+                skipped++;
+                continue;
+            }
+            result.add(entry);
+            if (result.size() >= limit) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    private void recordHistory(UUID playerId, String crateId, String rewardId, SyncEventType type, Instant timestamp) {
+        Deque<CrateHistoryEntry> entries = history.computeIfAbsent(playerId, key -> new ArrayDeque<>());
+        String serverId = syncBridge != null && syncBridge.getSettings() != null ? syncBridge.getSettings().getServerId() : "local";
+        entries.addFirst(new CrateHistoryEntry(type, playerId, crateId, rewardId, timestamp, serverId));
+        while (entries.size() > HISTORY_LIMIT) {
+            entries.removeLast();
         }
     }
 }

@@ -423,7 +423,7 @@ public class CrateSession {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
         }
-        showRewardMessage(reward);
+        sessionManager.recordRewardGranted(player, crate, reward);
         if (rewardIndex >= rewards.size() - 1) {
             return;
         }
