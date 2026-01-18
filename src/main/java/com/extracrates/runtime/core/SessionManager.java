@@ -30,7 +30,9 @@ import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +51,7 @@ public class SessionManager {
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Random> sessionRandoms = new HashMap<>();
+    private final Map<UUID, Deque<Instant>> recentOpens = new HashMap<>();
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, EconomyService economyService) {
         this.plugin = plugin;
@@ -65,6 +68,7 @@ public class SessionManager {
         sessions.values().forEach(CrateSession::end);
         sessions.clear();
         sessionRandoms.clear();
+        recentOpens.clear();
         if (syncBridge != null) {
             syncBridge.shutdown();
         }
@@ -79,7 +83,7 @@ public class SessionManager {
 
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
-            player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
+            player.sendMessage(languageManager.getMessage("session.already-in-progress"));
             return false;
         }
         CutscenePath path = resolveCutscenePath(crate, player);
@@ -89,14 +93,21 @@ public class SessionManager {
             return false;
         }
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
-            player.sendMessage(Component.text("Necesitas una llave para esta crate."));
+            player.sendMessage(languageManager.getMessage("session.key-required"));
             return false;
         }
         if (!preview && isOnCooldown(player, crate)) {
-            player.sendMessage(Component.text("Esta crate está en cooldown."));
+            player.sendMessage(languageManager.getMessage("session.cooldown"));
+            return false;
+        }
+        if (!preview && isRateLimited(player)) {
+            player.sendMessage(Component.text("Has alcanzado el límite de aperturas por minuto."));
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
+        if (rewardPool.preventDuplicateItems() && rewardPool.rollCount() > rewardPool.rewards().size()) {
+            player.sendMessage(languageManager.getMessage("session.duplicate-reroll"));
+        }
         List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
         if (rewards.isEmpty()) {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
@@ -109,6 +120,7 @@ public class SessionManager {
         }
         session.start();
         if (!preview) {
+            recordOpen(player);
             applyCooldown(player, crate);
         }
         return true;
@@ -227,6 +239,34 @@ public class SessionManager {
         }
         if (record && syncBridge != null) {
             syncBridge.recordCooldown(player.getUniqueId(), crate.id());
+        }
+    }
+
+    private boolean isRateLimited(Player player) {
+        int limit = configLoader.getMainConfig().getInt("rate-limit.opens-per-minute", 0);
+        if (limit <= 0) {
+            return false;
+        }
+        Deque<Instant> opens = recentOpens.computeIfAbsent(player.getUniqueId(), key -> new ArrayDeque<>());
+        pruneOldOpens(opens, Instant.now());
+        return opens.size() >= limit;
+    }
+
+    private void recordOpen(Player player) {
+        int limit = configLoader.getMainConfig().getInt("rate-limit.opens-per-minute", 0);
+        if (limit <= 0) {
+            return;
+        }
+        Deque<Instant> opens = recentOpens.computeIfAbsent(player.getUniqueId(), key -> new ArrayDeque<>());
+        Instant now = Instant.now();
+        pruneOldOpens(opens, now);
+        opens.addLast(now);
+    }
+
+    private void pruneOldOpens(Deque<Instant> opens, Instant now) {
+        Instant threshold = now.minusSeconds(60);
+        while (!opens.isEmpty() && opens.peekFirst().isBefore(threshold)) {
+            opens.removeFirst();
         }
     }
 
