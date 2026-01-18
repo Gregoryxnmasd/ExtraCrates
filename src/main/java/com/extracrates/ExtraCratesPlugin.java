@@ -51,7 +51,9 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         configLoader = new ConfigLoader(this);
         configLoader.loadAll();
         ConfigValidator validator = new ConfigValidator(this, configLoader);
-        validator.report(validator.validate());
+        ConfigValidator.ValidationReport report = validator.validate();
+        validator.report(report);
+        configLoader.setConfigValid(report.isValid());
 
         languageManager = new LanguageManager(this);
         languageManager.load();

@@ -19,6 +19,7 @@ public class ConfigLoader {
     private final Map<String, RewardPool> rewardPools = new HashMap<>();
     private final Map<String, CutscenePath> paths = new HashMap<>();
     private SettingsSnapshot settings;
+    private boolean configValid = true;
 
     public ConfigLoader(ExtraCratesPlugin plugin) {
         this.plugin = plugin;
@@ -61,6 +62,14 @@ public class ConfigLoader {
             settings = SettingsSnapshot.fromConfig(getMainConfig());
         }
         return settings;
+    }
+
+    public boolean isConfigValid() {
+        return configValid;
+    }
+
+    public void setConfigValid(boolean configValid) {
+        this.configValid = configValid;
     }
 
     public Integer resolveModelData(String modelKey) {

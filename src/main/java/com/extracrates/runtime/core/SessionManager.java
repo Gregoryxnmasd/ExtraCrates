@@ -78,6 +78,10 @@ public class SessionManager {
     }
 
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
+        if (!configLoader.isConfigValid()) {
+            player.sendMessage(Component.text("La configuración es inválida. Revisa el reporte de validación."));
+            return false;
+        }
         if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
             return false;
