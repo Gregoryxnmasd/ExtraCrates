@@ -26,9 +26,9 @@ public interface CrateStorage {
 
     Optional<PendingReward> getPendingReward(UUID playerId);
 
-    void setPendingReward(UUID playerId, PendingReward pendingReward);
+    void setPendingReward(UUID playerId, String crateId, String rewardId);
 
-    void clearPendingReward(UUID playerId);
+    void markRewardDelivered(UUID playerId, String crateId, String rewardId);
 
     void close();
 }

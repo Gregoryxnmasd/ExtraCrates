@@ -1,6 +1,7 @@
 package com.extracrates.storage;
 
-import java.time.Instant;
-
-public record PendingReward(String crateId, String rewardId, Instant createdAt) {
+public record PendingReward(String crateId, String rewardId, PendingRewardStatus status) {
+    public boolean isPending() {
+        return status == PendingRewardStatus.PENDING;
+    }
 }

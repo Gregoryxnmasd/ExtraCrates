@@ -240,7 +240,7 @@ public class SqlStorage implements CrateStorage {
 
     @Override
     public Optional<PendingReward> getPendingReward(UUID playerId) {
-        String sql = "SELECT crate_id, reward_id, created_at FROM crate_pending_rewards WHERE player_uuid=?";
+        String sql = "SELECT crate_id, reward_id, status FROM crate_pending_rewards WHERE player_uuid=?";
         return withConnection(connection -> {
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.setString(1, playerId.toString());
@@ -250,27 +250,28 @@ public class SqlStorage implements CrateStorage {
                     }
                     String crateId = resultSet.getString("crate_id");
                     String rewardId = resultSet.getString("reward_id");
-                    long createdAt = resultSet.getLong("created_at");
-                    return Optional.of(new PendingReward(crateId, rewardId, Instant.ofEpochMilli(createdAt)));
+                    String status = resultSet.getString("status");
+                    return Optional.of(new PendingReward(crateId, rewardId, PendingRewardStatus.fromString(status)));
                 }
             }
         });
     }
 
     @Override
-    public void setPendingReward(UUID playerId, PendingReward pendingReward) {
+    public void setPendingReward(UUID playerId, String crateId, String rewardId) {
         withConnection(connection -> {
             String deleteSql = "DELETE FROM crate_pending_rewards WHERE player_uuid=?";
             try (PreparedStatement delete = connection.prepareStatement(deleteSql)) {
                 delete.setString(1, playerId.toString());
                 delete.executeUpdate();
             }
-            String insertSql = "INSERT INTO crate_pending_rewards (player_uuid, crate_id, reward_id, created_at) VALUES (?, ?, ?, ?)";
+            String insertSql = "INSERT INTO crate_pending_rewards (player_uuid, crate_id, reward_id, status, updated_at) VALUES (?, ?, ?, ?, ?)";
             try (PreparedStatement insert = connection.prepareStatement(insertSql)) {
                 insert.setString(1, playerId.toString());
-                insert.setString(2, pendingReward.crateId());
-                insert.setString(3, pendingReward.rewardId());
-                insert.setLong(4, pendingReward.createdAt().toEpochMilli());
+                insert.setString(2, crateId);
+                insert.setString(3, rewardId);
+                insert.setString(4, PendingRewardStatus.PENDING.name());
+                insert.setLong(5, Instant.now().toEpochMilli());
                 insert.executeUpdate();
             }
             return null;
@@ -278,12 +279,28 @@ public class SqlStorage implements CrateStorage {
     }
 
     @Override
-    public void clearPendingReward(UUID playerId) {
-        String sql = "DELETE FROM crate_pending_rewards WHERE player_uuid=?";
+    public void markRewardDelivered(UUID playerId, String crateId, String rewardId) {
         withConnection(connection -> {
-            try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                statement.setString(1, playerId.toString());
-                statement.executeUpdate();
+            String updateSql = "UPDATE crate_pending_rewards SET status=?, updated_at=? WHERE player_uuid=? AND crate_id=? AND reward_id=?";
+            try (PreparedStatement update = connection.prepareStatement(updateSql)) {
+                update.setString(1, PendingRewardStatus.DELIVERED.name());
+                update.setLong(2, Instant.now().toEpochMilli());
+                update.setString(3, playerId.toString());
+                update.setString(4, crateId);
+                update.setString(5, rewardId);
+                int updated = update.executeUpdate();
+                if (updated > 0) {
+                    return null;
+                }
+            }
+            String insertSql = "INSERT INTO crate_pending_rewards (player_uuid, crate_id, reward_id, status, updated_at) VALUES (?, ?, ?, ?, ?)";
+            try (PreparedStatement insert = connection.prepareStatement(insertSql)) {
+                insert.setString(1, playerId.toString());
+                insert.setString(2, crateId);
+                insert.setString(3, rewardId);
+                insert.setString(4, PendingRewardStatus.DELIVERED.name());
+                insert.setLong(5, Instant.now().toEpochMilli());
+                insert.executeUpdate();
             }
             return null;
         });

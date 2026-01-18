@@ -69,9 +69,7 @@ public class CrateSession {
     private ItemStack previousHelmet;
     private float previousWalkSpeed;
     private float previousFlySpeed;
-    private boolean gamemodeSnapshotTaken;
-    private boolean speedSnapshotTaken;
-    private boolean helmetSnapshotTaken;
+    private boolean rewardDelivered;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -453,28 +451,9 @@ public class CrateSession {
         if (reward == null) {
             return;
         }
-        CrateRewardEvent rewardEvent = new CrateRewardEvent(player, crate, reward, preview);
-        Bukkit.getPluginManager().callEvent(rewardEvent);
-        if (rewardEvent.isCancelled()) {
-            return;
-        }
-        reward = rewardEvent.getReward();
-        if (reward == null) {
-            return;
-        }
-        if (isQaMode()) {
-            player.sendMessage(languageManager.getMessage("session.error.qa-mode"));
-        } else {
-            player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.displayName())));
-            ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-            player.getInventory().addItem(item);
-
-            for (String command : reward.commands()) {
-                String parsed = command.replace("%player%", player.getName());
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
-            }
-        }
-        sessionManager.recordRewardGranted(player, crate, reward);
+        sessionManager.grantReward(player, crate, reward);
+        sessionManager.markRewardDelivered(player, crate, reward);
+        rewardDelivered = true;
         if (rewardIndex >= rewards.size() - 1) {
             return;
         }
@@ -610,11 +589,9 @@ public class CrateSession {
                 setTextDisplayText(hologram, textComponent);
             }
         }
-        sendRerollActionBar();
-    }
-
-    private boolean isQaMode() {
-        return configLoader.getMainConfig().getBoolean("qa-mode", false);
+        if (!rewardDelivered) {
+            sessionManager.updatePendingReward(player, crate, reward, preview);
+        }
     }
 
     private void executeCutsceneCommands(String key, Reward reward) {
@@ -853,17 +830,12 @@ public class CrateSession {
         return preview;
     }
 
-    public boolean registerInput() {
-        int debounceTicks = Math.max(0, configLoader.getMainConfig().getInt("cutscene.input-debounce-ticks", 0));
-        if (debounceTicks <= 0) {
-            lastInputTick = elapsedTicks;
-            return true;
-        }
-        if (lastInputTick >= 0 && elapsedTicks - lastInputTick < debounceTicks) {
-            return false;
-        }
-        lastInputTick = elapsedTicks;
-        return true;
+    public Reward getActiveReward() {
+        return getCurrentReward();
+    }
+
+    public CrateDefinition getCrate() {
+        return crate;
     }
 
     private boolean toggleHud(boolean hidden) {
