@@ -51,7 +51,7 @@ public class CrateSession {
     private Entity hologram;
     private BukkitRunnable task;
     private BukkitRunnable musicTask;
-    private BukkitRunnable uiTask;
+    private BukkitRunnable timeoutTask;
 
     private int rewardIndex;
     private int rerollsUsed;
@@ -69,9 +69,9 @@ public class CrateSession {
     private ItemStack previousHelmet;
     private float previousWalkSpeed;
     private float previousFlySpeed;
-    private ItemStack[] previousInventoryContents;
-    private ItemStack[] previousArmorContents;
-    private ItemStack previousOffHand;
+    private boolean gamemodeSnapshotTaken;
+    private boolean speedSnapshotTaken;
+    private boolean helmetSnapshotTaken;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -116,6 +116,11 @@ public class CrateSession {
         nextRewardSwitchTick = rewardSwitchTicks;
         resolveUiSettings();
         Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
+        previousGameMode = player.getGameMode();
+        gamemodeSnapshotTaken = true;
+        previousWalkSpeed = player.getWalkSpeed();
+        previousFlySpeed = player.getFlySpeed();
+        speedSnapshotTaken = true;
         spawnCamera(start);
         applySpectatorMode();
         spawnRewardDisplay();
@@ -124,7 +129,7 @@ public class CrateSession {
         }
         sendRerollActionBar();
         startMusic();
-        scheduleUiMessage();
+        scheduleTimeout();
         startCutscene();
     }
 
@@ -154,6 +159,8 @@ public class CrateSession {
         sessionManager.applySpectator(player, speedModifierKey, modifierValue);
         player.setSpectatorTarget(cameraEntity);
 
+        previousHelmet = player.getInventory().getHelmet();
+        helmetSnapshotTaken = true;
         String overlayModel = crate.cutsceneSettings().overlayModel();
         if (overlayModel != null && !overlayModel.isEmpty()) {
             ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
@@ -349,6 +356,26 @@ public class CrateSession {
             }
         };
         task.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    private void scheduleTimeout() {
+        int maxDurationTicks = configLoader.getMainConfig().getInt("sessions.max-duration-ticks", 0);
+        if (maxDurationTicks <= 0) {
+            return;
+        }
+        timeoutTask = new BukkitRunnable() {
+            int ticks = 0;
+
+            @Override
+            public void run() {
+                ticks++;
+                if (ticks > maxDurationTicks) {
+                    cancel();
+                    end();
+                }
+            }
+        };
+        timeoutTask.runTaskTimer(plugin, 1L, 1L);
     }
 
     private List<Location> buildTimeline(World world, CutscenePath path) {
@@ -682,8 +709,8 @@ public class CrateSession {
         if (musicTask != null) {
             musicTask.cancel();
         }
-        if (uiTask != null) {
-            uiTask.cancel();
+        if (timeoutTask != null) {
+            timeoutTask.cancel();
         }
         stopMusic();
         untrackEntity(cameraEntity);
@@ -702,15 +729,27 @@ public class CrateSession {
         if (hologram != null && !hologram.isDead()) {
             hologram.remove();
         }
-        restoreInventory();
-        restorePlayerState();
+        if (gamemodeSnapshotTaken && previousGameMode != null) {
+            player.setGameMode(previousGameMode);
+        }
+        player.setSpectatorTarget(null);
         if (speedModifierKey != null) {
             sessionManager.removeSpectatorModifier(player, speedModifierKey);
         }
-        player.setWalkSpeed(previousWalkSpeed);
-        player.setFlySpeed(previousFlySpeed);
-        toggleHud(false);
-        player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet != null ? previousHelmet : new ItemStack(Material.AIR));
+        if (speedSnapshotTaken) {
+            player.setWalkSpeed(previousWalkSpeed);
+            player.setFlySpeed(previousFlySpeed);
+        }
+        if (hudHiddenApplied) {
+            toggleHud(false);
+        }
+        if (helmetSnapshotTaken) {
+            if (previousHelmet != null) {
+                player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet);
+            } else {
+                player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
+            }
+        }
         sessionManager.removeSession(player.getUniqueId());
         logVerbose("Sesion limpiada: jugador=%s crate=%s", player.getName(), crate.id());
     }
