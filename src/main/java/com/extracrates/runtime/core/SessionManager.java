@@ -95,6 +95,10 @@ public class SessionManager {
             logVerbose("Fallido: jugador=%s crate=%s preview=%s (pool nulo)", player.getName(), crate.id(), preview);
             return false;
         }
+        if (!isPlayerInAllowedArea(player, crate)) {
+            player.sendMessage(languageManager.getMessage("session.outside-allowed-area"));
+            return false;
+        }
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
             player.sendMessage(Component.text("Necesitas una llave para esta crate."));
             logVerbose("Fallido: jugador=%s crate=%s (sin llave)", player.getName(), crate.id());
@@ -264,6 +268,14 @@ public class SessionManager {
             return null;
         }
         return configLoader.getRewardPools().get(crate.rewardsPool());
+    }
+
+    private boolean isPlayerInAllowedArea(Player player, CrateDefinition crate) {
+        CrateDefinition.AllowedArea allowedArea = crate.allowedArea();
+        if (allowedArea == null) {
+            return true;
+        }
+        return allowedArea.contains(player.getLocation());
     }
 
     private boolean isOnCooldown(Player player, CrateDefinition crate) {

@@ -14,6 +14,7 @@ session:
   no-permission: "&cYou don't have permission to open this crate."
   key-required: "&cYou need a key for this crate."
   cooldown: "&cThis crate is on cooldown."
+  outside-allowed-area: "&cYou must be inside the allowed area to open this crate."
   no-rewards: "&cNo rewards configured."
   duplicate-reroll: "&eOnly one unique reward available, forced re-roll applied."
   reward-received: "&aYou received: %reward%"
