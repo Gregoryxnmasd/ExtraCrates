@@ -36,7 +36,7 @@ import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -482,79 +482,17 @@ public class SessionManager {
         }
     }
 
-    public void updatePendingReward(Player player, CrateDefinition crate, Reward reward) {
-        if (storage == null || reward == null) {
+    public void grantKey(Player player, CrateDefinition crate, int amount) {
+        if (amount <= 0) {
             return;
         }
-        storage.setPendingReward(player.getUniqueId(), crate.id(), reward.id(), Instant.now());
-    }
-
-    public void claimPendingRewards(Player player) {
-        if (storage == null) {
+        if (storageEnabled) {
+            storage.addKey(player.getUniqueId(), crate.id(), amount);
             return;
         }
-        List<PendingReward> pendingRewards = storage.getPendingRewards(player.getUniqueId());
-        if (pendingRewards.isEmpty()) {
-            return;
-        }
-        for (PendingReward pending : pendingRewards) {
-            if (pending.status() != RewardDeliveryStatus.PENDING) {
-                continue;
-            }
-            CrateDefinition crate = configLoader.getCrates().get(pending.crateId());
-            if (crate == null) {
-                plugin.getLogger().warning("Recompensa pendiente sin crate: " + pending.crateId());
-                continue;
-            }
-            Reward reward = findReward(crate, pending.rewardId());
-            if (reward == null) {
-                plugin.getLogger().warning("Recompensa pendiente no encontrada: " + pending.rewardId());
-                continue;
-            }
-            tryGrantReward(player, crate, reward);
-        }
-    }
-
-    public boolean tryGrantReward(Player player, CrateDefinition crate, Reward reward) {
-        if (reward == null) {
-            return false;
-        }
-        if (isQaMode()) {
-            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
-            return false;
-        }
-        if (storage != null && !storage.markRewardDelivered(player.getUniqueId(), crate.id(), reward.id(), Instant.now())) {
-            return false;
-        }
-        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
-        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-        player.getInventory().addItem(item);
-
-        for (String command : reward.commands()) {
-            String parsed = command.replace("%player%", player.getName());
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
-        }
-        recordRewardGranted(player, crate, reward);
-        return true;
-    }
-
-    public void recordDeliveryStarted(Player player, CrateDefinition crate, Reward reward, int attempt) {
-        recordDeliveryStatus(player, crate, reward, DeliveryStatus.STARTED, attempt);
-    }
-
-    public void recordDeliveryCompleted(Player player, CrateDefinition crate, Reward reward, int attempt) {
-        recordDeliveryStatus(player, crate, reward, DeliveryStatus.COMPLETED, attempt);
-    }
-
-    public void recordDeliveryPending(Player player, CrateDefinition crate, Reward reward, int attempt) {
-        recordDeliveryStatus(player, crate, reward, DeliveryStatus.PENDING, attempt);
-    }
-
-    private void recordDeliveryStatus(Player player, CrateDefinition crate, Reward reward, DeliveryStatus status, int attempt) {
-        if (storage == null || reward == null || crate == null || player == null) {
-            return;
-        }
-        storage.recordDelivery(player.getUniqueId(), crate.id(), reward.id(), status, attempt, Instant.now());
+        ItemStack keyItem = buildKeyItem(crate);
+        keyItem.setAmount(amount);
+        player.getInventory().addItem(keyItem);
     }
 
     public void applyRemoteCooldown(UUID playerId, String crateId, Instant timestamp) {
@@ -672,59 +610,21 @@ public class SessionManager {
         }
     }
 
-    public List<CrateHistoryEntry> getHistory(UUID playerId, String crateId, int limit, int offset) {
-        if (syncBridge != null && syncBridge.isHistoryAvailable()) {
-            return syncBridge.getHistory(playerId, crateId, limit, offset);
-        }
-        return getLocalHistory(playerId, crateId, limit, offset);
-    }
-
-    private List<CrateHistoryEntry> getLocalHistory(UUID playerId, String crateId, int limit, int offset) {
-        Deque<CrateHistoryEntry> entries = history.get(playerId);
-        if (entries == null || entries.isEmpty()) {
-            return List.of();
-        }
-        int skipped = 0;
-        List<CrateHistoryEntry> result = new java.util.ArrayList<>();
-        for (CrateHistoryEntry entry : entries) {
-            if (crateId != null && !crateId.isBlank() && !crateId.equalsIgnoreCase(entry.crateId())) {
-                continue;
+    private ItemStack buildKeyItem(CrateDefinition crate) {
+        ItemStack key = new ItemStack(crate.keyMaterial());
+        ItemMeta meta = key.getItemMeta();
+        if (meta != null) {
+            String keyName = languageManager.getRaw(
+                    "command.key-item-name",
+                    java.util.Map.of("crate_name", crate.displayName())
+            );
+            meta.displayName(TextUtil.color(keyName));
+            int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.keyModel());
+            if (modelData >= 0) {
+                meta.setCustomModelData(modelData);
             }
-            if (skipped < offset) {
-                skipped++;
-                continue;
-            }
-            result.add(entry);
-            if (result.size() >= limit) {
-                break;
-            }
+            key.setItemMeta(meta);
         }
-        return result;
-    }
-
-    private void recordHistory(UUID playerId, String crateId, String rewardId, SyncEventType type, Instant timestamp) {
-        Deque<CrateHistoryEntry> entries = history.computeIfAbsent(playerId, key -> new ArrayDeque<>());
-        String serverId = syncBridge != null && syncBridge.getSettings() != null ? syncBridge.getSettings().getServerId() : "local";
-        entries.addFirst(new CrateHistoryEntry(type, playerId, crateId, rewardId, timestamp, serverId));
-        while (entries.size() > HISTORY_LIMIT) {
-            entries.removeLast();
-        }
-    }
-
-    private Reward findReward(CrateDefinition crate, String rewardId) {
-        RewardPool rewardPool = resolveRewardPool(crate);
-        if (rewardPool == null) {
-            return null;
-        }
-        for (Reward reward : rewardPool.rewards()) {
-            if (reward.id().equals(rewardId)) {
-                return reward;
-            }
-        }
-        return null;
-    }
-
-    private boolean isQaMode() {
-        return configLoader.getMainConfig().getBoolean("qa-mode", false);
+        return key;
     }
 }
