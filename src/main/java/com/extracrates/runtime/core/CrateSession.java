@@ -11,6 +11,7 @@ import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Display;
@@ -51,6 +52,9 @@ public class CrateSession {
     private Location rewardBaseLocation;
     private Location hologramBaseLocation;
     private Transformation rewardBaseTransform;
+    private int rerollEnabledAtTick;
+    private boolean rerollLocked;
+    private int selectedRewardIndex;
 
     private GameMode previousGameMode;
     private NamespacedKey speedModifierKey;
@@ -91,6 +95,9 @@ public class CrateSession {
         elapsedTicks = 0;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
+        rerollEnabledAtTick = rewardSwitchTicks;
+        rerollLocked = false;
+        selectedRewardIndex = -1;
         Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
         previousGameMode = player.getGameMode();
         previousWalkSpeed = player.getWalkSpeed();
@@ -219,7 +226,8 @@ public class CrateSession {
                 cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
                 elapsedTicks++;
-                if (rewards.size() > 1 && rewardSwitchTicks > 0) {
+                updateRerollDisplay();
+                if (!rerollLocked && rewards.size() > 1 && rewardSwitchTicks > 0) {
                     while (elapsedTicks >= nextRewardSwitchTick && rewardIndex < rewards.size() - 1) {
                         rewardIndex++;
                         nextRewardSwitchTick += rewardSwitchTicks;
@@ -295,6 +303,9 @@ public class CrateSession {
     }
 
     private void finish() {
+        if (rerollLocked && selectedRewardIndex >= 0 && selectedRewardIndex < rewards.size()) {
+            rewardIndex = selectedRewardIndex;
+        }
         if (!preview) {
             executeReward();
         }
@@ -351,6 +362,24 @@ public class CrateSession {
             String name = format.replace("%reward_name%", reward.displayName());
             hologram.text(TextUtil.color(name));
         }
+    }
+
+    public void handleRerollInput(boolean shift) {
+        if (rewards == null || rewards.size() <= 1) {
+            return;
+        }
+        if (elapsedTicks < rerollEnabledAtTick || rerollLocked) {
+            return;
+        }
+        if (shift) {
+            rerollLocked = true;
+            selectedRewardIndex = rewardIndex;
+            updateRerollDisplay();
+            return;
+        }
+        rewardIndex = (rewardIndex + 1) % rewards.size();
+        refreshRewardDisplay();
+        updateRerollDisplay();
     }
 
     private boolean isQaMode() {
@@ -415,6 +444,7 @@ public class CrateSession {
         } else {
             player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
         }
+        clearRerollDisplay();
         sessionManager.removeSession(player.getUniqueId());
     }
 
@@ -509,5 +539,27 @@ public class CrateSession {
         } catch (IllegalArgumentException ex) {
             return SoundCategory.MUSIC;
         }
+    }
+
+    private void updateRerollDisplay() {
+        if (rewards == null || rewards.size() <= 1) {
+            return;
+        }
+        Component message;
+        if (rerollLocked) {
+            message = Component.text("Recompensa seleccionada", NamedTextColor.YELLOW);
+        } else if (elapsedTicks >= rerollEnabledAtTick) {
+            message = Component.text("Clic para reroll \u2022 Shift para reclamar", NamedTextColor.YELLOW);
+        } else {
+            message = Component.text("Reroll disponible pronto...", NamedTextColor.YELLOW);
+        }
+        player.sendActionBar(message);
+    }
+
+    private void clearRerollDisplay() {
+        if (rewards == null || rewards.size() <= 1) {
+            return;
+        }
+        player.sendActionBar(Component.empty());
     }
 }
