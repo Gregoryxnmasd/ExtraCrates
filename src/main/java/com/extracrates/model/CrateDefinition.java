@@ -15,6 +15,8 @@ public record CrateDefinition(
         int cooldownSeconds,
         double cost,
         String permission,
+        java.util.List<String> allowedWorlds,
+        java.util.List<String> blockedWorlds,
         Location cameraStart,
         Location rewardAnchor,
         AnimationSettings animation,
@@ -52,6 +54,8 @@ public record CrateDefinition(
         int cooldown = section.getInt("cooldown-seconds", 0);
         double cost = section.getDouble("cost", 0);
         String permission = section.getString("permission", "extracrates.open");
+        java.util.List<String> allowedWorlds = section.getStringList("allowed-worlds");
+        java.util.List<String> blockedWorlds = section.getStringList("blocked-worlds");
 
         ConfigurationSection locations = section.getConfigurationSection("locations");
         Location cameraStart = null;
@@ -100,6 +104,8 @@ public record CrateDefinition(
                 cooldown,
                 cost,
                 permission,
+                allowedWorlds,
+                blockedWorlds,
                 cameraStart,
                 rewardAnchor,
                 animation,

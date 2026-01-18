@@ -13,6 +13,7 @@ session:
   already-in-progress: "&cYa tienes una cinemática en progreso."
   no-permission: "&cNo tienes permiso para abrir esta crate."
   key-required: "&cNecesitas una llave para esta crate."
+  world-blocked: "&cNo puedes abrir esta crate en este mundo."
   cooldown: "&cEsta crate está en enfriamiento."
   no-rewards: "&cNo hay recompensas configuradas."
   reward-received: "&aHas recibido: %reward%"

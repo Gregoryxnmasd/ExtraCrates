@@ -82,6 +82,10 @@ public class SessionManager {
             player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
             return false;
         }
+        if (isWorldBlocked(player, crate)) {
+            player.sendMessage(languageManager.getMessage("session.world-blocked"));
+            return false;
+        }
         CutscenePath path = resolveCutscenePath(crate, player);
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
@@ -112,6 +116,28 @@ public class SessionManager {
             applyCooldown(player, crate);
         }
         return true;
+    }
+
+    private boolean isWorldBlocked(Player player, CrateDefinition crate) {
+        String worldName = player.getWorld().getName();
+        List<String> blockedWorlds = crate.blockedWorlds();
+        if (blockedWorlds != null) {
+            for (String blockedWorld : blockedWorlds) {
+                if (blockedWorld.equalsIgnoreCase(worldName)) {
+                    return true;
+                }
+            }
+        }
+        List<String> allowedWorlds = crate.allowedWorlds();
+        if (allowedWorlds != null && !allowedWorlds.isEmpty()) {
+            for (String allowedWorld : allowedWorlds) {
+                if (allowedWorld.equalsIgnoreCase(worldName)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     public void endSession(UUID playerId) {
