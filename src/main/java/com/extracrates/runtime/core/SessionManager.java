@@ -549,4 +549,12 @@ public class SessionManager {
             FirstOpenGuide.start(plugin, configLoader, languageManager, player);
         }
     }
+
+    public boolean isStorageEnabled() {
+        return storageEnabled;
+    }
+
+    public CrateStorage getStorage() {
+        return storage;
+    }
 }
