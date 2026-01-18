@@ -101,11 +101,9 @@ public class CrateSession {
             finish();
             return;
         }
-        if (isAccessibilityMode()) {
-            startAccessibilitySession();
-            return;
+        if (preview) {
+            player.sendMessage(Component.text("Modo vista previa: solo vista previa."));
         }
-        sendActionBar("session.actionbar-start", Collections.emptyMap());
         rewardIndex = 0;
         rerollsUsed = 0;
         elapsedTicks = 0;
@@ -199,10 +197,10 @@ public class CrateSession {
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
             display.setItemStack(buildRewardDisplayItem(reward, anchor.getWorld()));
         });
-        hologram = spawnHologramEntity(displayLocation.clone().add(0, 0.4, 0), reward);
-
-        trackEntity(rewardDisplay);
-        trackEntity(hologram);
+        hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
+            display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(buildHologramText(reward))));
+            display.setBillboard(Display.Billboard.CENTER);
+        });
 
         hideFromOthers(rewardDisplay);
         hideFromOthers(hologram);
@@ -447,6 +445,9 @@ public class CrateSession {
     }
 
     private void executeReward() {
+        if (preview) {
+            return;
+        }
         Reward reward = getCurrentReward();
         if (reward == null) {
             return;
@@ -581,16 +582,7 @@ public class CrateSession {
             rewardDisplay.setItemStack(buildRewardDisplayItem(reward, rewardDisplay.getWorld()));
         }
         if (hologram != null) {
-            Component textComponent = buildHologramComponent(reward);
-            if (hologram instanceof ArmorStand armorStand) {
-                armorStand.setCustomName(TextUtil.serializeLegacy(textComponent));
-                armorStand.setCustomNameVisible(true);
-            } else {
-                setTextDisplayText(hologram, textComponent);
-            }
-        }
-        if (!rewardDelivered) {
-            sessionManager.updatePendingReward(player, crate, reward, preview);
+            hologram.text(configLoader.getSettings().applyHologramFont(TextUtil.color(buildHologramText(reward))));
         }
     }
 
@@ -663,20 +655,19 @@ public class CrateSession {
         return item;
     }
 
-    public static void clearRewardDisplayCache() {
-        REWARD_DISPLAY_CACHE.clear();
-    }
-
-    private void logTiming(RewardDisplayCacheKey cacheKey, boolean cacheHit, long start) {
-        double ms = (System.nanoTime() - start) / 1_000_000.0;
-        plugin.getLogger().info(String.format(
-                "CrateSession.buildRewardDisplayItem reward=%s world=%s model=%s cache=%s timeMs=%.3f",
-                cacheKey.rewardId(),
-                cacheKey.world(),
-                cacheKey.model(),
-                cacheHit ? "hit" : "miss",
-                ms
-        ));
+    private String buildHologramText(Reward reward) {
+        String format = reward.hologram();
+        if (format == null || format.isEmpty()) {
+            format = crate.animation().hologramFormat();
+        }
+        if (format == null || format.isEmpty()) {
+            format = "%reward_name%";
+        }
+        String name = format.replace("%reward_name%", reward.displayName());
+        if (preview) {
+            name = name + "\n&7(solo vista previa)";
+        }
+        return name;
     }
 
     public void end() {
