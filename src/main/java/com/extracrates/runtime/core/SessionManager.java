@@ -45,6 +45,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -98,18 +99,18 @@ public class SessionManager {
     }
 
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
-        if (!configLoader.isConfigValid()) {
-            player.sendMessage(Component.text("La configuración es inválida. Revisa el reporte de validación."));
-            return false;
-        }
         if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(languageManager.getMessage("session.already-in-progress"));
             return false;
         }
-        if (!preview) {
-            claimPendingReward(player);
+        String openMode = normalizeOpenMode(crate.openMode());
+        boolean rewardOnly = openMode.equals("reward-only");
+        boolean previewOnly = openMode.equals("preview-only");
+        boolean cinematic = openMode.equals("full") || openMode.equals("cinematic");
+        if (previewOnly && !preview) {
+            player.sendMessage(languageManager.getMessage("session.open-mode-preview-only"));
+            return false;
         }
-        CutscenePath path = resolveCutscenePath(crate, player);
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
             player.sendMessage(languageManager.getMessage("session.error.missing-reward-pool"));
@@ -120,11 +121,7 @@ public class SessionManager {
             return false;
         }
         if (!preview && isOnCooldown(player, crate)) {
-            long remainingSeconds = getCooldownRemainingSeconds(player, crate);
-            Map<String, String> placeholders = Map.of("seconds", String.valueOf(remainingSeconds));
-            player.sendMessage(languageManager.getMessage("session.cooldown", placeholders));
-            languageManager.sendActionBar(player, "session.cooldown-actionbar", placeholders);
-            showCooldownBossBar(player, crate, remainingSeconds);
+            player.sendMessage(languageManager.getMessage("session.cooldown"));
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
@@ -133,6 +130,24 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
+        if (rewardOnly) {
+            player.sendMessage(languageManager.getMessage("session.open-mode-reward-only"));
+            Reward reward = rewards.get(0);
+            if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
+                consumeKey(player, crate);
+            }
+            if (preview) {
+                player.sendMessage(languageManager.getMessage("session.preview-reward", Map.of("reward", reward.displayName())));
+            } else {
+                deliverReward(player, reward);
+                applyCooldown(player, crate);
+            }
+            return true;
+        }
+        if (cinematic) {
+            player.sendMessage(languageManager.getMessage("session.open-mode-cinematic"));
+        }
+        CutscenePath path = resolveCutscenePath(crate, player);
         CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview);
         sessions.put(player.getUniqueId(), session);
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
@@ -271,22 +286,28 @@ public class SessionManager {
         return configLoader.getRewardPools().get(crate.rewardsPool());
     }
 
-    private boolean chargeRerollCost(Player player, CrateDefinition crate) {
-        double rerollCost = crate.rerollCost();
-        if (rerollCost <= 0) {
-            return true;
+    private String normalizeOpenMode(String openMode) {
+        if (openMode == null || openMode.isBlank()) {
+            return "reward-only";
         }
-        if (!economyService.isAvailable()) {
-            return true;
+        return openMode.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private void deliverReward(Player player, Reward reward) {
+        if (reward == null) {
+            return;
         }
-        if (!economyService.hasBalance(player, rerollCost)) {
-            player.sendMessage(languageManager.getMessage("session.reroll-no-balance", Map.of(
-                    "amount", economyService.format(rerollCost)
-            )));
-            return false;
+        if (configLoader.getMainConfig().getBoolean("qa-mode", false)) {
+            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
+            return;
         }
-        EconomyResponse response = economyService.withdraw(player, rerollCost);
-        return response.type == EconomyResponse.ResponseType.SUCCESS;
+        player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.displayName())));
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+        player.getInventory().addItem(item);
+        for (String command : reward.commands()) {
+            String parsed = command.replace("%player%", player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        }
     }
 
     private boolean isOnCooldown(Player player, CrateDefinition crate) {
