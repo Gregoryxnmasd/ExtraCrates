@@ -23,6 +23,15 @@ CREATE TABLE IF NOT EXISTS crate_opens (
   INDEX idx_crate_opens_player (player_uuid)
 );
 
+CREATE TABLE IF NOT EXISTS crate_pending_rewards (
+  player_uuid CHAR(36) NOT NULL,
+  crate_id VARCHAR(64) NOT NULL,
+  reward_id VARCHAR(64) NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  updated_at BIGINT NOT NULL,
+  PRIMARY KEY (player_uuid, crate_id)
+);
+
 CREATE TABLE IF NOT EXISTS crate_locks (
   player_uuid CHAR(36) NOT NULL,
   crate_id VARCHAR(64) NOT NULL,

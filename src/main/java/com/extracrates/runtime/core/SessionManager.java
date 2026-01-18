@@ -14,7 +14,7 @@ import com.extracrates.storage.CrateStorage;
 import com.extracrates.storage.CrateOpenEntry;
 import com.extracrates.storage.LocalStorage;
 import com.extracrates.storage.PendingReward;
-import com.extracrates.storage.PendingRewardStatus;
+import com.extracrates.storage.RewardDeliveryStatus;
 import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
 import com.extracrates.storage.StorageSettings;
@@ -116,6 +116,10 @@ public class SessionManager {
             player.sendMessage(Component.text("Esta crate solo permite previews."));
             return false;
         }
+        if (!preview) {
+            claimPendingRewards(player);
+        }
+        CutscenePath path = resolveCutscenePath(crate, player);
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
             player.sendMessage(languageManager.getMessage("session.error.missing-reward-pool"));
@@ -135,30 +139,9 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
-        if (openMode.equals("reward-only")) {
-            Reward reward = rewards.get(0);
-            if (preview) {
-                player.sendMessage(Component.text("Preview de recompensa: ").append(TextUtil.color(reward.displayName())));
-            } else {
-                if (isQaMode()) {
-                    player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
-                } else {
-                    player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
-                    ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-                    player.getInventory().addItem(item);
-                    for (String command : reward.commands()) {
-                        String parsed = command.replace("%player%", player.getName());
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
-                    }
-                }
-                if (crate.type() == com.extracrates.model.CrateType.KEYED) {
-                    consumeKey(player, crate);
-                }
-                applyCooldown(player, crate);
-            }
-            return true;
+        if (!preview) {
+            updatePendingReward(player, crate, rewards.getFirst());
         }
-        CutscenePath path = resolveCutscenePath(crate, player);
         CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview);
         sessions.put(player.getUniqueId(), session);
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
@@ -488,85 +471,60 @@ public class SessionManager {
         }
     }
 
-    void setPendingReward(Player player, CrateDefinition crate, Reward reward) {
-        if (storage == null || player == null || crate == null || reward == null) {
+    public void updatePendingReward(Player player, CrateDefinition crate, Reward reward) {
+        if (storage == null || reward == null) {
             return;
         }
-        storage.setPendingReward(player.getUniqueId(), crate.id(), reward.id());
+        storage.setPendingReward(player.getUniqueId(), crate.id(), reward.id(), Instant.now());
     }
 
-    void markRewardDelivered(Player player, CrateDefinition crate, Reward reward) {
-        if (storage == null || player == null || crate == null || reward == null) {
+    public void claimPendingRewards(Player player) {
+        if (storage == null) {
             return;
         }
-        storage.markRewardDelivered(player.getUniqueId(), crate.id(), reward.id());
-    }
-
-    void updatePendingReward(Player player, CrateDefinition crate, Reward reward, boolean preview) {
-        if (preview) {
+        List<PendingReward> pendingRewards = storage.getPendingRewards(player.getUniqueId());
+        if (pendingRewards.isEmpty()) {
             return;
         }
-        setPendingReward(player, crate, reward);
-    }
-
-    public boolean claimPendingReward(Player player) {
-        if (storage == null || player == null) {
-            return false;
-        }
-        PendingReward pending = storage.getPendingReward(player.getUniqueId()).orElse(null);
-        if (pending == null || pending.status() != PendingRewardStatus.PENDING) {
-            return false;
-        }
-        CrateDefinition crate = configLoader.getCrates().get(pending.crateId());
-        if (crate == null) {
-            plugin.getLogger().warning("No se encontró la crate pendiente: " + pending.crateId());
-            storage.markRewardDelivered(player.getUniqueId(), pending.crateId(), pending.rewardId());
-            return false;
-        }
-        Reward reward = findReward(crate, pending.rewardId());
-        if (reward == null) {
-            plugin.getLogger().warning("No se encontró la recompensa pendiente: " + pending.rewardId());
-            storage.markRewardDelivered(player.getUniqueId(), pending.crateId(), pending.rewardId());
-            return false;
-        }
-        grantReward(player, crate, reward);
-        storage.markRewardDelivered(player.getUniqueId(), pending.crateId(), pending.rewardId());
-        return true;
-    }
-
-    private Reward findReward(CrateDefinition crate, String rewardId) {
-        RewardPool rewardPool = resolveRewardPool(crate);
-        if (rewardPool == null) {
-            return null;
-        }
-        for (Reward reward : rewardPool.rewards()) {
-            if (reward.id().equals(rewardId)) {
-                return reward;
+        for (PendingReward pending : pendingRewards) {
+            if (pending.status() != RewardDeliveryStatus.PENDING) {
+                continue;
             }
+            CrateDefinition crate = configLoader.getCrates().get(pending.crateId());
+            if (crate == null) {
+                plugin.getLogger().warning("Recompensa pendiente sin crate: " + pending.crateId());
+                continue;
+            }
+            Reward reward = findReward(crate, pending.rewardId());
+            if (reward == null) {
+                plugin.getLogger().warning("Recompensa pendiente no encontrada: " + pending.rewardId());
+                continue;
+            }
+            tryGrantReward(player, crate, reward);
         }
-        return null;
     }
 
-    void grantReward(Player player, CrateDefinition crate, Reward reward) {
-        if (reward == null || player == null) {
-            return;
+    public boolean tryGrantReward(Player player, CrateDefinition crate, Reward reward) {
+        if (reward == null) {
+            return false;
         }
         if (isQaMode()) {
             player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
-        } else {
-            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
-            ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-            player.getInventory().addItem(item);
-            for (String command : reward.commands()) {
-                String parsed = command.replace("%player%", player.getName());
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
-            }
+            return false;
+        }
+        if (storage != null && !storage.markRewardDelivered(player.getUniqueId(), crate.id(), reward.id(), Instant.now())) {
+            return false;
+        }
+        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+        player.getInventory().addItem(item);
+
+        for (String command : reward.commands()) {
+            String parsed = command.replace("%player%", player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
         }
         recordRewardGranted(player, crate, reward);
-    }
-
-    private boolean isQaMode() {
-        return configLoader.getMainConfig().getBoolean("qa-mode", false);
+        return true;
     }
 
     public void applyRemoteCooldown(UUID playerId, String crateId, Instant timestamp) {
@@ -727,5 +685,22 @@ public class SessionManager {
         while (entries.size() > HISTORY_LIMIT) {
             entries.removeLast();
         }
+    }
+
+    private Reward findReward(CrateDefinition crate, String rewardId) {
+        RewardPool rewardPool = resolveRewardPool(crate);
+        if (rewardPool == null) {
+            return null;
+        }
+        for (Reward reward : rewardPool.rewards()) {
+            if (reward.id().equals(rewardId)) {
+                return reward;
+            }
+        }
+        return null;
+    }
+
+    private boolean isQaMode() {
+        return configLoader.getMainConfig().getBoolean("qa-mode", false);
     }
 }

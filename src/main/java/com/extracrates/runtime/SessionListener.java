@@ -6,7 +6,7 @@ import com.extracrates.runtime.core.SessionManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
@@ -32,7 +32,7 @@ public class SessionListener implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        sessionManager.claimPendingReward(event.getPlayer());
+        sessionManager.claimPendingRewards(event.getPlayer());
     }
 
     @EventHandler(ignoreCancelled = true)

@@ -345,10 +345,7 @@ public class CrateSession {
                         nextRewardSwitchTick += rewardSwitchTicks;
                         refreshRewardDisplay();
                         if (!preview) {
-                            Reward reward = getCurrentReward();
-                            if (reward != null) {
-                                sessionManager.recordPendingReward(player.getUniqueId(), crate.id(), reward.id());
-                            }
+                            sessionManager.updatePendingReward(player, crate, getCurrentReward());
                         }
                     }
                 }
@@ -456,19 +453,8 @@ public class CrateSession {
         if (reward == null) {
             return;
         }
-        if (isQaMode()) {
-            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
-        } else {
-            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
-            ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-            player.getInventory().addItem(item);
-
-            for (String command : reward.commands()) {
-                String parsed = command.replace("%player%", player.getName());
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
-            }
-        }
-        if (rerollLocked || rewardIndex >= rewards.size() - 1) {
+        sessionManager.tryGrantReward(player, crate, reward);
+        if (rewardIndex >= rewards.size() - 1) {
             return;
         }
         while (elapsedTicks >= nextRewardSwitchTick && rewardIndex < rewards.size() - 1) {
@@ -596,31 +582,6 @@ public class CrateSession {
         }
         if (hologram != null) {
             hologram.text(configLoader.getSettings().applyHologramFont(TextUtil.color(buildHologramText(reward))));
-        }
-    }
-
-    private void executeCutsceneCommands(String key, Reward reward) {
-        if (!crate.cutsceneSettings().commandsEnabled()) {
-            return;
-        }
-        List<String> commands = configLoader.getMainConfig().getStringList("cutscene." + key);
-        if (commands == null || commands.isEmpty()) {
-            return;
-        }
-        String rewardId = reward != null ? reward.id() : "";
-        String rewardName = reward != null ? reward.displayName() : "";
-        for (String command : commands) {
-            if (command == null || command.isBlank()) {
-                continue;
-            }
-            String parsed = command
-                    .replace("%player%", player.getName())
-                    .replace("%player_uuid%", player.getUniqueId().toString())
-                    .replace("%crate_id%", crate.id())
-                    .replace("%crate_name%", crate.displayName())
-                    .replace("%reward_id%", rewardId)
-                    .replace("%reward_name%", rewardName);
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
         }
     }
 
