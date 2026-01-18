@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -41,6 +42,7 @@ public class ConfigValidator {
         List<ValidationIssue> errors = new ArrayList<>();
         List<ValidationIssue> warnings = new ArrayList<>();
         Map<String, RewardPool> rewardPools = configLoader.getRewardPools();
+        Set<String> uiModes = Set.of("actionbar", "chat", "none");
 
         File cratesFile = new File(plugin.getDataFolder(), "crates.yml");
         FileConfiguration cratesConfig = YamlConfiguration.loadConfiguration(cratesFile);
@@ -90,6 +92,20 @@ public class ConfigValidator {
                         ));
                     }
                 }
+                if (!invalidEnchantments.isEmpty()) {
+                    issues.add("encantamientos inválidos " + invalidEnchantments);
+                }
+                boolean hasBlankCommand = reward.commands().stream().anyMatch(command -> command == null || command.isBlank());
+                if (reward.commands().isEmpty() || hasBlankCommand) {
+                    issues.add("comandos vacíos");
+                }
+                if (!issues.isEmpty()) {
+                    warnings.add("Recompensa inválida '" + reward.id() + "' (pool '" + pool.id() + "'): " + String.join(", ", issues) + ".");
+                    poolInvalid = true;
+                }
+            }
+            if (poolInvalid) {
+                invalidPools.add(pool.id());
             }
         }
 

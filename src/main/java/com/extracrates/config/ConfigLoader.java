@@ -3,6 +3,7 @@ package com.extracrates.config;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.model.CrateDefinition;
+import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -12,9 +13,12 @@ import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public class ConfigLoader {
-    private final ExtraCratesPlugin plugin;
+    private final Supplier<FileConfiguration> mainConfigSupplier;
+    private final Supplier<File> dataFolderSupplier;
+    private final Logger logger;
     private final Map<String, CrateDefinition> crates = new HashMap<>();
     private final Map<String, RewardPool> rewardPools = new HashMap<>();
     private final Map<String, CutscenePath> paths = new HashMap<>();
@@ -22,7 +26,13 @@ public class ConfigLoader {
     private boolean configValid = true;
 
     public ConfigLoader(ExtraCratesPlugin plugin) {
-        this.plugin = plugin;
+        this(plugin::getConfig, plugin::getDataFolder, plugin.getLogger());
+    }
+
+    ConfigLoader(Supplier<FileConfiguration> mainConfigSupplier, Supplier<File> dataFolderSupplier, Logger logger) {
+        this.mainConfigSupplier = mainConfigSupplier;
+        this.dataFolderSupplier = dataFolderSupplier;
+        this.logger = logger;
     }
 
     public void loadAll() {
@@ -33,7 +43,7 @@ public class ConfigLoader {
         loadCrates();
         loadRewards();
         loadPaths();
-        plugin.getLogger().info(String.format(
+        logger.info(String.format(
                 "Configuracion cargada: crates=%d, pools=%d, paths=%d",
                 crates.size(),
                 rewardPools.size(),
@@ -49,12 +59,26 @@ public class ConfigLoader {
         return Collections.unmodifiableMap(rewardPools);
     }
 
+    public Optional<Reward> findRewardById(String rewardId) {
+        if (rewardId == null || rewardId.isEmpty()) {
+            return Optional.empty();
+        }
+        for (RewardPool pool : rewardPools.values()) {
+            for (Reward reward : pool.rewards()) {
+                if (reward.id().equalsIgnoreCase(rewardId)) {
+                    return Optional.of(reward);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
     public Map<String, CutscenePath> getPaths() {
         return Collections.unmodifiableMap(paths);
     }
 
     public FileConfiguration getMainConfig() {
-        return plugin.getConfig();
+        return mainConfigSupplier.get();
     }
 
     public SettingsSnapshot getSettings() {
@@ -92,11 +116,11 @@ public class ConfigLoader {
     }
 
     private void loadCrates() {
-        File file = new File(plugin.getDataFolder(), "crates.yml");
+        File file = new File(dataFolderSupplier.get(), "crates.yml");
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection section = config.getConfigurationSection("crates");
         if (section == null) {
-            plugin.getLogger().warning("No se encontro la seccion 'crates' en " + file.getAbsolutePath());
+            logger.warning("No se encontro la seccion 'crates' en " + file.getAbsolutePath());
             return;
         }
         for (String id : section.getKeys(false)) {
@@ -105,7 +129,7 @@ public class ConfigLoader {
                 crates.put(id, crate);
             }
         }
-        plugin.getLogger().info(String.format(
+        logger.info(String.format(
                 "Validacion crates.yml: ruta=%s, crates=%d",
                 file.getAbsolutePath(),
                 crates.size()
@@ -113,11 +137,11 @@ public class ConfigLoader {
     }
 
     private void loadRewards() {
-        File file = new File(plugin.getDataFolder(), "rewards.yml");
+        File file = new File(dataFolderSupplier.get(), "rewards.yml");
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection section = config.getConfigurationSection("pools");
         if (section == null) {
-            plugin.getLogger().warning("No se encontro la seccion 'pools' en " + file.getAbsolutePath());
+            logger.warning("No se encontro la seccion 'pools' en " + file.getAbsolutePath());
             return;
         }
         for (String id : section.getKeys(false)) {
@@ -126,7 +150,7 @@ public class ConfigLoader {
                 rewardPools.put(id, pool);
             }
         }
-        plugin.getLogger().info(String.format(
+        logger.info(String.format(
                 "Validacion rewards.yml: ruta=%s, pools=%d",
                 file.getAbsolutePath(),
                 rewardPools.size()
@@ -134,11 +158,11 @@ public class ConfigLoader {
     }
 
     private void loadPaths() {
-        File file = new File(plugin.getDataFolder(), "paths.yml");
+        File file = new File(dataFolderSupplier.get(), "paths.yml");
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection section = config.getConfigurationSection("paths");
         if (section == null) {
-            plugin.getLogger().warning("No se encontro la seccion 'paths' en " + file.getAbsolutePath());
+            logger.warning("No se encontro la seccion 'paths' en " + file.getAbsolutePath());
             return;
         }
         for (String id : section.getKeys(false)) {
@@ -147,7 +171,7 @@ public class ConfigLoader {
                 paths.put(id, path);
             }
         }
-        plugin.getLogger().info(String.format(
+        logger.info(String.format(
                 "Validacion paths.yml: ruta=%s, paths=%d",
                 file.getAbsolutePath(),
                 paths.size()

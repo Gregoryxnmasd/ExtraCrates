@@ -1,15 +1,19 @@
 package com.extracrates.storage;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 public class LocalStorage implements CrateStorage {
+    private static final int MAX_HISTORY = 500;
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Map<String, Integer>> keys = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> locks = new HashMap<>();
+    private final Map<UUID, List<CrateOpenEntry>> openHistory = new HashMap<>();
 
     @Override
     public Optional<Instant> getCooldown(UUID playerId, String crateId) {
@@ -64,7 +68,39 @@ public class LocalStorage implements CrateStorage {
 
     @Override
     public void logOpen(UUID playerId, String crateId, String rewardId, String serverId, Instant timestamp) {
-        // No-op for local storage.
+        List<CrateOpenEntry> entries = openHistory.computeIfAbsent(playerId, key -> new ArrayList<>());
+        entries.add(0, new CrateOpenEntry(playerId, crateId, rewardId, serverId, timestamp));
+        if (entries.size() > MAX_HISTORY) {
+            entries.remove(entries.size() - 1);
+        }
+    }
+
+    @Override
+    public List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        List<CrateOpenEntry> entries = openHistory.get(playerId);
+        if (entries == null || entries.isEmpty()) {
+            return List.of();
+        }
+        OpenHistoryFilter safeFilter = filter != null ? filter : OpenHistoryFilter.none();
+        List<CrateOpenEntry> result = new ArrayList<>();
+        int skipped = 0;
+        for (CrateOpenEntry entry : entries) {
+            if (!safeFilter.matches(entry)) {
+                continue;
+            }
+            if (skipped < offset) {
+                skipped++;
+                continue;
+            }
+            result.add(entry);
+            if (result.size() >= limit) {
+                break;
+            }
+        }
+        return result;
     }
 
     @Override
@@ -86,9 +122,25 @@ public class LocalStorage implements CrateStorage {
     }
 
     @Override
+    public Optional<PendingReward> getPendingReward(UUID playerId) {
+        return Optional.ofNullable(pendingRewards.get(playerId));
+    }
+
+    @Override
+    public void setPendingReward(UUID playerId, PendingReward pendingReward) {
+        pendingRewards.put(playerId, pendingReward);
+    }
+
+    @Override
+    public void clearPendingReward(UUID playerId) {
+        pendingRewards.remove(playerId);
+    }
+
+    @Override
     public void close() {
         cooldowns.clear();
         keys.clear();
         locks.clear();
+        pendingRewards.clear();
     }
 }
