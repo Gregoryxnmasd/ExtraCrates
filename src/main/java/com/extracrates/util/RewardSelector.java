@@ -25,9 +25,14 @@ public final class RewardSelector {
             return results;
         }
         int rolls = Math.max(1, pool.rollCount());
+        List<Reward> available = pool.preventDuplicateItems() ? new ArrayList<>(pool.rewards()) : null;
         for (int i = 0; i < rolls; i++) {
-            RollResult result = selectOne(pool.rewards(), random);
+            List<Reward> selection = available != null && !available.isEmpty() ? available : pool.rewards();
+            RollResult result = selectOne(selection, random);
             results.add(result.reward());
+            if (available != null && !available.isEmpty()) {
+                available.remove(result.reward());
+            }
             if (logger != null) {
                 logger.log(result.reward(), result.roll(), result.total());
             }
