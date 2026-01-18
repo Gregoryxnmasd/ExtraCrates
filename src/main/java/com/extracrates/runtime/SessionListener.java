@@ -6,7 +6,7 @@ import com.extracrates.runtime.core.SessionManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
@@ -52,27 +52,11 @@ public class SessionListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
-        if (!shouldAcceptInput(event.getPlayer())) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onSwap(PlayerSwapHandItemsEvent event) {
-        if (!shouldAcceptInput(event.getPlayer())) {
-            event.setCancelled(true);
-        }
-    }
-
-    private boolean shouldAcceptInput(Player player) {
-        CrateSession session = sessionManager.getSession(player.getUniqueId());
+        CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
         if (session == null) {
-            return true;
+            return;
         }
-        if (session.registerInput()) {
-            return true;
-        }
-        player.sendMessage(plugin.getLanguageManager().getMessage("session.input-debounced"));
-        return false;
+        event.setCancelled(true);
+        session.handleRerollInput(event.isShiftClick());
     }
 }
