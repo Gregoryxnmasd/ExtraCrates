@@ -21,7 +21,11 @@ public interface CrateStorage {
 
     void releaseLock(UUID playerId, String crateId);
 
-    boolean markFirstOpen(UUID playerId);
+    Optional<PendingReward> getPendingReward(UUID playerId);
+
+    void setPendingReward(UUID playerId, PendingReward pendingReward);
+
+    void clearPendingReward(UUID playerId);
 
     void close();
 }

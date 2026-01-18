@@ -71,7 +71,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             @NotNull String[] args
     ) {
         if (args.length == 0) {
-            sender.sendMessage(languageManager.getMessage("command.usage"));
+            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|claim|cutscene|reload|sync|givekey|route"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -231,6 +231,19 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 }
                 return true;
             }
+            case "claim" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage(languageManager.getMessage("command.only-players"));
+                    return true;
+                }
+                if (!sender.hasPermission("extracrates.open")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                boolean discard = args.length > 1 && args[1].equalsIgnoreCase("discard");
+                sessionManager.claimPendingReward(player, discard);
+                return true;
+            }
             case "cutscene" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage(languageManager.getMessage("command.only-players"));
@@ -330,6 +343,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("editor");
             results.add("open");
             results.add("preview");
+            results.add("claim");
             results.add("cutscene");
             results.add("reroll");
             results.add("reload");
@@ -338,6 +352,10 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("givekey");
             results.add("route");
             results.add("status");
+            return results;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("claim")) {
+            results.add("discard");
             return results;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {

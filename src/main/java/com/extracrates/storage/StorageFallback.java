@@ -114,10 +114,26 @@ public class StorageFallback implements CrateStorage {
     }
 
     @Override
-    public boolean markFirstOpen(UUID playerId) {
+    public Optional<PendingReward> getPendingReward(UUID playerId) {
         return callWithFallback(
-                () -> primary.markFirstOpen(playerId),
-                () -> fallback.markFirstOpen(playerId)
+                () -> primary.getPendingReward(playerId),
+                () -> fallback.getPendingReward(playerId)
+        );
+    }
+
+    @Override
+    public void setPendingReward(UUID playerId, PendingReward pendingReward) {
+        runWithFallback(
+                () -> primary.setPendingReward(playerId, pendingReward),
+                () -> fallback.setPendingReward(playerId, pendingReward)
+        );
+    }
+
+    @Override
+    public void clearPendingReward(UUID playerId) {
+        runWithFallback(
+                () -> primary.clearPendingReward(playerId),
+                () -> fallback.clearPendingReward(playerId)
         );
     }
 

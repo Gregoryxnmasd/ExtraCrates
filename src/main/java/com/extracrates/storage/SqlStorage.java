@@ -191,22 +191,53 @@ public class SqlStorage implements CrateStorage {
     }
 
     @Override
-    public boolean markFirstOpen(UUID playerId) {
-        String sql = "INSERT INTO crate_first_opens (player_uuid, opened_at) VALUES (?, ?)";
+    public Optional<PendingReward> getPendingReward(UUID playerId) {
+        String sql = "SELECT crate_id, reward_id, created_at FROM crate_pending_rewards WHERE player_uuid=?";
         return withConnection(connection -> {
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.setString(1, playerId.toString());
-                statement.setLong(2, Instant.now().toEpochMilli());
-                statement.executeUpdate();
-                return true;
-            } catch (SQLIntegrityConstraintViolationException ex) {
-                return false;
-            } catch (SQLException ex) {
-                if (isConstraintViolation(ex)) {
-                    return false;
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (!resultSet.next()) {
+                        return Optional.empty();
+                    }
+                    String crateId = resultSet.getString("crate_id");
+                    String rewardId = resultSet.getString("reward_id");
+                    long createdAt = resultSet.getLong("created_at");
+                    return Optional.of(new PendingReward(crateId, rewardId, Instant.ofEpochMilli(createdAt)));
                 }
-                throw ex;
             }
+        });
+    }
+
+    @Override
+    public void setPendingReward(UUID playerId, PendingReward pendingReward) {
+        withConnection(connection -> {
+            String deleteSql = "DELETE FROM crate_pending_rewards WHERE player_uuid=?";
+            try (PreparedStatement delete = connection.prepareStatement(deleteSql)) {
+                delete.setString(1, playerId.toString());
+                delete.executeUpdate();
+            }
+            String insertSql = "INSERT INTO crate_pending_rewards (player_uuid, crate_id, reward_id, created_at) VALUES (?, ?, ?, ?)";
+            try (PreparedStatement insert = connection.prepareStatement(insertSql)) {
+                insert.setString(1, playerId.toString());
+                insert.setString(2, pendingReward.crateId());
+                insert.setString(3, pendingReward.rewardId());
+                insert.setLong(4, pendingReward.createdAt().toEpochMilli());
+                insert.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    @Override
+    public void clearPendingReward(UUID playerId) {
+        String sql = "DELETE FROM crate_pending_rewards WHERE player_uuid=?";
+        withConnection(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, playerId.toString());
+                statement.executeUpdate();
+            }
+            return null;
         });
     }
 

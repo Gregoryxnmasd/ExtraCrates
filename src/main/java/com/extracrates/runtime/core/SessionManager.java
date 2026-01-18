@@ -12,13 +12,15 @@ import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.storage.CrateStorage;
 import com.extracrates.storage.LocalStorage;
+import com.extracrates.storage.PendingReward;
 import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
 import com.extracrates.storage.StorageSettings;
 import com.extracrates.sync.SyncBridge;
+import com.extracrates.util.ItemUtil;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
-import com.extracrates.util.SoundUtil;
+import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -86,6 +88,10 @@ public class SessionManager {
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(languageManager.getMessage("session.already-in-progress", player, crate, null, null));
+            return false;
+        }
+        if (!preview && hasPendingReward(player)) {
+            player.sendMessage(Component.text("Tienes una recompensa pendiente. Usa /crate claim o /crate claim discard."));
             return false;
         }
         CutscenePath path = resolveCutscenePath(crate, player);
@@ -489,6 +495,87 @@ public class SessionManager {
         if (playerPending.isEmpty()) {
             pendingRewards.remove(playerId);
         }
+    }
+
+    public boolean hasPendingReward(Player player) {
+        return storage != null && storage.getPendingReward(player.getUniqueId()).isPresent();
+    }
+
+    public void setPendingReward(Player player, CrateDefinition crate, Reward reward) {
+        if (storage == null) {
+            return;
+        }
+        PendingReward pendingReward = new PendingReward(crate.id(), reward.id(), Instant.now());
+        storage.setPendingReward(player.getUniqueId(), pendingReward);
+    }
+
+    public void clearPendingReward(Player player) {
+        if (storage == null) {
+            return;
+        }
+        storage.clearPendingReward(player.getUniqueId());
+    }
+
+    public boolean claimPendingReward(Player player, boolean discard) {
+        if (storage == null) {
+            player.sendMessage(Component.text("No hay storage disponible para recompensas pendientes."));
+            return false;
+        }
+        PendingReward pendingReward = storage.getPendingReward(player.getUniqueId()).orElse(null);
+        if (pendingReward == null) {
+            player.sendMessage(Component.text("No tienes recompensas pendientes."));
+            return false;
+        }
+        if (discard) {
+            storage.clearPendingReward(player.getUniqueId());
+            player.sendMessage(Component.text("Recompensa pendiente descartada."));
+            return true;
+        }
+        CrateDefinition crate = configLoader.getCrates().get(pendingReward.crateId());
+        Reward reward = resolvePendingReward(crate, pendingReward.rewardId());
+        if (reward == null) {
+            storage.clearPendingReward(player.getUniqueId());
+            player.sendMessage(Component.text("No se encontró la recompensa pendiente. Se descartó."));
+            return false;
+        }
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+        player.getInventory().addItem(item);
+        for (String command : reward.commands()) {
+            String parsed = command.replace("%player%", player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        }
+        storage.clearPendingReward(player.getUniqueId());
+        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
+        if (crate != null) {
+            recordRewardGranted(player, crate, reward);
+        }
+        return true;
+    }
+
+    private Reward resolvePendingReward(CrateDefinition crate, String rewardId) {
+        Reward reward = null;
+        if (crate != null && crate.rewardsPool() != null) {
+            RewardPool pool = configLoader.getRewardPools().get(crate.rewardsPool());
+            if (pool != null) {
+                reward = pool.rewards().stream()
+                        .filter(entry -> entry.id().equalsIgnoreCase(rewardId))
+                        .findFirst()
+                        .orElse(null);
+            }
+        }
+        if (reward != null) {
+            return reward;
+        }
+        for (RewardPool pool : configLoader.getRewardPools().values()) {
+            reward = pool.rewards().stream()
+                    .filter(entry -> entry.id().equalsIgnoreCase(rewardId))
+                    .findFirst()
+                    .orElse(null);
+            if (reward != null) {
+                return reward;
+            }
+        }
+        return null;
     }
 
     public void applyRemoteCooldown(UUID playerId, String crateId, Instant timestamp) {

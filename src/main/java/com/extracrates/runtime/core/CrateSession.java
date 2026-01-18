@@ -359,7 +359,8 @@ public class CrateSession {
         if (isQaMode()) {
             player.sendMessage(languageManager.getMessage("session.qa-mode"));
         } else {
-            player.sendMessage(languageManager.getMessage("session.reward-received", player, crate, reward, null));
+            sessionManager.setPendingReward(player, crate, reward);
+            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
             ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
             player.getInventory().addItem(item);
 
@@ -367,6 +368,8 @@ public class CrateSession {
                 String parsed = command.replace("%player%", player.getName());
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
+            sessionManager.clearPendingReward(player);
+            sessionManager.recordRewardGranted(player, crate, reward);
         }
         SoundUtil.play(player, configLoader.getSettings().getSounds().claim());
         if (rewardIndex >= rewards.size() - 1) {

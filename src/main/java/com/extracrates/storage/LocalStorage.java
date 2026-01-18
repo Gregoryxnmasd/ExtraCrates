@@ -10,7 +10,7 @@ public class LocalStorage implements CrateStorage {
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Map<String, Integer>> keys = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> locks = new HashMap<>();
-    private final Map<UUID, Instant> firstOpens = new HashMap<>();
+    private final Map<UUID, PendingReward> pendingRewards = new HashMap<>();
 
     @Override
     public Optional<Instant> getCooldown(UUID playerId, String crateId) {
@@ -87,19 +87,25 @@ public class LocalStorage implements CrateStorage {
     }
 
     @Override
+    public Optional<PendingReward> getPendingReward(UUID playerId) {
+        return Optional.ofNullable(pendingRewards.get(playerId));
+    }
+
+    @Override
+    public void setPendingReward(UUID playerId, PendingReward pendingReward) {
+        pendingRewards.put(playerId, pendingReward);
+    }
+
+    @Override
+    public void clearPendingReward(UUID playerId) {
+        pendingRewards.remove(playerId);
+    }
+
+    @Override
     public void close() {
         cooldowns.clear();
         keys.clear();
         locks.clear();
-        firstOpens.clear();
-    }
-
-    @Override
-    public boolean markFirstOpen(UUID playerId) {
-        if (firstOpens.containsKey(playerId)) {
-            return false;
-        }
-        firstOpens.put(playerId, Instant.now());
-        return true;
+        pendingRewards.clear();
     }
 }
