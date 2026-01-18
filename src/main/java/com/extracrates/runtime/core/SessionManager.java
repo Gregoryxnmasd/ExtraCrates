@@ -6,6 +6,7 @@ import com.extracrates.config.LanguageManager;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.cutscene.CutscenePoint;
 import com.extracrates.economy.EconomyService;
+import com.extracrates.event.CrateOpenEvent;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
@@ -116,7 +117,27 @@ public class SessionManager {
             logVerbose("Fallido: jugador=%s crate=%s (sin rewards)", player.getName(), crate.id());
             return false;
         }
-        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview);
+        CrateOpenEvent openEvent = new CrateOpenEvent(player, crate, rewards, preview);
+        Bukkit.getPluginManager().callEvent(openEvent);
+        if (openEvent.isCancelled()) {
+            return false;
+        }
+        List<Reward> sessionRewards = openEvent.getRewards();
+        if (sessionRewards == null || sessionRewards.isEmpty()) {
+            player.sendMessage(languageManager.getMessage("session.no-rewards"));
+            return false;
+        }
+        CrateSession session = new CrateSession(
+                plugin,
+                configLoader,
+                languageManager,
+                player,
+                crate,
+                new ArrayList<>(sessionRewards),
+                path,
+                this,
+                preview
+        );
         sessions.put(player.getUniqueId(), session);
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
             consumeKey(player, crate);
