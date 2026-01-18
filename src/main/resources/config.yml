@@ -58,9 +58,9 @@ holograms:
   height-offset: 0.8
 permissions:
   use-per-crate: true
-debug:
-  rolls: false
-  verbose: false
+rewards:
+  normalize-chances: false
+  warning-threshold: 0
 storage:
   enabled: false
   type: "mysql"

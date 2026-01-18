@@ -105,10 +105,12 @@ public class SessionManager {
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
-        if (rewardPool.preventDuplicateItems() && rewardPool.rollCount() > rewardPool.rewards().size()) {
-            player.sendMessage(languageManager.getMessage("session.duplicate-reroll"));
-        }
-        List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
+        List<Reward> rewards = RewardSelector.roll(
+                rewardPool,
+                random,
+                buildRollLogger(player),
+                buildRewardSelectorSettings()
+        );
         if (rewards.isEmpty()) {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             logVerbose("Fallido: jugador=%s crate=%s (sin rewards)", player.getName(), crate.id());
@@ -200,11 +202,22 @@ public class SessionManager {
         ));
     }
 
-    private void logVerbose(String message, Object... args) {
-        if (!configLoader.getMainConfig().getBoolean("debug.verbose", false)) {
-            return;
+    private RewardSelector.RewardSelectorSettings buildRewardSelectorSettings() {
+        boolean normalizeChances = configLoader.getMainConfig().getBoolean("rewards.normalize-chances", false);
+        double warningThreshold = configLoader.getMainConfig().getDouble("rewards.warning-threshold", 0);
+        RewardSelector.RewardWarningLogger warningLogger = (pool, reward, threshold) -> plugin.getLogger().warning(
+                String.format(
+                        "Reward chance exceeds threshold pool=%s rewardId=%s chance=%.4f threshold=%.4f",
+                        pool.id(),
+                        reward.id(),
+                        reward.chance(),
+                        threshold
+                )
+        );
+        if (warningThreshold <= 0) {
+            warningLogger = null;
         }
-        plugin.getLogger().info(String.format("[Debug] " + message, args));
+        return new RewardSelector.RewardSelectorSettings(normalizeChances, warningThreshold, warningLogger);
     }
 
     private CutscenePath buildDefaultPath(Player player) {
