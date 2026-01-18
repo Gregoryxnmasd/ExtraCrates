@@ -1,14 +1,38 @@
 # Opciones globales
 language: es_es
 qa-mode: false
+accessibility-mode: true
 particles-default: "crit"
 hologram-font: "resourcepack:cutscene_font"
+cooldown-global:
+  normal: 0
+  keyed: 0
+  event: 0
+  seasonal: 0
+  mystery: 0
 gui:
   title: "&8ExtraCrates"
   editor-title: "&0Editor de Crates"
   preview-enabled: true
   click-sounds: true
   click-sound: "UI_BUTTON_CLICK"
+sounds:
+  reroll:
+    sound: "ui.button.click"
+    volume: 0.8
+    pitch: 1.0
+  claim:
+    sound: "entity.player.levelup"
+    volume: 1.0
+    pitch: 1.0
+  error:
+    sound: "entity.villager.no"
+    volume: 1.0
+    pitch: 1.0
+  preview:
+    sound: "block.note_block.pling"
+    volume: 0.8
+    pitch: 1.2
 resourcepack:
   use-custom-model-data: true
   allow-animated-items: true
@@ -30,12 +54,18 @@ cutscene:
   armorstand-invisible: true
   camera-entity: "armor_stand"
   speed-modifier-uuid: "c0c0a1f2-7a89-4a2c-88a7-9f53b0d6f8b1"
+  on-start:
+    - "say %player% inició la cutscene de %crate_id%"
+  on-end:
+    - "say %player% terminó la cutscene de %crate_id% y obtuvo %reward_name%"
   locks:
     movement: true
     hud: true
 sessions:
   max-duration-ticks: 600
   cleanup-on-quit: true
+rate-limit:
+  opens-per-minute: 0
 holograms:
   provider: "display"
   name-format: "&e%reward_name%"
@@ -44,3 +74,4 @@ permissions:
   use-per-crate: true
 debug:
   rolls: false
+  reward-commands: false
