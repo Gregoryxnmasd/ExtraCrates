@@ -8,6 +8,7 @@ crates:
     key-material: "TRIPWIRE_HOOK"
     cooldown-seconds: 120
     cost: 0
+    reroll-cost: 0
     permission: "extracrates.open.legendary"
     locations:
       world: "world"
@@ -47,6 +48,7 @@ crates:
     # open-mode: reward-only | full | preview-only
     open-mode: "reward-only"
     cooldown-seconds: 30
+    reroll-cost: 0
     permission: "extracrates.open.seasonal"
     locations:
       world: "world"

@@ -1,5 +1,5 @@
 command:
-  usage: "&cUse /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route"
+  usage: "&cUse /crate gui|open|preview|reroll|reload|givekey &7(give key)"
   only-players: "&cPlayers only."
   no-permission: "&cYou don't have permission."
   open-usage: "&cUsage: /crate %sub% <id>"
@@ -29,16 +29,11 @@ session:
   actionbar-accessibility: "&eAccessibility mode: minimal animation."
   actionbar-reward: "&aReward: %reward%"
   no-permission: "&cYou don't have permission to open this crate."
-  reward-pool-not-found: "&cReward pool not found for this crate."
-  cutscene-path-not-found: "&cCutscene path not found."
+  no-active: "&cYou don't have an active crate session."
   key-required: "&cYou need a key for this crate."
   cooldown: "&cThis crate is on cooldown."
   outside-allowed-area: "&cYou must be inside the allowed area to open this crate."
   no-rewards: "&cNo rewards configured."
   qa-mode: "&eQA mode active: no items delivered and no commands executed."
   reward-received: "&aYou received: %reward%"
-route:
-  editor:
-    point-added: "&aPoint added (#%count%): %x%, %y%, %z% (yaw %yaw%, pitch %pitch%)"
-    saved: "&aRoute '%path%' saved with %count% points."
-    save-failed: "&cCould not save paths.yml."
+  reroll-no-balance: "&cYou need %amount% to reroll."

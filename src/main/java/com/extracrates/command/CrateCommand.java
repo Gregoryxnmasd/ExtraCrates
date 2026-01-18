@@ -118,6 +118,18 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 sessionManager.openCrate(player, crate, sub.equals("preview"));
                 return true;
             }
+            case "reroll" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage(languageManager.getMessage("command.only-players"));
+                    return true;
+                }
+                if (!sender.hasPermission("extracrates.reroll")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                sessionManager.rerollSession(player);
+                return true;
+            }
             case "reload" -> {
                 if (!sender.hasPermission("extracrates.reload")) {
                     sender.sendMessage(languageManager.getMessage("command.no-permission"));
@@ -319,6 +331,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("open");
             results.add("preview");
             results.add("cutscene");
+            results.add("reroll");
             results.add("reload");
             results.add("debug");
             results.add("sync");

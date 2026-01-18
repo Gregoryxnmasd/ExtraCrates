@@ -35,7 +35,7 @@ public class CrateSession {
     private final LanguageManager languageManager;
     private final Player player;
     private final CrateDefinition crate;
-    private final List<Reward> rewards;
+    private List<Reward> rewards;
     private final CutscenePath path;
     private final SessionManager sessionManager;
     private final boolean preview;
@@ -118,25 +118,8 @@ public class CrateSession {
         startCutscene();
     }
 
-    private void startAccessibilitySession() {
-        sendActionBar("session.actionbar-accessibility", Collections.emptyMap());
-        rewardIndex = 0;
-        elapsedTicks = 0;
-        rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
-        nextRewardSwitchTick = rewardSwitchTicks;
-        spawnRewardDisplay();
-        task = new BukkitRunnable() {
-            int tick = 0;
-
-            @Override
-            public void run() {
-                if (tick++ >= rewardSwitchTicks) {
-                    cancel();
-                    finish();
-                }
-            }
-        };
-        task.runTaskTimer(plugin, 0L, 1L);
+    public CrateDefinition getCrate() {
+        return crate;
     }
 
     private void spawnCamera(Location start) {
@@ -390,6 +373,17 @@ public class CrateSession {
             refreshRewardDisplay();
             logVerbose("Cambio de reward post-entrega: tick=%d rewardIndex=%d", elapsedTicks, rewardIndex);
         }
+    }
+
+    public void reroll(List<Reward> newRewards) {
+        if (newRewards == null || newRewards.isEmpty()) {
+            return;
+        }
+        this.rewards = new ArrayList<>(newRewards);
+        rewardIndex = 0;
+        elapsedTicks = 0;
+        nextRewardSwitchTick = rewardSwitchTicks;
+        refreshRewardDisplay();
     }
 
     private Reward getCurrentReward() {

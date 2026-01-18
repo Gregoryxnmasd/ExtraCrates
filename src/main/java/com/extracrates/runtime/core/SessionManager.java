@@ -18,6 +18,8 @@ import com.extracrates.storage.StorageSettings;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
+import net.milkbowl.vault.economy.EconomyResponse;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -168,6 +170,31 @@ public class SessionManager {
         }
     }
 
+    public boolean rerollSession(Player player) {
+        CrateSession session = sessions.get(player.getUniqueId());
+        if (session == null) {
+            player.sendMessage(languageManager.getMessage("session.no-active"));
+            return false;
+        }
+        CrateDefinition crate = session.getCrate();
+        if (!chargeRerollCost(player, crate)) {
+            return false;
+        }
+        RewardPool rewardPool = resolveRewardPool(crate);
+        if (rewardPool == null) {
+            player.sendMessage(Component.text("No se encontró el pool de recompensas para esta crate."));
+            return false;
+        }
+        Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
+        List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
+        if (rewards.isEmpty()) {
+            player.sendMessage(languageManager.getMessage("session.no-rewards"));
+            return false;
+        }
+        session.reroll(rewards);
+        return true;
+    }
+
     public CrateSession getSession(UUID playerId) {
         return sessions.get(playerId);
     }
@@ -267,12 +294,22 @@ public class SessionManager {
         return configLoader.getRewardPools().get(crate.rewardsPool());
     }
 
-    private boolean isPlayerInAllowedArea(Player player, CrateDefinition crate) {
-        CrateDefinition.AllowedArea allowedArea = crate.allowedArea();
-        if (allowedArea == null) {
+    private boolean chargeRerollCost(Player player, CrateDefinition crate) {
+        double rerollCost = crate.rerollCost();
+        if (rerollCost <= 0) {
             return true;
         }
-        return allowedArea.contains(player.getLocation());
+        if (!economyService.isAvailable()) {
+            return true;
+        }
+        if (!economyService.hasBalance(player, rerollCost)) {
+            player.sendMessage(languageManager.getMessage("session.reroll-no-balance", Map.of(
+                    "amount", economyService.format(rerollCost)
+            )));
+            return false;
+        }
+        EconomyResponse response = economyService.withdraw(player, rerollCost);
+        return response.type == EconomyResponse.ResponseType.SUCCESS;
     }
 
     private boolean isOnCooldown(Player player, CrateDefinition crate) {
