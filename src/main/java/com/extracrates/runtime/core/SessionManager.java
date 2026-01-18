@@ -140,7 +140,9 @@ public class SessionManager {
         logVerbose("Sesion iniciada: jugador=%s crate=%s preview=%s rewards=%d", player.getName(), crate.id(), preview, rewards.size());
         session.start();
         if (!preview) {
-            recordOpen(player);
+            maybeShowFirstOpenGuide(player);
+        }
+        if (!preview) {
             applyCooldown(player, crate);
         }
         return true;
@@ -464,22 +466,15 @@ public class SessionManager {
         cooldowns.clear();
     }
 
-    private String resolveHistoryRewardId(CrateDefinition crate, Reward reward) {
-        if (reward == null) {
-            plugin.getLogger().warning("Recompensa nula al registrar historial para crate " + crate.id() + ". Guardando unknown.");
-            return "unknown";
+    private void maybeShowFirstOpenGuide(Player player) {
+        if (!configLoader.getMainConfig().getBoolean("guide.enabled", true)) {
+            return;
         }
-        RewardPool pool = resolveRewardPool(crate);
-        if (pool == null) {
-            plugin.getLogger().warning("Pool de recompensas no encontrado para crate " + crate.id() + ". Guardando unknown.");
-            return "unknown";
+        if (storage == null) {
+            return;
         }
-        String rewardId = reward.id();
-        boolean exists = pool.rewards().stream().anyMatch(entry -> entry.id().equalsIgnoreCase(rewardId));
-        if (!exists) {
-            plugin.getLogger().warning("Recompensa '" + rewardId + "' no existe en pool '" + pool.id() + "'. Guardando unknown.");
-            return "unknown";
+        if (storage.markFirstOpen(player.getUniqueId())) {
+            FirstOpenGuide.start(plugin, configLoader, languageManager, player);
         }
-        return rewardId;
     }
 }
