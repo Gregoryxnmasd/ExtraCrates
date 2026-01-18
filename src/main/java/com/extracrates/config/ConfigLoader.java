@@ -58,6 +58,15 @@ public class ConfigLoader {
         return Collections.unmodifiableMap(rewardPools);
     }
 
+    public void removeCratesById(Set<String> crateIds) {
+        if (crateIds == null || crateIds.isEmpty()) {
+            return;
+        }
+        for (String crateId : crateIds) {
+            crates.remove(crateId);
+        }
+    }
+
     public Map<String, CutscenePath> getPaths() {
         return Collections.unmodifiableMap(paths);
     }
