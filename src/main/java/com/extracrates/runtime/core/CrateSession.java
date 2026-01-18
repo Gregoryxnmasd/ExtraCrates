@@ -48,6 +48,7 @@ public class CrateSession {
     private int rewardSwitchTicks;
     private int nextRewardSwitchTick;
     private int elapsedTicks;
+    private int rerollEnabledAtTick;
     private Location rewardBaseLocation;
     private Location hologramBaseLocation;
     private Transformation rewardBaseTransform;
@@ -91,6 +92,7 @@ public class CrateSession {
         elapsedTicks = 0;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
+        rerollEnabledAtTick = Math.max(0, configLoader.getMainConfig().getInt("cutscene.reroll-enable-ticks", 0));
         Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
         previousGameMode = player.getGameMode();
         previousWalkSpeed = player.getWalkSpeed();
@@ -424,6 +426,20 @@ public class CrateSession {
 
     public boolean isPreview() {
         return preview;
+    }
+
+    public boolean handleRerollInput() {
+        if (elapsedTicks < rerollEnabledAtTick) {
+            int remainingTicks = rerollEnabledAtTick - elapsedTicks;
+            showRerollCountdown(remainingTicks);
+            return false;
+        }
+        return true;
+    }
+
+    private void showRerollCountdown(int remainingTicks) {
+        int remainingSeconds = (int) Math.ceil(remainingTicks / 20.0);
+        player.sendActionBar(Component.text("Reroll disponible en " + remainingSeconds + "s"));
     }
 
     private boolean toggleHud(boolean hidden) {
