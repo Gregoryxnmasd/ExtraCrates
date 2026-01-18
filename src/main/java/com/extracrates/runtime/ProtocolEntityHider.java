@@ -12,7 +12,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -90,10 +89,7 @@ public class ProtocolEntityHider {
             if (online.getUniqueId().equals(owner.getUniqueId())) {
                 continue;
             }
-            try {
-                protocolManager.sendServerPacket(online, destroyPacket);
-            } catch (InvocationTargetException ignored) {
-            }
+            protocolManager.sendServerPacket(online, destroyPacket);
         }
     }
 }
