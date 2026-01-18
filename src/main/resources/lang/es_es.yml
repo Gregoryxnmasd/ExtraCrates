@@ -16,4 +16,5 @@ session:
   cooldown: "&cEsta crate está en enfriamiento."
   outside-allowed-area: "&cDebes estar en el área permitida para abrir esta crate."
   no-rewards: "&cNo hay recompensas configuradas."
+  duplicate-reroll: "&eLa recompensa es única, se aplicó un re-roll forzado."
   reward-received: "&aHas recibido: %reward%"
