@@ -8,7 +8,9 @@ import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
@@ -400,6 +402,109 @@ public class SqlStorage implements CrateStorage {
     @Override
     public void close() {
         pool.close();
+    }
+
+    void setKeyCount(UUID playerId, String crateId, int amount) {
+        if (amount <= 0) {
+            withConnection(connection -> {
+                String deleteSql = "DELETE FROM crate_keys WHERE player_uuid=? AND crate_id=?";
+                try (PreparedStatement delete = connection.prepareStatement(deleteSql)) {
+                    delete.setString(1, playerId.toString());
+                    delete.setString(2, crateId);
+                    delete.executeUpdate();
+                }
+                return null;
+            });
+            return;
+        }
+        withConnection(connection -> {
+            String updateSql = "UPDATE crate_keys SET amount = ? WHERE player_uuid=? AND crate_id=?";
+            try (PreparedStatement update = connection.prepareStatement(updateSql)) {
+                update.setInt(1, amount);
+                update.setString(2, playerId.toString());
+                update.setString(3, crateId);
+                int updated = update.executeUpdate();
+                if (updated > 0) {
+                    return null;
+                }
+            }
+            String insertSql = "INSERT INTO crate_keys (player_uuid, crate_id, amount) VALUES (?, ?, ?)";
+            try (PreparedStatement insert = connection.prepareStatement(insertSql)) {
+                insert.setString(1, playerId.toString());
+                insert.setString(2, crateId);
+                insert.setInt(3, amount);
+                insert.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    void clearMigrationData() {
+        withConnection(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("DELETE FROM crate_cooldowns")) {
+                statement.executeUpdate();
+            }
+            try (PreparedStatement statement = connection.prepareStatement("DELETE FROM crate_keys")) {
+                statement.executeUpdate();
+            }
+            try (PreparedStatement statement = connection.prepareStatement("DELETE FROM crate_opens")) {
+                statement.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    Map<UUID, Map<String, Instant>> fetchCooldowns() {
+        String sql = "SELECT player_uuid, crate_id, cooldown_at FROM crate_cooldowns";
+        return withConnection(connection -> {
+            Map<UUID, Map<String, Instant>> result = new HashMap<>();
+            try (PreparedStatement statement = connection.prepareStatement(sql);
+                 ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    UUID playerId = UUID.fromString(resultSet.getString("player_uuid"));
+                    String crateId = resultSet.getString("crate_id");
+                    Instant timestamp = Instant.ofEpochMilli(resultSet.getLong("cooldown_at"));
+                    result.computeIfAbsent(playerId, key -> new HashMap<>()).put(crateId, timestamp);
+                }
+            }
+            return result;
+        });
+    }
+
+    Map<UUID, Map<String, Integer>> fetchKeys() {
+        String sql = "SELECT player_uuid, crate_id, amount FROM crate_keys";
+        return withConnection(connection -> {
+            Map<UUID, Map<String, Integer>> result = new HashMap<>();
+            try (PreparedStatement statement = connection.prepareStatement(sql);
+                 ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    UUID playerId = UUID.fromString(resultSet.getString("player_uuid"));
+                    String crateId = resultSet.getString("crate_id");
+                    int amount = resultSet.getInt("amount");
+                    result.computeIfAbsent(playerId, key -> new HashMap<>()).put(crateId, amount);
+                }
+            }
+            return result;
+        });
+    }
+
+    List<OpenHistoryEntry> fetchOpenHistory() {
+        String sql = "SELECT player_uuid, crate_id, reward_id, server_id, opened_at FROM crate_opens";
+        return withConnection(connection -> {
+            List<OpenHistoryEntry> history = new ArrayList<>();
+            try (PreparedStatement statement = connection.prepareStatement(sql);
+                 ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    UUID playerId = UUID.fromString(resultSet.getString("player_uuid"));
+                    String crateId = resultSet.getString("crate_id");
+                    String rewardId = resultSet.getString("reward_id");
+                    String serverId = resultSet.getString("server_id");
+                    Instant timestamp = Instant.ofEpochMilli(resultSet.getLong("opened_at"));
+                    history.add(new OpenHistoryEntry(playerId, crateId, rewardId, serverId, timestamp));
+                }
+            }
+            return history;
+        });
     }
 
     private boolean isConstraintViolation(SQLException ex) {

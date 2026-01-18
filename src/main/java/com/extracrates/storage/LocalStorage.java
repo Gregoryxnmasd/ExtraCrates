@@ -174,6 +174,40 @@ public class LocalStorage implements CrateStorage {
 
     @Override
     public void close() {
+        clearAll();
+    }
+
+    void setKeyCount(UUID playerId, String crateId, int amount) {
+        if (amount <= 0) {
+            Map<String, Integer> userKeys = keys.get(playerId);
+            if (userKeys != null) {
+                userKeys.remove(crateId);
+                if (userKeys.isEmpty()) {
+                    keys.remove(playerId);
+                }
+            }
+            return;
+        }
+        keys.computeIfAbsent(playerId, key -> new HashMap<>()).put(crateId, amount);
+    }
+
+    Map<UUID, Map<String, Instant>> getCooldownsSnapshot() {
+        Map<UUID, Map<String, Instant>> snapshot = new HashMap<>();
+        for (Map.Entry<UUID, Map<String, Instant>> entry : cooldowns.entrySet()) {
+            snapshot.put(entry.getKey(), new HashMap<>(entry.getValue()));
+        }
+        return snapshot;
+    }
+
+    Map<UUID, Map<String, Integer>> getKeysSnapshot() {
+        Map<UUID, Map<String, Integer>> snapshot = new HashMap<>();
+        for (Map.Entry<UUID, Map<String, Integer>> entry : keys.entrySet()) {
+            snapshot.put(entry.getKey(), new HashMap<>(entry.getValue()));
+        }
+        return snapshot;
+    }
+
+    void clearAll() {
         cooldowns.clear();
         keys.clear();
         locks.clear();

@@ -12,9 +12,8 @@ import com.extracrates.route.RouteEditorManager;
 import com.extracrates.runtime.CutscenePreviewSession;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.runtime.core.SessionManager;
-import com.extracrates.storage.PendingRewardStore;
-import com.extracrates.storage.PendingRewardStore.PendingReward;
-import com.extracrates.util.ItemUtil;
+import com.extracrates.storage.StorageMigrationReport;
+import com.extracrates.storage.StorageTarget;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
@@ -106,7 +105,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             @NotNull String[] args
     ) {
         if (args.length == 0) {
-            sender.sendMessage(languageManager.getMessage("command.usage"));
+            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route|migrate"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -222,6 +221,28 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             }
             case "sync" -> {
                 return syncCommand.handle(sender, args);
+            }
+            case "migrate" -> {
+                if (!sender.hasPermission("extracrates.migrate")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage(Component.text("Uso: /crate migrate <sql|local>"));
+                    return true;
+                }
+                StorageTarget target = StorageTarget.fromString(args[1]).orElse(null);
+                if (target == null) {
+                    sender.sendMessage(Component.text("Destino inválido. Usa /crate migrate <sql|local>"));
+                    return true;
+                }
+                StorageMigrationReport report = sessionManager.migrateStorage(target);
+                if (report.success()) {
+                    sender.sendMessage(Component.text("Migración completada. Revisa la consola para validar integridad."));
+                } else {
+                    sender.sendMessage(Component.text("Migración fallida: " + report.message()));
+                }
+                return true;
             }
             case "givekey" -> {
                 if (!(sender instanceof Player player)) {
@@ -465,9 +486,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("sync");
             results.add("givekey");
             results.add("route");
-            results.add("crates");
-            results.add("pools");
-            results.add("rewards");
+            results.add("migrate");
             return results;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("crates")) {
@@ -551,8 +570,9 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("editor");
             return results;
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("status")) {
-            results.add("export");
+        if (args.length == 2 && args[0].equalsIgnoreCase("migrate")) {
+            results.add("sql");
+            results.add("local");
             return results;
         }
         if (args.length >= 2 && args[0].equalsIgnoreCase("sync")) {

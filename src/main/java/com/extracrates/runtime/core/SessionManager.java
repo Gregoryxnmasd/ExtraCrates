@@ -17,8 +17,10 @@ import com.extracrates.storage.PendingReward;
 import com.extracrates.storage.RewardDeliveryStatus;
 import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
+import com.extracrates.storage.StorageMigrationReport;
+import com.extracrates.storage.StorageMigrator;
 import com.extracrates.storage.StorageSettings;
-import com.extracrates.sync.CrateHistoryEntry;
+import com.extracrates.storage.StorageTarget;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.RewardSelector;
@@ -584,16 +586,10 @@ public class SessionManager {
         return playerPending.containsKey(crateId);
     }
 
-    private void maybeShowFirstOpenGuide(Player player) {
-        if (!configLoader.getMainConfig().getBoolean("guide.enabled", true)) {
-            return;
-        }
-        if (storage == null) {
-            return;
-        }
-        if (storage.markFirstOpen(player.getUniqueId())) {
-            FirstOpenGuide.start(plugin, configLoader, languageManager, player);
-        }
+    public StorageMigrationReport migrateStorage(StorageTarget target) {
+        StorageSettings settings = StorageSettings.fromConfig(configLoader.getMainConfig());
+        StorageMigrator migrator = new StorageMigrator();
+        return migrator.migrate(storage, settings, target, plugin.getLogger());
     }
 
     public boolean isStorageEnabled() {
