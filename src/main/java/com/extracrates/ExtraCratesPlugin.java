@@ -60,7 +60,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         EconomyService economyService = new EconomyService(this);
         sessionManager = new SessionManager(this, configLoader, economyService);
         syncBridge = new SyncBridge(this, configLoader, sessionManager);
-        SyncCommand syncCommand = new SyncCommand(this, configLoader, syncBridge);
+        SyncCommand syncCommand = new SyncCommand(this, configLoader, syncBridge, languageManager);
         apiService = new ExtraCratesApiService(configLoader, sessionManager);
         getServer().getServicesManager().register(ExtraCratesApi.class, apiService, this, ServicePriority.Normal);
         new SessionListener(this, sessionManager);
