@@ -10,6 +10,7 @@ import com.extracrates.runtime.CameraEntityFactory;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
+import com.extracrates.util.SoundUtil;
 import com.extracrates.util.TextUtil;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -366,7 +367,7 @@ public class CrateSession {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
         }
-        sessionManager.recordRewardGranted(player, crate, reward);
+        SoundUtil.play(player, configLoader.getSettings().getSounds().claim());
         if (rewardIndex >= rewards.size() - 1) {
             return;
         }
@@ -426,7 +427,7 @@ public class CrateSession {
             String name = format.replace("%reward_name%", reward.displayName());
             hologram.text(TextUtil.color(name));
         }
-        updateRewardDisplayLocations(reward);
+        SoundUtil.play(player, configLoader.getSettings().getSounds().reroll());
     }
 
     private boolean isQaMode() {

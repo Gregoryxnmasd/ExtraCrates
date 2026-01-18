@@ -18,7 +18,7 @@ import com.extracrates.storage.StorageSettings;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
-import net.milkbowl.vault.economy.EconomyResponse;
+import com.extracrates.util.SoundUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -85,25 +85,25 @@ public class SessionManager {
 
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
-            player.sendMessage(languageManager.getMessage("session.already-in-progress"));
-            return false;
-        }
-        if (!preview && hasPendingReward(player.getUniqueId(), crate.id())) {
-            player.sendMessage(Component.text("Tienes una recompensa pendiente para esta crate."));
+            player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
+            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
             return false;
         }
         CutscenePath path = resolveCutscenePath(crate, player);
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
-            player.sendMessage(languageManager.getMessage("session.reward-pool-not-found"));
+            player.sendMessage(Component.text("No se encontró el pool de recompensas para esta crate."));
+            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
             return false;
         }
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
-            player.sendMessage(languageManager.getMessage("session.key-required"));
+            player.sendMessage(Component.text("Necesitas una llave para esta crate."));
+            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
             return false;
         }
         if (!preview && isOnCooldown(player, crate)) {
-            player.sendMessage(languageManager.getMessage("session.cooldown"));
+            player.sendMessage(Component.text("Esta crate está en cooldown."));
+            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
@@ -115,17 +115,7 @@ public class SessionManager {
         );
         if (rewards.isEmpty()) {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
-            logVerbose("Fallido: jugador=%s crate=%s (sin rewards)", player.getName(), crate.id());
-            return false;
-        }
-        CrateOpenEvent openEvent = new CrateOpenEvent(player, crate, rewards, preview);
-        Bukkit.getPluginManager().callEvent(openEvent);
-        if (openEvent.isCancelled()) {
-            return false;
-        }
-        List<Reward> sessionRewards = openEvent.getRewards();
-        if (sessionRewards == null || sessionRewards.isEmpty()) {
-            player.sendMessage(languageManager.getMessage("session.no-rewards"));
+            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
             return false;
         }
         CrateSession session = new CrateSession(
@@ -145,6 +135,9 @@ public class SessionManager {
         }
         logVerbose("Sesion iniciada: jugador=%s crate=%s preview=%s rewards=%d", player.getName(), crate.id(), preview, rewards.size());
         session.start();
+        if (preview) {
+            SoundUtil.play(player, configLoader.getSettings().getSounds().preview());
+        }
         if (!preview) {
             maybeShowFirstOpenGuide(player);
         }
