@@ -33,6 +33,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +52,7 @@ public class SessionManager {
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Random> sessionRandoms = new HashMap<>();
+    private final Map<UUID, Deque<Instant>> recentOpens = new HashMap<>();
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, EconomyService economyService) {
         this.plugin = plugin;
@@ -67,6 +69,7 @@ public class SessionManager {
         sessions.values().forEach(CrateSession::end);
         sessions.clear();
         sessionRandoms.clear();
+        recentOpens.clear();
         if (syncBridge != null) {
             syncBridge.shutdown();
         }
@@ -82,26 +85,36 @@ public class SessionManager {
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
+            logVerbose("Bloqueado: jugador=%s crate=%s preview=%s (sesion activa)", player.getName(), crate.id(), preview);
             return false;
         }
         CutscenePath path = resolveCutscenePath(crate, player);
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
             player.sendMessage(Component.text("No se encontró el pool de recompensas para esta crate."));
+            logVerbose("Fallido: jugador=%s crate=%s preview=%s (pool nulo)", player.getName(), crate.id(), preview);
             return false;
         }
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
             player.sendMessage(Component.text("Necesitas una llave para esta crate."));
+            logVerbose("Fallido: jugador=%s crate=%s (sin llave)", player.getName(), crate.id());
             return false;
         }
         if (!preview && isOnCooldown(player, crate)) {
             player.sendMessage(Component.text("Esta crate está en cooldown."));
+            logVerbose("Fallido: jugador=%s crate=%s (cooldown)", player.getName(), crate.id());
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
-        List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
+        List<Reward> rewards = RewardSelector.roll(
+                rewardPool,
+                random,
+                buildRollLogger(player),
+                buildRewardSelectorSettings()
+        );
         if (rewards.isEmpty()) {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
+            logVerbose("Fallido: jugador=%s crate=%s (sin rewards)", player.getName(), crate.id());
             return false;
         }
         CrateOpenEvent openEvent = new CrateOpenEvent(player, crate, rewards, preview);
@@ -129,8 +142,10 @@ public class SessionManager {
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
             consumeKey(player, crate);
         }
+        logVerbose("Sesion iniciada: jugador=%s crate=%s preview=%s rewards=%d", player.getName(), crate.id(), preview, rewards.size());
         session.start();
         if (!preview) {
+            recordOpen(player);
             applyCooldown(player, crate);
         }
         return true;
@@ -140,6 +155,7 @@ public class SessionManager {
         CrateSession session = sessions.remove(playerId);
         if (session != null) {
             session.end();
+            logVerbose("Sesion finalizada: jugador=%s", playerId);
         }
         sessionRandoms.remove(playerId);
     }
@@ -160,6 +176,39 @@ public class SessionManager {
         sessionRandoms.remove(playerId);
     }
 
+    public int getActiveSessionCount() {
+        return sessions.size();
+    }
+
+    public int getActivePreviewCount() {
+        return (int) sessions.values().stream().filter(CrateSession::isPreview).count();
+    }
+
+    public int getPendingRewardCount() {
+        return sessions.values().stream()
+                .filter(session -> !session.isPreview())
+                .mapToInt(CrateSession::getPendingRewardCount)
+                .sum();
+    }
+
+    public StorageStatus getStorageStatus() {
+        String backend = "local";
+        boolean fallbackActive = false;
+        if (storage instanceof StorageFallback fallback) {
+            backend = "sql";
+            fallbackActive = fallback.isUsingFallback();
+        } else if (storage instanceof LocalStorage) {
+            backend = "local";
+        } else if (storage != null) {
+            backend = storage.getClass().getSimpleName();
+        }
+        return new StorageStatus(storageEnabled, backend, fallbackActive);
+    }
+
+    public SyncBridge getSyncBridge() {
+        return syncBridge;
+    }
+
     private RewardSelector.RewardRollLogger buildRollLogger(Player player) {
         if (!configLoader.getMainConfig().getBoolean("debug.rolls", false)) {
             return null;
@@ -172,6 +221,24 @@ public class SessionManager {
                 reward.chance(),
                 total
         ));
+    }
+
+    private RewardSelector.RewardSelectorSettings buildRewardSelectorSettings() {
+        boolean normalizeChances = configLoader.getMainConfig().getBoolean("rewards.normalize-chances", false);
+        double warningThreshold = configLoader.getMainConfig().getDouble("rewards.warning-threshold", 0);
+        RewardSelector.RewardWarningLogger warningLogger = (pool, reward, threshold) -> plugin.getLogger().warning(
+                String.format(
+                        "Reward chance exceeds threshold pool=%s rewardId=%s chance=%.4f threshold=%.4f",
+                        pool.id(),
+                        reward.id(),
+                        reward.chance(),
+                        threshold
+                )
+        );
+        if (warningThreshold <= 0) {
+            warningLogger = null;
+        }
+        return new RewardSelector.RewardSelectorSettings(normalizeChances, warningThreshold, warningLogger);
     }
 
     private CutscenePath buildDefaultPath(Player player) {
@@ -249,6 +316,34 @@ public class SessionManager {
         }
         if (record && syncBridge != null) {
             syncBridge.recordCooldown(player.getUniqueId(), crate.id());
+        }
+    }
+
+    private boolean isRateLimited(Player player) {
+        int limit = configLoader.getMainConfig().getInt("rate-limit.opens-per-minute", 0);
+        if (limit <= 0) {
+            return false;
+        }
+        Deque<Instant> opens = recentOpens.computeIfAbsent(player.getUniqueId(), key -> new ArrayDeque<>());
+        pruneOldOpens(opens, Instant.now());
+        return opens.size() >= limit;
+    }
+
+    private void recordOpen(Player player) {
+        int limit = configLoader.getMainConfig().getInt("rate-limit.opens-per-minute", 0);
+        if (limit <= 0) {
+            return;
+        }
+        Deque<Instant> opens = recentOpens.computeIfAbsent(player.getUniqueId(), key -> new ArrayDeque<>());
+        Instant now = Instant.now();
+        pruneOldOpens(opens, now);
+        opens.addLast(now);
+    }
+
+    private void pruneOldOpens(Deque<Instant> opens, Instant now) {
+        Instant threshold = now.minusSeconds(60);
+        while (!opens.isEmpty() && opens.peekFirst().isBefore(threshold)) {
+            opens.removeFirst();
         }
     }
 
@@ -345,7 +440,8 @@ public class SessionManager {
 
     public void recordRewardGranted(Player player, CrateDefinition crate, Reward reward) {
         if (syncBridge != null) {
-            syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), reward.id());
+            String rewardId = resolveHistoryRewardId(crate, reward);
+            syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), rewardId);
         }
     }
 
@@ -374,5 +470,24 @@ public class SessionManager {
 
     public void flushSyncCaches() {
         cooldowns.clear();
+    }
+
+    private String resolveHistoryRewardId(CrateDefinition crate, Reward reward) {
+        if (reward == null) {
+            plugin.getLogger().warning("Recompensa nula al registrar historial para crate " + crate.id() + ". Guardando unknown.");
+            return "unknown";
+        }
+        RewardPool pool = resolveRewardPool(crate);
+        if (pool == null) {
+            plugin.getLogger().warning("Pool de recompensas no encontrado para crate " + crate.id() + ". Guardando unknown.");
+            return "unknown";
+        }
+        String rewardId = reward.id();
+        boolean exists = pool.rewards().stream().anyMatch(entry -> entry.id().equalsIgnoreCase(rewardId));
+        if (!exists) {
+            plugin.getLogger().warning("Recompensa '" + rewardId + "' no existe en pool '" + pool.id() + "'. Guardando unknown.");
+            return "unknown";
+        }
+        return rewardId;
     }
 }
