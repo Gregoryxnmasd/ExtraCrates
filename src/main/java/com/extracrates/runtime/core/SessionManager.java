@@ -49,6 +49,7 @@ public class SessionManager {
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Random> sessionRandoms = new HashMap<>();
+    private final Map<UUID, Map<String, String>> pendingRewards = new HashMap<>();
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, EconomyService economyService) {
         this.plugin = plugin;
@@ -80,6 +81,10 @@ public class SessionManager {
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
+            return false;
+        }
+        if (!preview && hasPendingReward(player.getUniqueId(), crate.id())) {
+            player.sendMessage(Component.text("Tienes una recompensa pendiente para esta crate."));
             return false;
         }
         CutscenePath path = resolveCutscenePath(crate, player);
@@ -322,8 +327,30 @@ public class SessionManager {
     }
 
     public void recordRewardGranted(Player player, CrateDefinition crate, Reward reward) {
+        clearPendingReward(player.getUniqueId(), crate.id());
         if (syncBridge != null) {
             syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), reward.id());
+        }
+    }
+
+    public void recordPendingReward(UUID playerId, String crateId, String rewardId) {
+        if (rewardId == null || rewardId.isBlank()) {
+            return;
+        }
+        pendingRewards.computeIfAbsent(playerId, key -> new HashMap<>()).put(crateId, rewardId);
+        if (syncBridge != null) {
+            syncBridge.recordPendingReward(playerId, crateId, rewardId);
+        }
+    }
+
+    public void clearPendingReward(UUID playerId, String crateId) {
+        Map<String, String> playerPending = pendingRewards.get(playerId);
+        if (playerPending == null) {
+            return;
+        }
+        playerPending.remove(crateId);
+        if (playerPending.isEmpty()) {
+            pendingRewards.remove(playerId);
         }
     }
 
@@ -347,10 +374,28 @@ public class SessionManager {
     }
 
     public void applyRemoteReward(UUID playerId, String crateId, String rewardId) {
+        clearPendingReward(playerId, crateId);
         plugin.getLogger().info(() -> "[Sync] Recompensa remota registrada " + rewardId + " para " + playerId);
+    }
+
+    public void applyRemotePendingReward(UUID playerId, String crateId, String rewardId) {
+        if (rewardId == null || rewardId.isBlank()) {
+            return;
+        }
+        pendingRewards.computeIfAbsent(playerId, key -> new HashMap<>()).put(crateId, rewardId);
+        plugin.getLogger().info(() -> "[Sync] Recompensa pendiente registrada " + rewardId + " para " + playerId);
     }
 
     public void flushSyncCaches() {
         cooldowns.clear();
+        pendingRewards.clear();
+    }
+
+    private boolean hasPendingReward(UUID playerId, String crateId) {
+        Map<String, String> playerPending = pendingRewards.get(playerId);
+        if (playerPending == null) {
+            return false;
+        }
+        return playerPending.containsKey(crateId);
     }
 }
