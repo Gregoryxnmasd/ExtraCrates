@@ -57,6 +57,7 @@ session:
   already-in-progress: "&cYou already have a cutscene in progress for %crate_name%."
   no-permission: "&cYou don't have permission to open this crate."
   key-required: "&cYou need a key for this crate."
+  world-blocked: "&cYou can't open this crate in this world."
   cooldown: "&cThis crate is on cooldown."
   cooldown-actionbar: "&cCooldown: %seconds%s"
   cooldown-bossbar: "&cAvailable in %seconds%s"

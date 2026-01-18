@@ -102,21 +102,9 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.already-in-progress"));
             return false;
         }
-        String openMode = normalizeOpenMode(crate.openMode());
-        boolean rewardOnly = openMode.equals("reward-only");
-        boolean previewOnly = openMode.equals("preview-only");
-        boolean cinematic = openMode.equals("full") || openMode.equals("cinematic");
-        if (previewOnly && !preview) {
-            player.sendMessage(languageManager.getMessage("session.open-mode-preview-only"));
+        if (isWorldBlocked(player, crate)) {
+            player.sendMessage(languageManager.getMessage("session.world-blocked"));
             return false;
-        }
-        String openMode = normalizeOpenMode(crate.openMode());
-        if (!preview && openMode.equals("preview-only")) {
-            player.sendMessage(Component.text("Esta crate solo permite previews."));
-            return false;
-        }
-        if (!preview) {
-            claimPendingRewards(player);
         }
         CutscenePath path = resolveCutscenePath(crate, player);
         RewardPool rewardPool = resolveRewardPool(crate);
@@ -155,6 +143,28 @@ public class SessionManager {
             applyCooldown(player, crate);
         }
         return true;
+    }
+
+    private boolean isWorldBlocked(Player player, CrateDefinition crate) {
+        String worldName = player.getWorld().getName();
+        List<String> blockedWorlds = crate.blockedWorlds();
+        if (blockedWorlds != null) {
+            for (String blockedWorld : blockedWorlds) {
+                if (blockedWorld.equalsIgnoreCase(worldName)) {
+                    return true;
+                }
+            }
+        }
+        List<String> allowedWorlds = crate.allowedWorlds();
+        if (allowedWorlds != null && !allowedWorlds.isEmpty()) {
+            for (String allowedWorld : allowedWorlds) {
+                if (allowedWorld.equalsIgnoreCase(worldName)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     public void endSession(UUID playerId) {
