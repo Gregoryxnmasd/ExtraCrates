@@ -3,7 +3,9 @@ package com.extracrates.runtime.core;
 import com.extracrates.api.ExtraCratesApi;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.model.CrateDefinition;
+import com.extracrates.model.Reward;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 
@@ -45,5 +47,28 @@ public class ExtraCratesApiService implements ExtraCratesApi {
             return false;
         }
         return sessionManager.openCrate(player, crate);
+    }
+
+    @Override
+    public boolean hasActiveSession(Player player) {
+        return sessionManager.getSession(player.getUniqueId()) != null;
+    }
+
+    @Override
+    public @Nullable Reward getCurrentReward(Player player) {
+        CrateSession session = sessionManager.getSession(player.getUniqueId());
+        if (session == null) {
+            return null;
+        }
+        return session.getActiveReward();
+    }
+
+    @Override
+    public int getRemainingTicks(Player player) {
+        CrateSession session = sessionManager.getSession(player.getUniqueId());
+        if (session == null) {
+            return -1;
+        }
+        return session.getRemainingTicks();
     }
 }

@@ -12,6 +12,7 @@ import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class ConfigLoader {
     private final ExtraCratesPlugin plugin;
@@ -46,6 +47,15 @@ public class ConfigLoader {
 
     public Map<String, RewardPool> getRewardPools() {
         return Collections.unmodifiableMap(rewardPools);
+    }
+
+    public void removeCratesById(Set<String> crateIds) {
+        if (crateIds == null || crateIds.isEmpty()) {
+            return;
+        }
+        for (String crateId : crateIds) {
+            crates.remove(crateId);
+        }
     }
 
     public Map<String, CutscenePath> getPaths() {
