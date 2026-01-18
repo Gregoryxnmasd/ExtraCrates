@@ -11,14 +11,18 @@ import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.storage.CrateStorage;
-import com.extracrates.storage.CrateOpenEntry;
+import com.extracrates.storage.DeliveryStatus;
 import com.extracrates.storage.LocalStorage;
-import com.extracrates.storage.OpenHistoryFilter;
+import com.extracrates.storage.PendingReward;
+import com.extracrates.storage.RewardDeliveryStatus;
 import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
+import com.extracrates.storage.StorageMigrationReport;
+import com.extracrates.storage.StorageMigrator;
 import com.extracrates.storage.StorageSettings;
+import com.extracrates.storage.StorageTarget;
 import com.extracrates.sync.SyncBridge;
-import com.extracrates.sync.SyncSettings;
+import com.extracrates.util.ItemUtil;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
@@ -36,12 +40,13 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.Deque;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -60,8 +65,8 @@ public class SessionManager {
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Random> sessionRandoms = new HashMap<>();
-    private final Map<UUID, BossBar> cooldownBars = new HashMap<>();
-    private final Map<UUID, BukkitRunnable> cooldownTasks = new HashMap<>();
+    private final Map<UUID, Deque<CrateHistoryEntry>> history = new HashMap<>();
+    private static final int HISTORY_LIMIT = 200;
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, EconomyService economyService) {
         this.plugin = plugin;
@@ -95,12 +100,12 @@ public class SessionManager {
     }
 
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
-        if (!configLoader.isConfigValid()) {
-            player.sendMessage(Component.text("La configuración es inválida. Revisa el reporte de validación."));
-            return false;
-        }
         if (sessions.containsKey(player.getUniqueId())) {
             player.sendMessage(languageManager.getMessage("session.already-in-progress"));
+            return false;
+        }
+        if (isWorldBlocked(player, crate)) {
+            player.sendMessage(languageManager.getMessage("session.world-blocked"));
             return false;
         }
         CutscenePath path = resolveCutscenePath(crate, player);
@@ -114,11 +119,7 @@ public class SessionManager {
             return false;
         }
         if (!preview && isOnCooldown(player, crate)) {
-            long remainingSeconds = getCooldownRemainingSeconds(player, crate);
-            Map<String, String> placeholders = Map.of("seconds", String.valueOf(remainingSeconds));
-            player.sendMessage(languageManager.getMessage("session.cooldown", placeholders));
-            languageManager.sendActionBar(player, "session.cooldown-actionbar", placeholders);
-            showCooldownBossBar(player, crate, remainingSeconds);
+            player.sendMessage(languageManager.getMessage("session.cooldown"));
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
@@ -127,16 +128,45 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
+        if (!preview) {
+            updatePendingReward(player, crate, rewards.getFirst());
+        }
         CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview);
         sessions.put(player.getUniqueId(), session);
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
             consumeKey(player, crate);
+        }
+        if (!preview) {
+            Reward reward = rewards.get(0);
+            setPendingReward(player, crate, reward);
         }
         session.start();
         if (!preview) {
             applyCooldown(player, crate);
         }
         return true;
+    }
+
+    private boolean isWorldBlocked(Player player, CrateDefinition crate) {
+        String worldName = player.getWorld().getName();
+        List<String> blockedWorlds = crate.blockedWorlds();
+        if (blockedWorlds != null) {
+            for (String blockedWorld : blockedWorlds) {
+                if (blockedWorld.equalsIgnoreCase(worldName)) {
+                    return true;
+                }
+            }
+        }
+        List<String> allowedWorlds = crate.allowedWorlds();
+        if (allowedWorlds != null && !allowedWorlds.isEmpty()) {
+            for (String allowedWorld : allowedWorlds) {
+                if (allowedWorld.equalsIgnoreCase(worldName)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     public void endSession(UUID playerId) {
@@ -185,42 +215,23 @@ public class SessionManager {
         return sessions.get(playerId);
     }
 
+    public Collection<CrateSession> getSessions() {
+        return List.copyOf(sessions.values());
+    }
+
     public void removeSession(UUID playerId) {
         sessions.remove(playerId);
         sessionRandoms.remove(playerId);
     }
 
-    public int getActiveSessionCount() {
-        return sessions.size();
-    }
-
-    public int getActivePreviewCount() {
-        return (int) sessions.values().stream().filter(CrateSession::isPreview).count();
-    }
-
-    public int getPendingRewardCount() {
-        return sessions.values().stream()
-                .filter(session -> !session.isPreview())
-                .mapToInt(CrateSession::getPendingRewardCount)
-                .sum();
-    }
-
-    public StorageStatus getStorageStatus() {
-        String backend = "local";
-        boolean fallbackActive = false;
-        if (storage instanceof StorageFallback fallback) {
-            backend = "sql";
-            fallbackActive = fallback.isUsingFallback();
-        } else if (storage instanceof LocalStorage) {
-            backend = "local";
-        } else if (storage != null) {
-            backend = storage.getClass().getSimpleName();
+    public void handleSessionQuit(Player player, CrateSession session) {
+        if (session == null || session.isPreview()) {
+            return;
         }
-        return new StorageStatus(storageEnabled, backend, fallbackActive);
-    }
-
-    public SyncBridge getSyncBridge() {
-        return syncBridge;
+        Reward reward = session.getActiveReward();
+        if (reward != null) {
+            setPendingReward(player, session.getCrate(), reward);
+        }
     }
 
     private RewardSelector.RewardRollLogger buildRollLogger(Player player) {
@@ -280,26 +291,19 @@ public class SessionManager {
         return configLoader.getRewardPools().get(crate.rewardsPool());
     }
 
-    private boolean chargeRerollCost(Player player, CrateDefinition crate) {
-        double rerollCost = crate.rerollCost();
-        if (rerollCost <= 0) {
-            return true;
+    private String normalizeOpenMode(String openMode) {
+        if (openMode == null || openMode.isBlank()) {
+            return "reward-only";
         }
-        if (!economyService.isAvailable()) {
-            return true;
-        }
-        if (!economyService.hasBalance(player, rerollCost)) {
-            player.sendMessage(languageManager.getMessage("session.reroll-no-balance", Map.of(
-                    "amount", economyService.format(rerollCost)
-            )));
-            return false;
-        }
-        EconomyResponse response = economyService.withdraw(player, rerollCost);
-        return response.type == EconomyResponse.ResponseType.SUCCESS;
+        return openMode.toLowerCase(java.util.Locale.ROOT);
     }
 
     private boolean isOnCooldown(Player player, CrateDefinition crate) {
         return getCooldownRemainingSeconds(player, crate) > 0;
+    }
+
+    private boolean isQaMode() {
+        return configLoader.getMainConfig().getBoolean("qa-mode", false);
     }
 
     public long getCooldownRemainingSeconds(Player player, CrateDefinition crate) {
@@ -342,7 +346,10 @@ public class SessionManager {
             storage.setCooldown(player.getUniqueId(), cooldownKey, appliedAt);
         }
         if (record && syncBridge != null) {
-            syncBridge.recordCooldown(player.getUniqueId(), cooldownKey);
+            recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.COOLDOWN_SET, appliedAt);
+            syncBridge.recordCooldown(player.getUniqueId(), crate.id(), appliedAt);
+        } else if (record) {
+            recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.COOLDOWN_SET, appliedAt);
         }
     }
 
@@ -398,7 +405,11 @@ public class SessionManager {
         if (storageEnabled) {
             boolean consumed = storage.consumeKey(player.getUniqueId(), crate.id());
             if (consumed && record && syncBridge != null) {
-                syncBridge.recordKeyConsumed(player.getUniqueId(), crate.id());
+                Instant timestamp = Instant.now();
+                recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.KEY_CONSUMED, timestamp);
+                syncBridge.recordKeyConsumed(player.getUniqueId(), crate.id(), timestamp);
+            } else if (consumed && record) {
+                recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.KEY_CONSUMED, Instant.now());
             }
             return;
         }
@@ -421,7 +432,11 @@ public class SessionManager {
                 }
                 player.getInventory().setContents(contents);
                 if (record && syncBridge != null) {
-                    syncBridge.recordKeyConsumed(player.getUniqueId(), crate.id());
+                    Instant timestamp = Instant.now();
+                    recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.KEY_CONSUMED, timestamp);
+                    syncBridge.recordKeyConsumed(player.getUniqueId(), crate.id(), timestamp);
+                } else if (record) {
+                    recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.KEY_CONSUMED, Instant.now());
                 }
                 return;
             }
@@ -460,17 +475,10 @@ public class SessionManager {
     }
 
     public void recordRewardGranted(Player player, CrateDefinition crate, Reward reward) {
-        recordCrateOpen(player, crate, reward);
-    }
-
-    public void recordCrateOpen(Player player, CrateDefinition crate, Reward reward) {
         Instant timestamp = Instant.now();
-        if (storage != null) {
-            storage.logOpen(player.getUniqueId(), crate.id(), reward.id(), serverId, timestamp);
-        }
+        recordHistory(player.getUniqueId(), crate.id(), reward.id(), SyncEventType.REWARD_GRANTED, timestamp);
         if (syncBridge != null) {
-            syncBridge.recordCrateOpen(player.getUniqueId(), crate.id());
-            syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), reward.id());
+            syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), reward.id(), timestamp);
         }
     }
 
@@ -489,9 +497,10 @@ public class SessionManager {
 
     public void applyRemoteCooldown(UUID playerId, String crateId, Instant timestamp) {
         cooldowns.computeIfAbsent(playerId, key -> new HashMap<>()).put(crateId, timestamp);
+        recordHistory(playerId, crateId, null, SyncEventType.COOLDOWN_SET, timestamp);
     }
 
-    public void applyRemoteKeyConsumed(UUID playerId, String crateId) {
+    public void applyRemoteKeyConsumed(UUID playerId, String crateId, Instant timestamp) {
         CrateDefinition crate = configLoader.getCrates().get(crateId);
         if (crate == null) {
             return;
@@ -500,15 +509,17 @@ public class SessionManager {
         if (player != null) {
             consumeKey(player, crate, false);
         }
+        recordHistory(playerId, crateId, null, SyncEventType.KEY_CONSUMED, timestamp);
     }
 
-    public void applyRemoteOpen(UUID playerId, String crateId) {
+    public void applyRemoteOpen(UUID playerId, String crateId, Instant timestamp) {
         plugin.getLogger().info(() -> "[Sync] Apertura remota registrada " + playerId + " en crate " + crateId);
+        recordHistory(playerId, crateId, null, SyncEventType.CRATE_OPEN, timestamp);
     }
 
-    public void applyRemoteReward(UUID playerId, String crateId, String rewardId) {
-        clearPendingReward(playerId, crateId);
+    public void applyRemoteReward(UUID playerId, String crateId, String rewardId, Instant timestamp) {
         plugin.getLogger().info(() -> "[Sync] Recompensa remota registrada " + rewardId + " para " + playerId);
+        recordHistory(playerId, crateId, rewardId, SyncEventType.REWARD_GRANTED, timestamp);
     }
 
     public void applyRemotePendingReward(UUID playerId, String crateId, String rewardId) {
@@ -532,16 +543,10 @@ public class SessionManager {
         return playerPending.containsKey(crateId);
     }
 
-    private void maybeShowFirstOpenGuide(Player player) {
-        if (!configLoader.getMainConfig().getBoolean("guide.enabled", true)) {
-            return;
-        }
-        if (storage == null) {
-            return;
-        }
-        if (storage.markFirstOpen(player.getUniqueId())) {
-            FirstOpenGuide.start(plugin, configLoader, languageManager, player);
-        }
+    public StorageMigrationReport migrateStorage(StorageTarget target) {
+        StorageSettings settings = StorageSettings.fromConfig(configLoader.getMainConfig());
+        StorageMigrator migrator = new StorageMigrator();
+        return migrator.migrate(storage, settings, target, plugin.getLogger());
     }
 
     public boolean isStorageEnabled() {

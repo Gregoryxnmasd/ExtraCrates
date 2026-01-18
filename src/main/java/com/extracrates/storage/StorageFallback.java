@@ -99,10 +99,10 @@ public class StorageFallback implements CrateStorage {
     }
 
     @Override
-    public List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset) {
-        return callWithFallback(
-                () -> primary.getOpenHistory(playerId, filter, limit, offset),
-                () -> fallback.getOpenHistory(playerId, filter, limit, offset)
+    public void recordDelivery(UUID playerId, String crateId, String rewardId, DeliveryStatus status, int attempt, Instant timestamp) {
+        runWithFallback(
+                () -> primary.recordDelivery(playerId, crateId, rewardId, status, attempt, timestamp),
+                () -> fallback.recordDelivery(playerId, crateId, rewardId, status, attempt, timestamp)
         );
     }
 
@@ -131,18 +131,18 @@ public class StorageFallback implements CrateStorage {
     }
 
     @Override
-    public void setPendingReward(UUID playerId, PendingReward pendingReward) {
+    public void setPendingReward(UUID playerId, String crateId, String rewardId) {
         runWithFallback(
-                () -> primary.setPendingReward(playerId, pendingReward),
-                () -> fallback.setPendingReward(playerId, pendingReward)
+                () -> primary.setPendingReward(playerId, crateId, rewardId),
+                () -> fallback.setPendingReward(playerId, crateId, rewardId)
         );
     }
 
     @Override
-    public void clearPendingReward(UUID playerId) {
+    public void markRewardDelivered(UUID playerId, String crateId, String rewardId) {
         runWithFallback(
-                () -> primary.clearPendingReward(playerId),
-                () -> fallback.clearPendingReward(playerId)
+                () -> primary.markRewardDelivered(playerId, crateId, rewardId),
+                () -> fallback.markRewardDelivered(playerId, crateId, rewardId)
         );
     }
 
@@ -150,5 +150,13 @@ public class StorageFallback implements CrateStorage {
     public void close() {
         primary.close();
         fallback.close();
+    }
+
+    CrateStorage activeStorage() {
+        return usingFallback ? fallback : primary;
+    }
+
+    boolean isUsingFallback() {
+        return usingFallback;
     }
 }

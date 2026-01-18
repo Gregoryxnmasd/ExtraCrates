@@ -18,7 +18,7 @@ public interface CrateStorage {
 
     void logOpen(UUID playerId, String crateId, String rewardId, String serverId, Instant timestamp);
 
-    List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset);
+    void recordDelivery(UUID playerId, String crateId, String rewardId, DeliveryStatus status, int attempt, Instant timestamp);
 
     boolean acquireLock(UUID playerId, String crateId);
 
@@ -26,9 +26,9 @@ public interface CrateStorage {
 
     Optional<PendingReward> getPendingReward(UUID playerId);
 
-    void setPendingReward(UUID playerId, PendingReward pendingReward);
+    void setPendingReward(UUID playerId, String crateId, String rewardId);
 
-    void clearPendingReward(UUID playerId);
+    void markRewardDelivered(UUID playerId, String crateId, String rewardId);
 
     void close();
 }
