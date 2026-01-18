@@ -29,3 +29,10 @@ CREATE TABLE IF NOT EXISTS crate_locks (
   locked_at INTEGER NOT NULL,
   PRIMARY KEY (player_uuid, crate_id)
 );
+
+CREATE TABLE IF NOT EXISTS crate_pending_rewards (
+  player_uuid TEXT NOT NULL PRIMARY KEY,
+  crate_id TEXT NOT NULL,
+  reward_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
