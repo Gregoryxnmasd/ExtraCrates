@@ -44,3 +44,4 @@ permissions:
   use-per-crate: true
 debug:
   rolls: false
+  verbose: false

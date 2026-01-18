@@ -68,7 +68,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             @NotNull String[] args
     ) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route"));
+            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route|debug"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -124,6 +124,32 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 configLoader.loadAll();
                 languageManager.load();
                 sender.sendMessage(languageManager.getMessage("command.reload-success"));
+                return true;
+            }
+            case "debug" -> {
+                if (!sender.hasPermission("extracrates.reload")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                if (args.length < 3 || !args[1].equalsIgnoreCase("verbose")) {
+                    sender.sendMessage(Component.text("Uso: /crate debug verbose <on|off|toggle>"));
+                    return true;
+                }
+                boolean current = plugin.getConfig().getBoolean("debug.verbose", false);
+                String action = args[2].toLowerCase(Locale.ROOT);
+                boolean next;
+                switch (action) {
+                    case "on", "true", "enable" -> next = true;
+                    case "off", "false", "disable" -> next = false;
+                    case "toggle" -> next = !current;
+                    default -> {
+                        sender.sendMessage(Component.text("Uso: /crate debug verbose <on|off|toggle>"));
+                        return true;
+                    }
+                }
+                plugin.getConfig().set("debug.verbose", next);
+                plugin.saveConfig();
+                sender.sendMessage(Component.text("Debug verbose " + (next ? "activado" : "desactivado") + "."));
                 return true;
             }
             case "sync" -> {
@@ -252,9 +278,20 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("preview");
             results.add("cutscene");
             results.add("reload");
+            results.add("debug");
             results.add("sync");
             results.add("givekey");
             results.add("route");
+            return results;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("debug")) {
+            results.add("verbose");
+            return results;
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("debug") && args[1].equalsIgnoreCase("verbose")) {
+            results.add("on");
+            results.add("off");
+            results.add("toggle");
             return results;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {
