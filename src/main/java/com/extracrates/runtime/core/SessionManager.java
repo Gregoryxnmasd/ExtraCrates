@@ -83,25 +83,25 @@ public class SessionManager {
 
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
-            player.sendMessage(languageManager.getMessage("session.already-in-progress"));
+            player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
+            logVerbose("Bloqueado: jugador=%s crate=%s preview=%s (sesion activa)", player.getName(), crate.id(), preview);
             return false;
         }
         CutscenePath path = resolveCutscenePath(crate, player);
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
             player.sendMessage(Component.text("No se encontró el pool de recompensas para esta crate."));
+            logVerbose("Fallido: jugador=%s crate=%s preview=%s (pool nulo)", player.getName(), crate.id(), preview);
             return false;
         }
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
-            player.sendMessage(languageManager.getMessage("session.key-required"));
+            player.sendMessage(Component.text("Necesitas una llave para esta crate."));
+            logVerbose("Fallido: jugador=%s crate=%s (sin llave)", player.getName(), crate.id());
             return false;
         }
         if (!preview && isOnCooldown(player, crate)) {
-            player.sendMessage(languageManager.getMessage("session.cooldown"));
-            return false;
-        }
-        if (!preview && isRateLimited(player)) {
-            player.sendMessage(Component.text("Has alcanzado el límite de aperturas por minuto."));
+            player.sendMessage(Component.text("Esta crate está en cooldown."));
+            logVerbose("Fallido: jugador=%s crate=%s (cooldown)", player.getName(), crate.id());
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
@@ -111,6 +111,7 @@ public class SessionManager {
         List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
         if (rewards.isEmpty()) {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
+            logVerbose("Fallido: jugador=%s crate=%s (sin rewards)", player.getName(), crate.id());
             return false;
         }
         CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview);
@@ -118,6 +119,7 @@ public class SessionManager {
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
             consumeKey(player, crate);
         }
+        logVerbose("Sesion iniciada: jugador=%s crate=%s preview=%s rewards=%d", player.getName(), crate.id(), preview, rewards.size());
         session.start();
         if (!preview) {
             recordOpen(player);
@@ -130,6 +132,7 @@ public class SessionManager {
         CrateSession session = sessions.remove(playerId);
         if (session != null) {
             session.end();
+            logVerbose("Sesion finalizada: jugador=%s", playerId);
         }
         sessionRandoms.remove(playerId);
     }
@@ -162,6 +165,13 @@ public class SessionManager {
                 reward.chance(),
                 total
         ));
+    }
+
+    private void logVerbose(String message, Object... args) {
+        if (!configLoader.getMainConfig().getBoolean("debug.verbose", false)) {
+            return;
+        }
+        plugin.getLogger().info(String.format("[Debug] " + message, args));
     }
 
     private CutscenePath buildDefaultPath(Player player) {
