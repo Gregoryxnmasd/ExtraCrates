@@ -6,6 +6,7 @@ import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.runtime.CameraEntityFactory;
+import com.extracrates.runtime.ProtocolEntityHider;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
@@ -41,6 +42,7 @@ public class CrateSession {
     private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
     private TextDisplay hologram;
+    private final Set<Entity> visibleEntities = new LinkedHashSet<>();
     private BukkitRunnable task;
     private BukkitRunnable musicTask;
 
@@ -107,7 +109,7 @@ public class CrateSession {
         String cameraEntityType = config.getString("cutscene.camera-entity", "armorstand");
         boolean armorStandInvisible = config.getBoolean("cutscene.armorstand-invisible", true);
         cameraEntity = CameraEntityFactory.spawn(start, cameraEntityType, armorStandInvisible);
-        hideFromOthers(cameraEntity);
+        registerVisibleEntity(cameraEntity);
     }
 
     private void applySpectatorMode() {
@@ -175,16 +177,25 @@ public class CrateSession {
             display.setBillboard(Display.Billboard.CENTER);
         });
 
-        hideFromOthers(rewardDisplay);
-        hideFromOthers(hologram);
+        registerVisibleEntity(rewardDisplay);
+        registerVisibleEntity(hologram);
 
         rewardBaseLocation = rewardDisplay.getLocation().clone();
         hologramBaseLocation = hologram.getLocation().clone();
         rewardBaseTransform = rewardDisplay.getTransformation();
     }
 
-    private void hideFromOthers(Entity entity) {
+    private void registerVisibleEntity(Entity entity) {
+        if (entity == null) {
+            return;
+        }
         if (!configLoader.getMainConfig().getBoolean("cutscene.hide-others", true)) {
+            return;
+        }
+        visibleEntities.add(entity);
+        ProtocolEntityHider protocolEntityHider = plugin.getProtocolEntityHider();
+        if (protocolEntityHider != null) {
+            protocolEntityHider.trackEntity(player, entity);
             return;
         }
         for (Player online : Bukkit.getOnlinePlayers()) {
@@ -396,6 +407,13 @@ public class CrateSession {
         if (hologram != null && !hologram.isDead()) {
             hologram.remove();
         }
+        ProtocolEntityHider protocolEntityHider = plugin.getProtocolEntityHider();
+        if (protocolEntityHider != null) {
+            for (Entity entity : visibleEntities) {
+                protocolEntityHider.untrackEntity(entity);
+            }
+        }
+        visibleEntities.clear();
         if (previousGameMode != null) {
             player.setGameMode(previousGameMode);
         }
@@ -424,6 +442,24 @@ public class CrateSession {
 
     public boolean isPreview() {
         return preview;
+    }
+
+    public void hideEntitiesFrom(Player target) {
+        if (target == null || target.getUniqueId().equals(player.getUniqueId())) {
+            return;
+        }
+        if (!configLoader.getMainConfig().getBoolean("cutscene.hide-others", true)) {
+            return;
+        }
+        for (Entity entity : visibleEntities) {
+            if (entity != null) {
+                target.hideEntity(plugin, entity);
+            }
+        }
+    }
+
+    public Collection<Entity> getVisibleEntities() {
+        return Collections.unmodifiableSet(visibleEntities);
     }
 
     private boolean toggleHud(boolean hidden) {

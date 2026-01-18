@@ -31,6 +31,7 @@ import org.bukkit.inventory.ItemStack;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,6 +132,10 @@ public class SessionManager {
 
     public CrateSession getSession(UUID playerId) {
         return sessions.get(playerId);
+    }
+
+    public Collection<CrateSession> getSessions() {
+        return List.copyOf(sessions.values());
     }
 
     public void removeSession(UUID playerId) {

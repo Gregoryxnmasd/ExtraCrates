@@ -5,6 +5,7 @@ import com.extracrates.runtime.core.CrateSession;
 import com.extracrates.runtime.core.SessionManager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -23,6 +24,16 @@ public class SessionListener implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         // Preview sessions share the same storage as normal sessions.
         sessionManager.endSession(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        if (plugin.getProtocolEntityHider() != null) {
+            return;
+        }
+        for (CrateSession session : sessionManager.getSessions()) {
+            session.hideEntitiesFrom(event.getPlayer());
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
