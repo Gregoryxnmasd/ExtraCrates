@@ -309,6 +309,7 @@ public class CrateSession {
         if (isQaMode()) {
             player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
         } else {
+            sessionManager.setPendingReward(player, crate, reward);
             player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
             ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
             player.getInventory().addItem(item);
@@ -317,6 +318,8 @@ public class CrateSession {
                 String parsed = command.replace("%player%", player.getName());
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
+            sessionManager.clearPendingReward(player);
+            sessionManager.recordRewardGranted(player, crate, reward);
         }
         if (rewardIndex >= rewards.size() - 1) {
             return;
