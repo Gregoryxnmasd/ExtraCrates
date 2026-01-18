@@ -23,6 +23,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -68,7 +72,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             @NotNull String[] args
     ) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route|debug"));
+            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route|status"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -190,6 +194,32 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(languageManager.getMessage("command.givekey-success"));
                 return true;
             }
+            case "status" -> {
+                if (!sender.hasPermission("extracrates.status")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                List<String> lines = buildStatusLines();
+                lines.forEach(line -> sender.sendMessage(Component.text(line)));
+                if (args.length >= 2 && args[1].equalsIgnoreCase("export")) {
+                    if (args.length < 3) {
+                        sender.sendMessage(Component.text("Uso: /crate status export <archivo>"));
+                        return true;
+                    }
+                    String fileName = args[2];
+                    File output = new File(plugin.getDataFolder(), fileName);
+                    try {
+                        if (output.toPath().getParent() != null) {
+                            Files.createDirectories(output.toPath().getParent());
+                        }
+                        Files.write(output.toPath(), lines, StandardCharsets.UTF_8);
+                        sender.sendMessage(Component.text("Estado exportado a " + output.getPath()));
+                    } catch (IOException ex) {
+                        sender.sendMessage(Component.text("No se pudo exportar el estado: " + ex.getMessage()));
+                    }
+                }
+                return true;
+            }
             case "cutscene" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage(languageManager.getMessage("command.only-players"));
@@ -295,25 +325,15 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("sync");
             results.add("givekey");
             results.add("route");
-            results.add("sessions");
-            return results;
-        }
-        if (args.length == 2 && args[0].equalsIgnoreCase("debug")) {
-            results.add("verbose");
-            return results;
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("debug") && args[1].equalsIgnoreCase("verbose")) {
-            results.add("on");
-            results.add("off");
-            results.add("toggle");
+            results.add("status");
             return results;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {
             results.add("editor");
             return results;
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("sessions")) {
-            results.add("check");
+        if (args.length == 2 && args[0].equalsIgnoreCase("status")) {
+            results.add("export");
             return results;
         }
         if (args.length >= 2 && args[0].equalsIgnoreCase("sync")) {
@@ -341,5 +361,37 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         } catch (IllegalArgumentException ignored) {
             return Particle.END_ROD;
         }
+    }
+
+    private List<String> buildStatusLines() {
+        List<String> lines = new ArrayList<>();
+        int crates = configLoader.getCrates().size();
+        int pools = configLoader.getRewardPools().size();
+        int paths = configLoader.getPaths().size();
+        lines.add("Config: crates=" + crates + ", pools=" + pools + ", paths=" + paths);
+
+        com.extracrates.storage.StorageSettings storageSettings =
+                com.extracrates.storage.StorageSettings.fromConfig(configLoader.getMainConfig());
+        SessionManager.StorageStatus storageStatus = sessionManager.getStorageStatus();
+        lines.add("Storage: enabled=" + storageStatus.enabled()
+                + ", type=" + storageSettings.type()
+                + ", backend=" + storageStatus.backend()
+                + ", fallback=" + (storageStatus.fallbackActive() ? "activo" : "inactivo"));
+
+        lines.addAll(sessionManager.getSyncBridge().getStatusLines());
+
+        boolean protocolLibPresent = plugin.getServer().getPluginManager().getPlugin("ProtocolLib") != null;
+        lines.add("ProtocolLib: " + (protocolLibPresent ? "detectado" : "no detectado"));
+
+        boolean vaultPresent = plugin.getServer().getPluginManager().getPlugin("Vault") != null;
+        String economyStatus = plugin.getEconomy() != null ? "economy=ok" : "economy=no disponible";
+        lines.add("Vault: " + (vaultPresent ? "detectado" : "no detectado") + " (" + economyStatus + ")");
+
+        int activeSessions = sessionManager.getActiveSessionCount();
+        int previewSessions = sessionManager.getActivePreviewCount();
+        int pendingRewards = sessionManager.getPendingRewardCount();
+        lines.add("Sesiones activas: " + activeSessions + " (preview=" + previewSessions + ")");
+        lines.add("Recompensas pendientes: " + pendingRewards);
+        return lines;
     }
 }

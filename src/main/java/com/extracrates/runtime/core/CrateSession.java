@@ -473,16 +473,12 @@ public class CrateSession {
         return preview;
     }
 
-    public Instant getLastActivity() {
-        return lastActivity;
-    }
-
-    public Player getPlayer() {
-        return player;
-    }
-
-    public String getCrateId() {
-        return crate.id();
+    public int getPendingRewardCount() {
+        if (rewards == null || rewards.isEmpty()) {
+            return 0;
+        }
+        int remaining = rewards.size() - Math.max(0, rewardIndex);
+        return Math.max(0, remaining);
     }
 
     private boolean toggleHud(boolean hidden) {

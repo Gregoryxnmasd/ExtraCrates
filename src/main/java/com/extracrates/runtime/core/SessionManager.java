@@ -153,6 +153,39 @@ public class SessionManager {
         sessionRandoms.remove(playerId);
     }
 
+    public int getActiveSessionCount() {
+        return sessions.size();
+    }
+
+    public int getActivePreviewCount() {
+        return (int) sessions.values().stream().filter(CrateSession::isPreview).count();
+    }
+
+    public int getPendingRewardCount() {
+        return sessions.values().stream()
+                .filter(session -> !session.isPreview())
+                .mapToInt(CrateSession::getPendingRewardCount)
+                .sum();
+    }
+
+    public StorageStatus getStorageStatus() {
+        String backend = "local";
+        boolean fallbackActive = false;
+        if (storage instanceof StorageFallback fallback) {
+            backend = "sql";
+            fallbackActive = fallback.isUsingFallback();
+        } else if (storage instanceof LocalStorage) {
+            backend = "local";
+        } else if (storage != null) {
+            backend = storage.getClass().getSimpleName();
+        }
+        return new StorageStatus(storageEnabled, backend, fallbackActive);
+    }
+
+    public SyncBridge getSyncBridge() {
+        return syncBridge;
+    }
+
     private RewardSelector.RewardRollLogger buildRollLogger(Player player) {
         if (!configLoader.getMainConfig().getBoolean("debug.rolls", false)) {
             return null;
@@ -404,35 +437,6 @@ public class SessionManager {
         cooldowns.clear();
     }
 
-    public int cleanupInactiveSessions() {
-        long maxTicks = configLoader.getMainConfig().getLong("sessions.max-duration-ticks", 600);
-        if (maxTicks <= 0) {
-            return 0;
-        }
-        Duration maxIdle = Duration.ofMillis(maxTicks * 50L);
-        Instant now = Instant.now();
-        List<CrateSession> activeSessions = new ArrayList<>(sessions.values());
-        int cleaned = 0;
-        for (CrateSession session : activeSessions) {
-            Instant lastActivity = session.getLastActivity();
-            if (lastActivity == null) {
-                continue;
-            }
-            Duration idleTime = Duration.between(lastActivity, now);
-            if (idleTime.compareTo(maxIdle) <= 0) {
-                continue;
-            }
-            Player player = session.getPlayer();
-            plugin.getLogger().warning(() -> String.format(
-                    "Sesión inactiva forzada: player=%s uuid=%s crate=%s idleSeconds=%d",
-                    player.getName(),
-                    player.getUniqueId(),
-                    session.getCrateId(),
-                    idleTime.getSeconds()
-            ));
-            session.end();
-            cleaned++;
-        }
-        return cleaned;
+    public record StorageStatus(boolean enabled, String backend, boolean fallbackActive) {
     }
 }
