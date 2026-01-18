@@ -100,6 +100,12 @@ public class CrateSession {
         elapsedTicks = 0;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
+        if (!preview) {
+            Reward reward = getCurrentReward();
+            if (reward != null) {
+                sessionManager.recordPendingReward(player.getUniqueId(), crate.id(), reward.id());
+            }
+        }
         Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
         previousGameMode = player.getGameMode();
         previousWalkSpeed = player.getWalkSpeed();
@@ -264,7 +270,12 @@ public class CrateSession {
                         rewardIndex++;
                         nextRewardSwitchTick += rewardSwitchTicks;
                         refreshRewardDisplay();
-                        logVerbose("Cambio de reward: tick=%d rewardIndex=%d nextSwitch=%d", elapsedTicks, rewardIndex, nextRewardSwitchTick);
+                        if (!preview) {
+                            Reward reward = getCurrentReward();
+                            if (reward != null) {
+                                sessionManager.recordPendingReward(player.getUniqueId(), crate.id(), reward.id());
+                            }
+                        }
                     }
                 }
             }
@@ -369,7 +380,7 @@ public class CrateSession {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
         }
-        logVerbose("Reward entregada: jugador=%s crate=%s reward=%s qa=%s", player.getName(), crate.id(), reward.id(), isQaMode());
+        sessionManager.recordRewardGranted(player, crate, reward);
         if (rewardIndex >= rewards.size() - 1) {
             return;
         }
@@ -510,6 +521,9 @@ public class CrateSession {
             player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet);
         } else {
             player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
+        }
+        if (!preview) {
+            sessionManager.clearPendingReward(player.getUniqueId(), crate.id());
         }
         sessionManager.removeSession(player.getUniqueId());
         logVerbose("Sesion limpiada: jugador=%s crate=%s", player.getName(), crate.id());
