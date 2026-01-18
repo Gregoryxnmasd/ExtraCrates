@@ -15,8 +15,10 @@ import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
 import com.extracrates.storage.StorageSettings;
 import com.extracrates.sync.SyncBridge;
+import com.extracrates.util.ItemUtil;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
+import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -82,7 +84,11 @@ public class SessionManager {
             player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
             return false;
         }
-        CutscenePath path = resolveCutscenePath(crate, player);
+        String openMode = normalizeOpenMode(crate.openMode());
+        if (!preview && openMode.equals("preview-only")) {
+            player.sendMessage(Component.text("Esta crate solo permite previews."));
+            return false;
+        }
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
             player.sendMessage(Component.text("No se encontró el pool de recompensas para esta crate."));
@@ -102,6 +108,30 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
+        if (openMode.equals("reward-only")) {
+            Reward reward = rewards.get(0);
+            if (preview) {
+                player.sendMessage(Component.text("Preview de recompensa: ").append(TextUtil.color(reward.displayName())));
+            } else {
+                if (isQaMode()) {
+                    player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
+                } else {
+                    player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
+                    ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+                    player.getInventory().addItem(item);
+                    for (String command : reward.commands()) {
+                        String parsed = command.replace("%player%", player.getName());
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+                    }
+                }
+                if (crate.type() == com.extracrates.model.CrateType.KEYED) {
+                    consumeKey(player, crate);
+                }
+                applyCooldown(player, crate);
+            }
+            return true;
+        }
+        CutscenePath path = resolveCutscenePath(crate, player);
         CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview);
         sessions.put(player.getUniqueId(), session);
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
@@ -177,8 +207,19 @@ public class SessionManager {
         return configLoader.getRewardPools().get(crate.rewardsPool());
     }
 
+    private String normalizeOpenMode(String openMode) {
+        if (openMode == null || openMode.isBlank()) {
+            return "reward-only";
+        }
+        return openMode.toLowerCase(java.util.Locale.ROOT);
+    }
+
     private boolean isOnCooldown(Player player, CrateDefinition crate) {
         return getCooldownRemainingSeconds(player, crate) > 0;
+    }
+
+    private boolean isQaMode() {
+        return configLoader.getMainConfig().getBoolean("qa-mode", false);
     }
 
     public long getCooldownRemainingSeconds(Player player, CrateDefinition crate) {
