@@ -3,11 +3,13 @@ package com.extracrates.runtime;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.runtime.core.CrateSession;
 import com.extracrates.runtime.core.SessionManager;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 
 @SuppressWarnings("unused")
 public class SessionListener implements Listener {
@@ -23,7 +25,14 @@ public class SessionListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         // Preview sessions share the same storage as normal sessions.
+        CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        sessionManager.handleSessionQuit(event.getPlayer(), session);
         sessionManager.endSession(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        sessionManager.claimPendingReward(event.getPlayer());
     }
 
     @EventHandler(ignoreCancelled = true)

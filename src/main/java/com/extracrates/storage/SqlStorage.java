@@ -7,6 +7,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
@@ -22,6 +24,7 @@ public class SqlStorage implements CrateStorage {
     public SqlStorage(StorageSettings settings, Logger logger) {
         this.logger = logger;
         this.pool = new SqlConnectionPool(settings, logger);
+        ensureFirstOpenTable();
     }
 
     @Override
@@ -156,6 +159,52 @@ public class SqlStorage implements CrateStorage {
     }
 
     @Override
+    public List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        OpenHistoryFilter safeFilter = filter != null ? filter : OpenHistoryFilter.none();
+        StringBuilder sql = new StringBuilder(
+                "SELECT crate_id, reward_id, server_id, opened_at FROM crate_opens WHERE player_uuid=?"
+        );
+        List<Object> params = new ArrayList<>();
+        params.add(playerId.toString());
+        if (safeFilter.crateId() != null && !safeFilter.crateId().isEmpty()) {
+            sql.append(" AND crate_id=?");
+            params.add(safeFilter.crateId());
+        }
+        if (safeFilter.from() != null) {
+            sql.append(" AND opened_at>=?");
+            params.add(safeFilter.from().toEpochMilli());
+        }
+        if (safeFilter.to() != null) {
+            sql.append(" AND opened_at<=?");
+            params.add(safeFilter.to().toEpochMilli());
+        }
+        sql.append(" ORDER BY opened_at DESC LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(Math.max(0, offset));
+        return withConnection(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+                for (int i = 0; i < params.size(); i++) {
+                    statement.setObject(i + 1, params.get(i));
+                }
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    List<CrateOpenEntry> entries = new ArrayList<>();
+                    while (resultSet.next()) {
+                        String crateId = resultSet.getString("crate_id");
+                        String rewardId = resultSet.getString("reward_id");
+                        String serverId = resultSet.getString("server_id");
+                        long openedAt = resultSet.getLong("opened_at");
+                        entries.add(new CrateOpenEntry(playerId, crateId, rewardId, serverId, Instant.ofEpochMilli(openedAt)));
+                    }
+                    return entries;
+                }
+            }
+        });
+    }
+
+    @Override
     public boolean acquireLock(UUID playerId, String crateId) {
         String sql = "INSERT INTO crate_locks (player_uuid, crate_id, locked_at) VALUES (?, ?, ?)";
         return withConnection(connection -> {
@@ -190,6 +239,74 @@ public class SqlStorage implements CrateStorage {
     }
 
     @Override
+    public Optional<PendingReward> getPendingReward(UUID playerId) {
+        String sql = "SELECT crate_id, reward_id, status FROM crate_pending_rewards WHERE player_uuid=?";
+        return withConnection(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, playerId.toString());
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (!resultSet.next()) {
+                        return Optional.empty();
+                    }
+                    String crateId = resultSet.getString("crate_id");
+                    String rewardId = resultSet.getString("reward_id");
+                    String status = resultSet.getString("status");
+                    return Optional.of(new PendingReward(crateId, rewardId, PendingRewardStatus.fromString(status)));
+                }
+            }
+        });
+    }
+
+    @Override
+    public void setPendingReward(UUID playerId, String crateId, String rewardId) {
+        withConnection(connection -> {
+            String deleteSql = "DELETE FROM crate_pending_rewards WHERE player_uuid=?";
+            try (PreparedStatement delete = connection.prepareStatement(deleteSql)) {
+                delete.setString(1, playerId.toString());
+                delete.executeUpdate();
+            }
+            String insertSql = "INSERT INTO crate_pending_rewards (player_uuid, crate_id, reward_id, status, updated_at) VALUES (?, ?, ?, ?, ?)";
+            try (PreparedStatement insert = connection.prepareStatement(insertSql)) {
+                insert.setString(1, playerId.toString());
+                insert.setString(2, crateId);
+                insert.setString(3, rewardId);
+                insert.setString(4, PendingRewardStatus.PENDING.name());
+                insert.setLong(5, Instant.now().toEpochMilli());
+                insert.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    @Override
+    public void markRewardDelivered(UUID playerId, String crateId, String rewardId) {
+        withConnection(connection -> {
+            String updateSql = "UPDATE crate_pending_rewards SET status=?, updated_at=? WHERE player_uuid=? AND crate_id=? AND reward_id=?";
+            try (PreparedStatement update = connection.prepareStatement(updateSql)) {
+                update.setString(1, PendingRewardStatus.DELIVERED.name());
+                update.setLong(2, Instant.now().toEpochMilli());
+                update.setString(3, playerId.toString());
+                update.setString(4, crateId);
+                update.setString(5, rewardId);
+                int updated = update.executeUpdate();
+                if (updated > 0) {
+                    return null;
+                }
+            }
+            String insertSql = "INSERT INTO crate_pending_rewards (player_uuid, crate_id, reward_id, status, updated_at) VALUES (?, ?, ?, ?, ?)";
+            try (PreparedStatement insert = connection.prepareStatement(insertSql)) {
+                insert.setString(1, playerId.toString());
+                insert.setString(2, crateId);
+                insert.setString(3, rewardId);
+                insert.setString(4, PendingRewardStatus.DELIVERED.name());
+                insert.setLong(5, Instant.now().toEpochMilli());
+                insert.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    @Override
     public void close() {
         pool.close();
     }
@@ -211,6 +328,19 @@ public class SqlStorage implements CrateStorage {
                 pool.releaseConnection(connection);
             }
         }
+    }
+
+    private void ensureFirstOpenTable() {
+        String sql = "CREATE TABLE IF NOT EXISTS crate_first_opens ("
+                + "player_uuid VARCHAR(36) PRIMARY KEY,"
+                + "opened_at BIGINT NOT NULL"
+                + ")";
+        withConnection(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.executeUpdate();
+            }
+            return null;
+        });
     }
 
     @FunctionalInterface
