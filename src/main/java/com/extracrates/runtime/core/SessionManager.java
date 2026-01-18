@@ -30,7 +30,9 @@ import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +51,7 @@ public class SessionManager {
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Random> sessionRandoms = new HashMap<>();
+    private final Map<UUID, Deque<Instant>> recentOpens = new HashMap<>();
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, EconomyService economyService) {
         this.plugin = plugin;
@@ -65,6 +68,7 @@ public class SessionManager {
         sessions.values().forEach(CrateSession::end);
         sessions.clear();
         sessionRandoms.clear();
+        recentOpens.clear();
         if (syncBridge != null) {
             syncBridge.shutdown();
         }
@@ -101,6 +105,9 @@ public class SessionManager {
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
+        if (rewardPool.preventDuplicateItems() && rewardPool.rollCount() > rewardPool.rewards().size()) {
+            player.sendMessage(languageManager.getMessage("session.duplicate-reroll"));
+        }
         List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
         if (rewards.isEmpty()) {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
@@ -115,6 +122,7 @@ public class SessionManager {
         logVerbose("Sesion iniciada: jugador=%s crate=%s preview=%s rewards=%d", player.getName(), crate.id(), preview, rewards.size());
         session.start();
         if (!preview) {
+            recordOpen(player);
             applyCooldown(player, crate);
         }
         return true;
@@ -244,6 +252,34 @@ public class SessionManager {
         }
     }
 
+    private boolean isRateLimited(Player player) {
+        int limit = configLoader.getMainConfig().getInt("rate-limit.opens-per-minute", 0);
+        if (limit <= 0) {
+            return false;
+        }
+        Deque<Instant> opens = recentOpens.computeIfAbsent(player.getUniqueId(), key -> new ArrayDeque<>());
+        pruneOldOpens(opens, Instant.now());
+        return opens.size() >= limit;
+    }
+
+    private void recordOpen(Player player) {
+        int limit = configLoader.getMainConfig().getInt("rate-limit.opens-per-minute", 0);
+        if (limit <= 0) {
+            return;
+        }
+        Deque<Instant> opens = recentOpens.computeIfAbsent(player.getUniqueId(), key -> new ArrayDeque<>());
+        Instant now = Instant.now();
+        pruneOldOpens(opens, now);
+        opens.addLast(now);
+    }
+
+    private void pruneOldOpens(Deque<Instant> opens, Instant now) {
+        Instant threshold = now.minusSeconds(60);
+        while (!opens.isEmpty() && opens.peekFirst().isBefore(threshold)) {
+            opens.removeFirst();
+        }
+    }
+
     private boolean hasKey(Player player, CrateDefinition crate) {
         if (storageEnabled) {
             return storage.getKeyCount(player.getUniqueId(), crate.id()) > 0;
@@ -366,5 +402,37 @@ public class SessionManager {
 
     public void flushSyncCaches() {
         cooldowns.clear();
+    }
+
+    public int cleanupInactiveSessions() {
+        long maxTicks = configLoader.getMainConfig().getLong("sessions.max-duration-ticks", 600);
+        if (maxTicks <= 0) {
+            return 0;
+        }
+        Duration maxIdle = Duration.ofMillis(maxTicks * 50L);
+        Instant now = Instant.now();
+        List<CrateSession> activeSessions = new ArrayList<>(sessions.values());
+        int cleaned = 0;
+        for (CrateSession session : activeSessions) {
+            Instant lastActivity = session.getLastActivity();
+            if (lastActivity == null) {
+                continue;
+            }
+            Duration idleTime = Duration.between(lastActivity, now);
+            if (idleTime.compareTo(maxIdle) <= 0) {
+                continue;
+            }
+            Player player = session.getPlayer();
+            plugin.getLogger().warning(() -> String.format(
+                    "Sesión inactiva forzada: player=%s uuid=%s crate=%s idleSeconds=%d",
+                    player.getName(),
+                    player.getUniqueId(),
+                    session.getCrateId(),
+                    idleTime.getSeconds()
+            ));
+            session.end();
+            cleaned++;
+        }
+        return cleaned;
     }
 }

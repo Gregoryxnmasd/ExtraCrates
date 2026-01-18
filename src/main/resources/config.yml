@@ -50,6 +50,8 @@ cutscene:
 sessions:
   max-duration-ticks: 600
   cleanup-on-quit: true
+rate-limit:
+  opens-per-minute: 0
 holograms:
   provider: "display"
   name-format: "&e%reward_name%"

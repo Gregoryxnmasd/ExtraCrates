@@ -256,6 +256,19 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Component.text("Haz clic en bloques para marcar puntos. Usa /crate route editor stop para guardar."));
                 return true;
             }
+            case "sessions" -> {
+                if (!sender.hasPermission("extracrates.sessions")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                if (args.length < 2 || !args[1].equalsIgnoreCase("check")) {
+                    sender.sendMessage(Component.text("Uso: /crate sessions check"));
+                    return true;
+                }
+                int cleaned = sessionManager.cleanupInactiveSessions();
+                sender.sendMessage(Component.text("Sesiones inactivas cerradas: " + cleaned));
+                return true;
+            }
             default -> {
                 sender.sendMessage(languageManager.getMessage("command.unknown-subcommand"));
                 return true;
@@ -282,6 +295,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("sync");
             results.add("givekey");
             results.add("route");
+            results.add("sessions");
             return results;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("debug")) {
@@ -296,6 +310,10 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {
             results.add("editor");
+            return results;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("sessions")) {
+            results.add("check");
             return results;
         }
         if (args.length >= 2 && args[0].equalsIgnoreCase("sync")) {
