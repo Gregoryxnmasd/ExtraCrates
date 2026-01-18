@@ -1,6 +1,7 @@
 pools:
   legendary_pool:
     roll-count: 1
+    prevent-duplicate-items: false
     rewards:
       dragon_sword:
         chance: 0.5
@@ -11,6 +12,14 @@ pools:
         enchantments:
           sharpness: 6
           looting: 5
+        reward-float:
+          height: 1.1
+          spin-speed: 3.5
+          bobbing: true
+        reward-display:
+          item-count: 2
+          text-line-spacing: 0.3
+          orbit-radius: 0.7
         commands:
           - "lp user %player% permission set crates.legendary.donor"
         messages:
@@ -31,6 +40,7 @@ pools:
           sound: "entity.player.levelup"
   seasonal_pool:
     roll-count: 1
+    prevent-duplicate-items: false
     rewards:
       candy_bow:
         chance: 2.5
