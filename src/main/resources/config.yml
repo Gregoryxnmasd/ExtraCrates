@@ -56,7 +56,7 @@ cutscene:
   default-speed: 0.35
   constant-speed: true
   smooth-tick: 2
-  input-debounce-ticks: 5
+  reroll-enable-ticks: 0
   pumpkin-model: "cutscene_mask"
   slowdown-modifier: -10.0
   min-teleport-distance: 0.05
