@@ -17,6 +17,7 @@ import com.extracrates.runtime.SessionListener;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.runtime.core.ExtraCratesApiService;
 import com.extracrates.runtime.core.SessionManager;
+import com.extracrates.storage.PendingRewardStore;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.MapImageCache;
 import com.extracrates.util.ResourcepackModelResolver;
@@ -38,6 +39,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private EditorMenu editorMenu;
     private Economy economy;
     private SyncBridge syncBridge;
+    private PendingRewardStore pendingRewardStore;
 
     @Override
     public void onEnable() {
@@ -69,6 +71,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         crateGui = new CrateGui(this, configLoader, sessionManager);
         mapImageCache = new MapImageCache(this);
         protocolEntityHider = ProtocolEntityHider.createIfPresent(this);
+        pendingRewardStore = new PendingRewardStore(this);
         EditorInputManager inputManager = new EditorInputManager(this);
         ConfirmationMenu confirmationMenu = new ConfirmationMenu(this);
         editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu);
@@ -84,7 +87,8 @@ public final class ExtraCratesPlugin extends JavaPlugin {
                     editorMenu,
                     syncCommand,
                     routeEditorManager,
-                    ResourcepackModelResolver.getInstance()
+                    ResourcepackModelResolver.getInstance(),
+                    pendingRewardStore
             );
             crateCommand.setExecutor(executor);
             crateCommand.setTabCompleter(executor);
