@@ -75,4 +75,4 @@ permissions:
   use-per-crate: true
 debug:
   rolls: false
-  reward-commands: false
+  timings: false
