@@ -28,6 +28,16 @@ public class SessionListener implements Listener {
         sessionManager.endSession(event.getPlayer().getUniqueId());
     }
 
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        if (plugin.getProtocolEntityHider() != null) {
+            return;
+        }
+        for (CrateSession session : sessionManager.getSessions()) {
+            session.hideEntitiesFrom(event.getPlayer());
+        }
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
         CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
