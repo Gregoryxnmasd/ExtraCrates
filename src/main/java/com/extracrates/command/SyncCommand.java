@@ -2,8 +2,10 @@ package com.extracrates.command;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
-import com.extracrates.config.LanguageManager;
+import com.extracrates.runtime.core.CrateSession;
 import com.extracrates.sync.SyncBridge;
+import com.extracrates.util.ItemUtil;
+import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 
 import java.util.List;
@@ -40,7 +42,9 @@ public class SyncCommand {
                 plugin.reloadConfig();
                 configLoader.loadAll();
                 syncBridge.reload();
-                sender.sendMessage(languageManager.getMessage("command.sync-reloaded"));
+                ItemUtil.clearItemCache();
+                CrateSession.clearRewardDisplayCache();
+                sender.sendMessage(Component.text("Sync recargado."));
             }
             case "flush" -> {
                 syncBridge.flush();

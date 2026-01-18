@@ -4,11 +4,17 @@ crates:
     type: "keyed"
     # open-mode: reward-only | full | preview-only
     open-mode: "reward-only"
+    reroll-enable-ticks: 0
+    ui-mode: "none"
+    actionbar-message: ""
     key-model: "legendary_key"
     key-material: "TRIPWIRE_HOOK"
     cooldown-seconds: 120
     cost: 0
+    reroll-cost: 0
     permission: "extracrates.open.legendary"
+    allowed-worlds: []
+    blocked-worlds: []
     locations:
       world: "world"
       camera-start: { x: 10.5, y: 65.0, z: -20.5, yaw: 0, pitch: 0 }
@@ -31,6 +37,7 @@ crates:
         end: "ui.toast.challenge_complete"
     cutscene:
       overlay-model: "cutscene_mask"
+      commands-enabled: true
       locks:
         movement: true
         hud: true
@@ -46,8 +53,14 @@ crates:
     type: "event"
     # open-mode: reward-only | full | preview-only
     open-mode: "reward-only"
+    reroll-enable-ticks: 0
+    ui-mode: "none"
+    actionbar-message: ""
     cooldown-seconds: 30
+    reroll-cost: 0
     permission: "extracrates.open.seasonal"
+    allowed-worlds: []
+    blocked-worlds: []
     locations:
       world: "world"
       reward-anchor: { x: -2.0, y: 64.2, z: 5.5 }
@@ -61,6 +74,7 @@ crates:
         bobbing: false
     cutscene:
       overlay-model: "cutscene_mask"
+      commands-enabled: false
       locks:
         movement: true
         hud: false

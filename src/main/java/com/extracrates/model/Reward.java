@@ -18,8 +18,7 @@ public record Reward(
         List<String> commands,
         RewardMessage message,
         RewardEffects effects,
-        CrateDefinition.RewardFloatSettings rewardFloatSettings,
-        CrateDefinition.RewardDisplaySettings rewardDisplaySettings,
+        RewardDisplayOverrides rewardDisplayOverrides,
         String hologram,
         String mapImage
 ) {
@@ -50,33 +49,10 @@ public record Reward(
         List<String> commands = section.getStringList("commands");
         RewardMessage message = RewardMessage.fromSection(section.getConfigurationSection("messages"));
         RewardEffects effects = RewardEffects.fromSection(section.getConfigurationSection("effects"));
-        ConfigurationSection floatSection = section.getConfigurationSection("reward-float");
-        CrateDefinition.RewardFloatSettings rewardFloatSettings = floatSection != null
-                ? CrateDefinition.RewardFloatSettings.fromSection(floatSection)
-                : null;
-        ConfigurationSection displaySection = section.getConfigurationSection("reward-display");
-        CrateDefinition.RewardDisplaySettings rewardDisplaySettings = displaySection != null
-                ? CrateDefinition.RewardDisplaySettings.fromSection(displaySection)
-                : null;
+        RewardDisplayOverrides rewardDisplayOverrides = RewardDisplayOverrides.fromSection(section.getConfigurationSection("reward-display"));
         String hologram = section.getString("hologram", "");
         String mapImage = section.getString("map-image", "");
-        return new Reward(
-                id,
-                chance,
-                displayName,
-                item,
-                amount,
-                customModel,
-                glow,
-                enchantments,
-                commands,
-                message,
-                effects,
-                rewardFloatSettings,
-                rewardDisplaySettings,
-                hologram,
-                mapImage
-        );
+        return new Reward(id, chance, displayName, item, amount, customModel, glow, enchantments, commands, message, effects, rewardDisplayOverrides, hologram, mapImage);
     }
 
     public record RewardMessage(String title, String subtitle) {
@@ -110,5 +86,163 @@ public record Reward(
                     section.getString("animation", "")
             );
         }
+    }
+
+    public record RewardDisplayOverrides(
+            Integer itemCount,
+            Double textLineSpacing,
+            Double orbitRadius,
+            Double orbitSpeed,
+            Double wobbleSpeed,
+            Double wobbleAmplitude,
+            Double pulseSpeed,
+            Double pulseScale,
+            Double glowScale,
+            ParticleOverrides particles,
+            TrailOverrides trail
+    ) {
+        public static RewardDisplayOverrides fromSection(ConfigurationSection section) {
+            if (section == null) {
+                return null;
+            }
+            return new RewardDisplayOverrides(
+                    readInt(section, "item-count"),
+                    readDouble(section, "text-line-spacing"),
+                    readDouble(section, "orbit-radius"),
+                    readDouble(section, "orbit-speed"),
+                    readDouble(section, "wobble-speed"),
+                    readDouble(section, "wobble-amplitude"),
+                    readDouble(section, "pulse-speed"),
+                    readDouble(section, "pulse-scale"),
+                    readDouble(section, "glow-scale"),
+                    ParticleOverrides.fromSection(section.getConfigurationSection("particles")),
+                    TrailOverrides.fromSection(section.getConfigurationSection("trail"))
+            );
+        }
+
+        public CrateDefinition.RewardDisplaySettings applyTo(CrateDefinition.RewardDisplaySettings base) {
+            if (base == null) {
+                return null;
+            }
+            CrateDefinition.ParticleSettings baseParticles = base.getParticles();
+            CrateDefinition.TrailSettings baseTrail = base.getTrail();
+            CrateDefinition.ParticleSettings mergedParticles = baseParticles;
+            if (particles != null) {
+                mergedParticles = new CrateDefinition.ParticleSettings(
+                        particles.type() != null ? particles.type() : baseParticles.getType(),
+                        particles.count() != null ? particles.count() : baseParticles.getCount(),
+                        particles.spread() != null ? particles.spread() : baseParticles.getSpread(),
+                        particles.speed() != null ? particles.speed() : baseParticles.getSpeed(),
+                        particles.radius() != null ? particles.radius() : baseParticles.getRadius(),
+                        particles.yOffset() != null ? particles.yOffset() : baseParticles.getYOffset(),
+                        particles.interval() != null ? particles.interval() : baseParticles.getInterval(),
+                        particles.enabled() != null ? particles.enabled() : baseParticles.isEnabled()
+                );
+            }
+            CrateDefinition.TrailSettings mergedTrail = baseTrail;
+            if (trail != null) {
+                mergedTrail = new CrateDefinition.TrailSettings(
+                        trail.type() != null ? trail.type() : baseTrail.getType(),
+                        trail.count() != null ? trail.count() : baseTrail.getCount(),
+                        trail.spread() != null ? trail.spread() : baseTrail.getSpread(),
+                        trail.speed() != null ? trail.speed() : baseTrail.getSpeed(),
+                        trail.interval() != null ? trail.interval() : baseTrail.getInterval(),
+                        trail.spacing() != null ? trail.spacing() : baseTrail.getSpacing(),
+                        trail.length() != null ? trail.length() : baseTrail.getLength(),
+                        trail.enabled() != null ? trail.enabled() : baseTrail.isEnabled()
+                );
+            }
+            return new CrateDefinition.RewardDisplaySettings(
+                    itemCount != null ? itemCount : base.getItemCount(),
+                    textLineSpacing != null ? textLineSpacing : base.getTextLineSpacing(),
+                    orbitRadius != null ? orbitRadius : base.getOrbitRadius(),
+                    orbitSpeed != null ? orbitSpeed : base.getOrbitSpeed(),
+                    wobbleSpeed != null ? wobbleSpeed : base.getWobbleSpeed(),
+                    wobbleAmplitude != null ? wobbleAmplitude : base.getWobbleAmplitude(),
+                    pulseSpeed != null ? pulseSpeed : base.getPulseSpeed(),
+                    pulseScale != null ? pulseScale : base.getPulseScale(),
+                    glowScale != null ? glowScale : base.getGlowScale(),
+                    mergedParticles,
+                    mergedTrail
+            );
+        }
+
+        private static Integer readInt(ConfigurationSection section, String key) {
+            return section.contains(key) ? section.getInt(key) : null;
+        }
+
+        private static Double readDouble(ConfigurationSection section, String key) {
+            return section.contains(key) ? section.getDouble(key) : null;
+        }
+    }
+
+    public record ParticleOverrides(
+            String type,
+            Integer count,
+            Double spread,
+            Double speed,
+            Double radius,
+            Double yOffset,
+            Integer interval,
+            Boolean enabled
+    ) {
+        public static ParticleOverrides fromSection(ConfigurationSection section) {
+            if (section == null) {
+                return null;
+            }
+            return new ParticleOverrides(
+                    readString(section, "type"),
+                    readInt(section, "count"),
+                    readDouble(section, "spread"),
+                    readDouble(section, "speed"),
+                    readDouble(section, "radius"),
+                    readDouble(section, "y-offset"),
+                    readInt(section, "interval"),
+                    readBoolean(section, "enabled")
+            );
+        }
+    }
+
+    public record TrailOverrides(
+            String type,
+            Integer count,
+            Double spread,
+            Double speed,
+            Integer interval,
+            Double spacing,
+            Integer length,
+            Boolean enabled
+    ) {
+        public static TrailOverrides fromSection(ConfigurationSection section) {
+            if (section == null) {
+                return null;
+            }
+            return new TrailOverrides(
+                    readString(section, "type"),
+                    readInt(section, "count"),
+                    readDouble(section, "spread"),
+                    readDouble(section, "speed"),
+                    readInt(section, "interval"),
+                    readDouble(section, "spacing"),
+                    readInt(section, "length"),
+                    readBoolean(section, "enabled")
+            );
+        }
+    }
+
+    private static Integer readInt(ConfigurationSection section, String key) {
+        return section.contains(key) ? section.getInt(key) : null;
+    }
+
+    private static Double readDouble(ConfigurationSection section, String key) {
+        return section.contains(key) ? section.getDouble(key) : null;
+    }
+
+    private static Boolean readBoolean(ConfigurationSection section, String key) {
+        return section.contains(key) ? section.getBoolean(key) : null;
+    }
+
+    private static String readString(ConfigurationSection section, String key) {
+        return section.contains(key) ? section.getString(key, "") : null;
     }
 }
