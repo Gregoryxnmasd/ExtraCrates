@@ -10,9 +10,9 @@ command:
   unknown-subcommand: "&cUnknown subcommand."
   key-item-name: "%crate_name% &7(key)"
 session:
-  already-in-progress: "&cYou already have a cutscene in progress."
+  already-in-progress: "&cYou already have a cutscene in progress for %crate_name%."
   no-permission: "&cYou don't have permission to open this crate."
-  key-required: "&cYou need a key for this crate."
-  cooldown: "&cThis crate is on cooldown."
+  key-required: "&cYou need a key for %crate_name%."
+  cooldown: "&cThis crate is on cooldown. Time remaining: %cooldown%s."
   no-rewards: "&cNo rewards configured."
   reward-received: "&aYou received: %reward%"

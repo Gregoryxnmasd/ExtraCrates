@@ -79,7 +79,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (!sender.hasPermission("extracrates.gui")) {
-                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    sender.sendMessage(languageManager.getMessage("command.no-permission", player, null, null, null));
                     return true;
                 }
                 crateGui.open(player);
@@ -100,7 +100,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 }
                 String permission = sub.equals("preview") ? "extracrates.preview" : "extracrates.open";
                 if (!sender.hasPermission(permission)) {
-                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    sender.sendMessage(languageManager.getMessage("command.no-permission", player, null, null, null));
                     return true;
                 }
                 if (args.length < 2) {
@@ -109,7 +109,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 }
                 CrateDefinition crate = configLoader.getCrates().get(args[1]);
                 if (crate == null) {
-                    sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
+                    sender.sendMessage(languageManager.getMessage("command.crate-not-found", player, null, null, null));
                     return true;
                 }
                 sessionManager.openCrate(player, crate, sub.equals("preview"));
@@ -135,22 +135,22 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (!sender.hasPermission("extracrates.givekey")) {
-                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    sender.sendMessage(languageManager.getMessage("command.no-permission", player, null, null, null));
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage(languageManager.getMessage("command.givekey-usage"));
+                    sender.sendMessage(languageManager.getMessage("command.givekey-usage", player, null, null, null));
                     return true;
                 }
                 CrateDefinition crate = configLoader.getCrates().get(args[1]);
                 if (crate == null) {
-                    sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
+                    sender.sendMessage(languageManager.getMessage("command.crate-not-found", player, null, null, null));
                     return true;
                 }
                 ItemStack key = new ItemStack(crate.keyMaterial());
                 ItemMeta meta = key.getItemMeta();
                 if (meta != null) {
-                    String keyName = languageManager.getRaw("command.key-item-name", java.util.Map.of("crate_name", crate.displayName()));
+                    String keyName = languageManager.getRaw("command.key-item-name", player, crate, null, null, java.util.Map.of());
                     meta.displayName(TextUtil.color(keyName));
                     if (crate.keyModel() != null && !crate.keyModel().isEmpty()) {
                         int modelData = resourcepackModelResolver.resolve(configLoader, crate.keyModel());
@@ -161,7 +161,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     key.setItemMeta(meta);
                 }
                 player.getInventory().addItem(key);
-                sender.sendMessage(languageManager.getMessage("command.givekey-success"));
+                sender.sendMessage(languageManager.getMessage("command.givekey-success", player, crate, null, null));
                 return true;
             }
             case "cutscene" -> {
