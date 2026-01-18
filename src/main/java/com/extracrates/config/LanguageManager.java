@@ -4,10 +4,12 @@ import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.util.TextUtil;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.util.Collections;
@@ -39,19 +41,23 @@ public class LanguageManager {
         return TextUtil.color(getRaw(key, placeholders));
     }
 
-    public Component getMessage(String key, Player player, CrateDefinition crate, Reward reward, Long cooldownSeconds) {
-        return getMessage(key, player, crate, reward, cooldownSeconds, Collections.emptyMap());
+    public void sendActionBar(Player player, String key) {
+        sendActionBar(player, key, Collections.emptyMap());
     }
 
-    public Component getMessage(
-            String key,
-            Player player,
-            CrateDefinition crate,
-            Reward reward,
-            Long cooldownSeconds,
-            Map<String, String> placeholders
-    ) {
-        return TextUtil.color(getRaw(key, player, crate, reward, cooldownSeconds, placeholders));
+    public void sendActionBar(Player player, String key, Map<String, String> placeholders) {
+        if (player == null) {
+            return;
+        }
+        player.sendActionBar(getMessage(key, placeholders));
+    }
+
+    public BossBar createBossBar(String key, float progress, BossBar.Color color, BossBar.Overlay overlay) {
+        return createBossBar(key, progress, color, overlay, Collections.emptyMap());
+    }
+
+    public BossBar createBossBar(String key, float progress, BossBar.Color color, BossBar.Overlay overlay, Map<String, String> placeholders) {
+        return BossBar.bossBar(getMessage(key, placeholders), progress, color, overlay);
     }
 
     public String getRaw(String key, Map<String, String> placeholders) {

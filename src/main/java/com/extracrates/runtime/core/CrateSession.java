@@ -12,9 +12,6 @@ import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.SoundUtil;
 import com.extracrates.util.TextUtil;
-import com.extracrates.runtime.UiMode;
-import net.kyori.adventure.bossbar.BossBar;
-import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Display;
@@ -101,7 +98,7 @@ public class CrateSession {
     public void start() {
         capturePlayerState();
         if (path == null) {
-            player.sendMessage(languageManager.getMessage("session.cutscene-path-not-found"));
+            player.sendMessage(languageManager.getMessage("session.error.missing-path"));
             finish();
             return;
         }
@@ -120,6 +117,10 @@ public class CrateSession {
         spawnCamera(start);
         applySpectatorMode();
         spawnRewardDisplay();
+        if (preview) {
+            languageManager.sendActionBar(player, "session.preview-actionbar");
+        }
+        sendRerollActionBar();
         startMusic();
         scheduleUiMessage();
         startCutscene();
@@ -411,8 +412,16 @@ public class CrateSession {
             return;
         }
         if (isQaMode()) {
-            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
-            return;
+            player.sendMessage(languageManager.getMessage("session.error.qa-mode"));
+        } else {
+            player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.displayName())));
+            ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+            player.getInventory().addItem(item);
+
+            for (String command : reward.commands()) {
+                String parsed = command.replace("%player%", player.getName());
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+            }
         }
         showRewardMessage(reward);
         if (rewardIndex >= rewards.size() - 1) {
@@ -550,7 +559,7 @@ public class CrateSession {
                 setTextDisplayText(hologram, textComponent);
             }
         }
-        SoundUtil.play(player, configLoader.getSettings().getSounds().reroll());
+        sendRerollActionBar();
     }
 
     private boolean isQaMode() {
@@ -764,12 +773,15 @@ public class CrateSession {
         return preview;
     }
 
-    public int getPendingRewardCount() {
-        if (rewards == null || rewards.isEmpty()) {
-            return 0;
+    private void sendRerollActionBar() {
+        if (rewards == null || rewards.size() <= 1) {
+            return;
         }
-        int remaining = rewards.size() - Math.max(0, rewardIndex);
-        return Math.max(0, remaining);
+        Map<String, String> placeholders = Map.of(
+                "current", String.valueOf(rewardIndex + 1),
+                "total", String.valueOf(rewards.size())
+        );
+        languageManager.sendActionBar(player, "session.reroll-actionbar", placeholders);
     }
 
     private boolean toggleHud(boolean hidden) {
