@@ -353,4 +353,12 @@ public class SessionManager {
     public void flushSyncCaches() {
         cooldowns.clear();
     }
+
+    public boolean isStorageEnabled() {
+        return storageEnabled;
+    }
+
+    public CrateStorage getStorage() {
+        return storage;
+    }
 }

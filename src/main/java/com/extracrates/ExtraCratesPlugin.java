@@ -71,7 +71,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         protocolEntityHider = ProtocolEntityHider.createIfPresent(this);
         EditorInputManager inputManager = new EditorInputManager(this);
         ConfirmationMenu confirmationMenu = new ConfirmationMenu(this);
-        editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu);
+        editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu, sessionManager);
 
         PluginCommand crateCommand = getCommand("crate");
         if (crateCommand != null) {
