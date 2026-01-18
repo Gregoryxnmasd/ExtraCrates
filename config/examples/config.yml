@@ -24,6 +24,7 @@ cutscene:
   reward-delay-ticks: 20
   pumpkin-model: "cutscene_mask"
   slowdown-modifier: -10.0
+  min-teleport-distance: 0.05
   hide-others: true
   spectator-lock: true
   fake-equip: true

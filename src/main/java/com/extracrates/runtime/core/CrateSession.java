@@ -204,9 +204,12 @@ public class CrateSession {
             finish();
             return;
         }
+        double minTeleportDistance = Math.max(0.0, configLoader.getMainConfig().getDouble("cutscene.min-teleport-distance", 0.0));
+        double minTeleportDistanceSquared = minTeleportDistance * minTeleportDistance;
         task = new BukkitRunnable() {
             int tick = 0;
             final int totalTicks = Math.max(0, timeline.size() - 1);
+            Location lastTeleportLocation = cameraEntity.getLocation();
 
             @Override
             public void run() {
@@ -216,7 +219,10 @@ public class CrateSession {
                     return;
                 }
                 Location point = timeline.get(tick++);
-                cameraEntity.teleport(point);
+                if (lastTeleportLocation == null || lastTeleportLocation.distanceSquared(point) >= minTeleportDistanceSquared) {
+                    cameraEntity.teleport(point);
+                    lastTeleportLocation = point;
+                }
                 player.setSpectatorTarget(cameraEntity);
                 elapsedTicks++;
                 if (rewards.size() > 1 && rewardSwitchTicks > 0) {
