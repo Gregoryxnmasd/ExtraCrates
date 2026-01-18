@@ -97,7 +97,12 @@ public class SessionManager {
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
-        List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
+        List<Reward> rewards = RewardSelector.roll(
+                rewardPool,
+                random,
+                buildRollLogger(player),
+                buildRewardSelectorSettings()
+        );
         if (rewards.isEmpty()) {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
@@ -150,6 +155,24 @@ public class SessionManager {
                 reward.chance(),
                 total
         ));
+    }
+
+    private RewardSelector.RewardSelectorSettings buildRewardSelectorSettings() {
+        boolean normalizeChances = configLoader.getMainConfig().getBoolean("rewards.normalize-chances", false);
+        double warningThreshold = configLoader.getMainConfig().getDouble("rewards.warning-threshold", 0);
+        RewardSelector.RewardWarningLogger warningLogger = (pool, reward, threshold) -> plugin.getLogger().warning(
+                String.format(
+                        "Reward chance exceeds threshold pool=%s rewardId=%s chance=%.4f threshold=%.4f",
+                        pool.id(),
+                        reward.id(),
+                        reward.chance(),
+                        threshold
+                )
+        );
+        if (warningThreshold <= 0) {
+            warningLogger = null;
+        }
+        return new RewardSelector.RewardSelectorSettings(normalizeChances, warningThreshold, warningLogger);
     }
 
     private CutscenePath buildDefaultPath(Player player) {
