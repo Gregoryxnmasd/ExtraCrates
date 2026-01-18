@@ -5,6 +5,7 @@ import com.extracrates.runtime.core.CrateSession;
 import com.extracrates.runtime.core.SessionManager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -38,5 +39,15 @@ public class SessionListener implements Listener {
         if (event.getFrom().distanceSquared(event.getTo()) > 0.0001) {
             event.setTo(event.getFrom());
         }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onInteract(PlayerInteractEvent event) {
+        CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session == null) {
+            return;
+        }
+        event.setCancelled(true);
+        session.handleRerollInput(event.isShiftClick());
     }
 }
