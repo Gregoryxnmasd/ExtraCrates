@@ -17,7 +17,7 @@ import com.extracrates.storage.StorageSettings;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
-import net.kyori.adventure.text.Component;
+import net.kyori.adventure.bossbar.BossBar;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -27,6 +27,7 @@ import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -49,6 +50,8 @@ public class SessionManager {
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Random> sessionRandoms = new HashMap<>();
+    private final Map<UUID, BossBar> cooldownBars = new HashMap<>();
+    private final Map<UUID, BukkitRunnable> cooldownTasks = new HashMap<>();
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, EconomyService economyService) {
         this.plugin = plugin;
@@ -65,6 +68,9 @@ public class SessionManager {
         sessions.values().forEach(CrateSession::end);
         sessions.clear();
         sessionRandoms.clear();
+        cooldownTasks.values().forEach(BukkitRunnable::cancel);
+        cooldownTasks.clear();
+        cooldownBars.clear();
         if (syncBridge != null) {
             syncBridge.shutdown();
         }
@@ -79,21 +85,25 @@ public class SessionManager {
 
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
-            player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
+            player.sendMessage(languageManager.getMessage("session.already-in-progress"));
             return false;
         }
         CutscenePath path = resolveCutscenePath(crate, player);
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
-            player.sendMessage(Component.text("No se encontró el pool de recompensas para esta crate."));
+            player.sendMessage(languageManager.getMessage("session.error.missing-reward-pool"));
             return false;
         }
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
-            player.sendMessage(Component.text("Necesitas una llave para esta crate."));
+            player.sendMessage(languageManager.getMessage("session.key-required"));
             return false;
         }
         if (!preview && isOnCooldown(player, crate)) {
-            player.sendMessage(Component.text("Esta crate está en cooldown."));
+            long remainingSeconds = getCooldownRemainingSeconds(player, crate);
+            Map<String, String> placeholders = Map.of("seconds", String.valueOf(remainingSeconds));
+            player.sendMessage(languageManager.getMessage("session.cooldown", placeholders));
+            languageManager.sendActionBar(player, "session.cooldown-actionbar", placeholders);
+            showCooldownBossBar(player, crate, remainingSeconds);
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
@@ -120,6 +130,7 @@ public class SessionManager {
             session.end();
         }
         sessionRandoms.remove(playerId);
+        clearCooldownDisplay(playerId);
     }
 
     public void endPreview(UUID playerId) {
@@ -352,5 +363,58 @@ public class SessionManager {
 
     public void flushSyncCaches() {
         cooldowns.clear();
+    }
+
+    private void showCooldownBossBar(Player player, CrateDefinition crate, long remainingSeconds) {
+        if (remainingSeconds <= 0 || crate.cooldownSeconds() <= 0) {
+            return;
+        }
+        UUID playerId = player.getUniqueId();
+        clearCooldownDisplay(playerId);
+        float progress = Math.max(0.0f, Math.min(1.0f, remainingSeconds / (float) crate.cooldownSeconds()));
+        Map<String, String> placeholders = Map.of("seconds", String.valueOf(remainingSeconds));
+        BossBar bossBar = languageManager.createBossBar(
+                "session.cooldown-bossbar",
+                progress,
+                BossBar.Color.RED,
+                BossBar.Overlay.PROGRESS,
+                placeholders
+        );
+        player.showBossBar(bossBar);
+        BukkitRunnable task = new BukkitRunnable() {
+            long remaining = remainingSeconds;
+
+            @Override
+            public void run() {
+                if (remaining <= 0 || !player.isOnline()) {
+                    player.hideBossBar(bossBar);
+                    clearCooldownDisplay(playerId);
+                    cancel();
+                    return;
+                }
+                float updatedProgress = Math.max(0.0f, Math.min(1.0f, remaining / (float) crate.cooldownSeconds()));
+                Map<String, String> updatedPlaceholders = Map.of("seconds", String.valueOf(remaining));
+                bossBar.name(languageManager.getMessage("session.cooldown-bossbar", updatedPlaceholders));
+                bossBar.progress(updatedProgress);
+                remaining--;
+            }
+        };
+        task.runTaskTimer(plugin, 0L, 20L);
+        cooldownBars.put(playerId, bossBar);
+        cooldownTasks.put(playerId, task);
+    }
+
+    private void clearCooldownDisplay(UUID playerId) {
+        BossBar bossBar = cooldownBars.remove(playerId);
+        if (bossBar != null) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player != null) {
+                player.hideBossBar(bossBar);
+            }
+        }
+        BukkitRunnable task = cooldownTasks.remove(playerId);
+        if (task != null) {
+            task.cancel();
+        }
     }
 }

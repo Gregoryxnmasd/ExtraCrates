@@ -14,5 +14,13 @@ session:
   no-permission: "&cNo tienes permiso para abrir esta crate."
   key-required: "&cNecesitas una llave para esta crate."
   cooldown: "&cEsta crate está en enfriamiento."
+  cooldown-actionbar: "&cEnfriamiento: %seconds%s"
+  cooldown-bossbar: "&cDisponible en %seconds%s"
   no-rewards: "&cNo hay recompensas configuradas."
   reward-received: "&aHas recibido: %reward%"
+  preview-actionbar: "&eVista previa activada."
+  reroll-actionbar: "&bReroll %current%/%total%"
+  error:
+    missing-path: "&cNo se encontró la ruta de la cinemática."
+    missing-reward-pool: "&cNo se encontró el pool de recompensas para esta crate."
+    qa-mode: "&eModo QA activo: no se entregan items ni se ejecutan comandos."

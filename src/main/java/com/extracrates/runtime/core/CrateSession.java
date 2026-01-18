@@ -10,7 +10,6 @@ import com.extracrates.config.LanguageManager;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
-import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Display;
@@ -83,7 +82,7 @@ public class CrateSession {
 
     public void start() {
         if (path == null) {
-            player.sendMessage(Component.text("No se encontró la ruta de la cutscene."));
+            player.sendMessage(languageManager.getMessage("session.error.missing-path"));
             finish();
             return;
         }
@@ -98,6 +97,10 @@ public class CrateSession {
         spawnCamera(start);
         applySpectatorMode();
         spawnRewardDisplay();
+        if (preview) {
+            languageManager.sendActionBar(player, "session.preview-actionbar");
+        }
+        sendRerollActionBar();
         startMusic();
         startCutscene();
     }
@@ -307,9 +310,9 @@ public class CrateSession {
             return;
         }
         if (isQaMode()) {
-            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
+            player.sendMessage(languageManager.getMessage("session.error.qa-mode"));
         } else {
-            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
+            player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.displayName())));
             ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
             player.getInventory().addItem(item);
 
@@ -351,6 +354,7 @@ public class CrateSession {
             String name = format.replace("%reward_name%", reward.displayName());
             hologram.text(TextUtil.color(name));
         }
+        sendRerollActionBar();
     }
 
     private boolean isQaMode() {
@@ -424,6 +428,17 @@ public class CrateSession {
 
     public boolean isPreview() {
         return preview;
+    }
+
+    private void sendRerollActionBar() {
+        if (rewards == null || rewards.size() <= 1) {
+            return;
+        }
+        Map<String, String> placeholders = Map.of(
+                "current", String.valueOf(rewardIndex + 1),
+                "total", String.valueOf(rewards.size())
+        );
+        languageManager.sendActionBar(player, "session.reroll-actionbar", placeholders);
     }
 
     private boolean toggleHud(boolean hidden) {

@@ -14,5 +14,13 @@ session:
   no-permission: "&cYou don't have permission to open this crate."
   key-required: "&cYou need a key for this crate."
   cooldown: "&cThis crate is on cooldown."
+  cooldown-actionbar: "&cCooldown: %seconds%s"
+  cooldown-bossbar: "&cAvailable in %seconds%s"
   no-rewards: "&cNo rewards configured."
   reward-received: "&aYou received: %reward%"
+  preview-actionbar: "&ePreview active."
+  reroll-actionbar: "&bReroll %current%/%total%"
+  error:
+    missing-path: "&cCutscene path not found."
+    missing-reward-pool: "&cReward pool not found for this crate."
+    qa-mode: "&eQA mode active: no items are granted and no commands run."
