@@ -16,3 +16,4 @@ session:
   cooldown: "&cThis crate is on cooldown."
   no-rewards: "&cNo rewards configured."
   reward-received: "&aYou received: %reward%"
+  input-debounced: "&cPlease wait before interacting again."

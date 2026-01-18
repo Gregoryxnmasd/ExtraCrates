@@ -16,3 +16,4 @@ session:
   cooldown: "&cEsta crate está en enfriamiento."
   no-rewards: "&cNo hay recompensas configuradas."
   reward-received: "&aHas recibido: %reward%"
+  input-debounced: "&cEspera un momento antes de volver a interactuar."

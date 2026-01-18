@@ -48,6 +48,7 @@ public class CrateSession {
     private int rewardSwitchTicks;
     private int nextRewardSwitchTick;
     private int elapsedTicks;
+    private int lastInputTick;
     private Location rewardBaseLocation;
     private Location hologramBaseLocation;
     private Transformation rewardBaseTransform;
@@ -89,6 +90,7 @@ public class CrateSession {
         }
         rewardIndex = 0;
         elapsedTicks = 0;
+        lastInputTick = -1;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
         Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
@@ -424,6 +426,19 @@ public class CrateSession {
 
     public boolean isPreview() {
         return preview;
+    }
+
+    public boolean registerInput() {
+        int debounceTicks = Math.max(0, configLoader.getMainConfig().getInt("cutscene.input-debounce-ticks", 0));
+        if (debounceTicks <= 0) {
+            lastInputTick = elapsedTicks;
+            return true;
+        }
+        if (lastInputTick >= 0 && elapsedTicks - lastInputTick < debounceTicks) {
+            return false;
+        }
+        lastInputTick = elapsedTicks;
+        return true;
     }
 
     private boolean toggleHud(boolean hidden) {
