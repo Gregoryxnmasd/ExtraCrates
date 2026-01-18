@@ -15,6 +15,7 @@ import com.extracrates.util.SoundUtil;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Display;
@@ -70,9 +71,8 @@ public class CrateSession {
     private Location hologramBaseLocation;
     private Transformation rewardBaseTransform;
     private int rerollEnabledAtTick;
-    private int selectedRewardIndex;
     private boolean rerollLocked;
-    private BossBar rerollBossBar;
+    private int selectedRewardIndex;
 
     private GameMode previousGameMode;
     private Entity previousSpectatorTarget;
@@ -122,9 +122,9 @@ public class CrateSession {
         lastInputTick = -1;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
-        maxDurationTicks = Math.max(0, configLoader.getMainConfig().getInt("sessions.max-duration-ticks", 0));
-        sessionStartMillis = System.currentTimeMillis();
-        lastTaskTickMillis = sessionStartMillis;
+        rerollEnabledAtTick = rewardSwitchTicks;
+        rerollLocked = false;
+        selectedRewardIndex = -1;
         Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
         previousGameMode = player.getGameMode();
         gamemodeSnapshotTaken = true;
@@ -352,8 +352,8 @@ public class CrateSession {
                 cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
                 elapsedTicks++;
-                lastTaskTickMillis = System.currentTimeMillis();
-                if (rewards.size() > 1 && rewardSwitchTicks > 0) {
+                updateRerollDisplay();
+                if (!rerollLocked && rewards.size() > 1 && rewardSwitchTicks > 0) {
                     while (elapsedTicks >= nextRewardSwitchTick && rewardIndex < rewards.size() - 1) {
                         rewardIndex++;
                         nextRewardSwitchTick += rewardSwitchTicks;
@@ -474,10 +474,9 @@ public class CrateSession {
     }
 
     private void finish() {
-        if (ending || ended) {
-            return;
+        if (rerollLocked && selectedRewardIndex >= 0 && selectedRewardIndex < rewards.size()) {
+            rewardIndex = selectedRewardIndex;
         }
-        ending = true;
         if (!preview) {
             executeReward();
         }
@@ -623,6 +622,28 @@ public class CrateSession {
         }
     }
 
+    public void handleRerollInput(boolean shift) {
+        if (rewards == null || rewards.size() <= 1) {
+            return;
+        }
+        if (elapsedTicks < rerollEnabledAtTick || rerollLocked) {
+            return;
+        }
+        if (shift) {
+            rerollLocked = true;
+            selectedRewardIndex = rewardIndex;
+            updateRerollDisplay();
+            return;
+        }
+        rewardIndex = (rewardIndex + 1) % rewards.size();
+        refreshRewardDisplay();
+        updateRerollDisplay();
+    }
+
+    private boolean isQaMode() {
+        return configLoader.getMainConfig().getBoolean("qa-mode", false);
+    }
+
     private ItemStack buildRewardDisplayItem(Reward reward, World world) {
         boolean debugTimings = configLoader.getMainConfig().getBoolean("debug.timings", false);
         long start = debugTimings ? System.nanoTime() : 0L;
@@ -746,6 +767,7 @@ public class CrateSession {
             player.hideBossBar(rerollBossBar);
             rerollBossBar = null;
         }
+        clearRerollDisplay();
         sessionManager.removeSession(player.getUniqueId());
         logVerbose("Sesion limpiada: jugador=%s crate=%s", player.getName(), crate.id());
     }
@@ -954,30 +976,25 @@ public class CrateSession {
         }
     }
 
-    private void setupRerollHud() {
-        if (rewards == null || rewards.isEmpty()) {
+    private void updateRerollDisplay() {
+        if (rewards == null || rewards.size() <= 1) {
             return;
         }
-        if (rerollBossBar == null) {
-            rerollBossBar = BossBar.bossBar(Component.empty(), 1.0f, BossBar.Color.YELLOW, BossBar.Overlay.PROGRESS);
-            player.showBossBar(rerollBossBar);
+        Component message;
+        if (rerollLocked) {
+            message = Component.text("Recompensa seleccionada", NamedTextColor.YELLOW);
+        } else if (elapsedTicks >= rerollEnabledAtTick) {
+            message = Component.text("Clic para reroll \u2022 Shift para reclamar", NamedTextColor.YELLOW);
+        } else {
+            message = Component.text("Reroll disponible pronto...", NamedTextColor.YELLOW);
         }
-        updateRerollHud();
+        player.sendActionBar(message);
     }
 
-    private void updateRerollHud() {
-        if (rerollBossBar == null) {
+    private void clearRerollDisplay() {
+        if (rewards == null || rewards.size() <= 1) {
             return;
         }
-        String key = "session.reroll.ready";
-        float progress = 1.0f;
-        if (rerollLocked) {
-            key = "session.reroll.confirmed-bar";
-        } else if (rerollEnabledAtTick > 0 && elapsedTicks < rerollEnabledAtTick) {
-            key = "session.reroll.waiting";
-            progress = Math.min(1.0f, Math.max(0.0f, elapsedTicks / (float) rerollEnabledAtTick));
-        }
-        rerollBossBar.name(languageManager.getMessage(key));
-        rerollBossBar.progress(progress);
+        player.sendActionBar(Component.empty());
     }
 }
