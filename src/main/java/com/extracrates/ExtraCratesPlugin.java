@@ -19,7 +19,6 @@ import com.extracrates.runtime.core.ExtraCratesApiService;
 import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.MapImageCache;
-import com.extracrates.util.ResourcepackModelResolver;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.command.PluginCommand;
@@ -83,8 +82,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
                     crateGui,
                     editorMenu,
                     syncCommand,
-                    routeEditorManager,
-                    ResourcepackModelResolver.getInstance()
+                    routeEditorManager
             );
             crateCommand.setExecutor(executor);
             crateCommand.setTabCompleter(executor);

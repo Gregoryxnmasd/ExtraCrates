@@ -17,6 +17,7 @@ import com.extracrates.storage.StorageSettings;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
+import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -27,6 +28,7 @@ import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -327,6 +329,19 @@ public class SessionManager {
         }
     }
 
+    public void grantKey(Player player, CrateDefinition crate, int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        if (storageEnabled) {
+            storage.addKey(player.getUniqueId(), crate.id(), amount);
+            return;
+        }
+        ItemStack keyItem = buildKeyItem(crate);
+        keyItem.setAmount(amount);
+        player.getInventory().addItem(keyItem);
+    }
+
     public void applyRemoteCooldown(UUID playerId, String crateId, Instant timestamp) {
         cooldowns.computeIfAbsent(playerId, key -> new HashMap<>()).put(crateId, timestamp);
     }
@@ -352,5 +367,23 @@ public class SessionManager {
 
     public void flushSyncCaches() {
         cooldowns.clear();
+    }
+
+    private ItemStack buildKeyItem(CrateDefinition crate) {
+        ItemStack key = new ItemStack(crate.keyMaterial());
+        ItemMeta meta = key.getItemMeta();
+        if (meta != null) {
+            String keyName = languageManager.getRaw(
+                    "command.key-item-name",
+                    java.util.Map.of("crate_name", crate.displayName())
+            );
+            meta.displayName(TextUtil.color(keyName));
+            int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.keyModel());
+            if (modelData >= 0) {
+                meta.setCustomModelData(modelData);
+            }
+            key.setItemMeta(meta);
+        }
+        return key;
     }
 }

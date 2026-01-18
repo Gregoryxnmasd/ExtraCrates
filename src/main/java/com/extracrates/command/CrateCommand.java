@@ -9,8 +9,6 @@ import com.extracrates.route.RouteEditorManager;
 import com.extracrates.runtime.CutscenePreviewSession;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.runtime.core.SessionManager;
-import com.extracrates.util.ResourcepackModelResolver;
-import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Particle;
 import org.bukkit.command.Command;
@@ -18,8 +16,6 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,7 +32,6 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
     private final EditorMenu editorMenu;
     private final SyncCommand syncCommand;
     private final RouteEditorManager routeEditorManager;
-    private final ResourcepackModelResolver resourcepackModelResolver;
 
     public CrateCommand(
             ExtraCratesPlugin plugin,
@@ -46,8 +41,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             CrateGui crateGui,
             EditorMenu editorMenu,
             SyncCommand syncCommand,
-            RouteEditorManager routeEditorManager,
-            ResourcepackModelResolver resourcepackModelResolver
+            RouteEditorManager routeEditorManager
     ) {
         this.plugin = plugin;
         this.configLoader = configLoader;
@@ -57,7 +51,6 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         this.editorMenu = editorMenu;
         this.syncCommand = syncCommand;
         this.routeEditorManager = routeEditorManager;
-        this.resourcepackModelResolver = resourcepackModelResolver;
     }
 
     @Override
@@ -147,20 +140,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
                     return true;
                 }
-                ItemStack key = new ItemStack(crate.keyMaterial());
-                ItemMeta meta = key.getItemMeta();
-                if (meta != null) {
-                    String keyName = languageManager.getRaw("command.key-item-name", java.util.Map.of("crate_name", crate.displayName()));
-                    meta.displayName(TextUtil.color(keyName));
-                    if (crate.keyModel() != null && !crate.keyModel().isEmpty()) {
-                        int modelData = resourcepackModelResolver.resolve(configLoader, crate.keyModel());
-                        if (modelData >= 0) {
-                            meta.setCustomModelData(modelData);
-                        }
-                    }
-                    key.setItemMeta(meta);
-                }
-                player.getInventory().addItem(key);
+                sessionManager.grantKey(player, crate, 1);
                 sender.sendMessage(languageManager.getMessage("command.givekey-success"));
                 return true;
             }
