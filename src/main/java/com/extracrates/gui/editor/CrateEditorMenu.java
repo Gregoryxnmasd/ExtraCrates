@@ -89,6 +89,26 @@ public class CrateEditorMenu implements Listener {
                 "&7Actual: &f" + (crate != null ? crate.openMode() : "reward-only"),
                 "&7Click para editar."
         )));
+        inventory.setItem(19, buildItem(Material.CARVED_PUMPKIN, "&eCutscene overlay", List.of(
+                "&7Actual: &f" + (crate != null ? crate.cutsceneSettings().overlayModel() : ""),
+                "&7Click para editar."
+        )));
+        inventory.setItem(20, buildItem(Material.IRON_BOOTS, "&eLock movimiento", List.of(
+                "&7Actual: &f" + (crate != null && crate.cutsceneSettings().lockMovement()),
+                "&7Click para alternar."
+        )));
+        inventory.setItem(21, buildItem(Material.PAPER, "&eLock HUD", List.of(
+                "&7Actual: &f" + (crate != null && crate.cutsceneSettings().hideHud()),
+                "&7Click para alternar."
+        )));
+        String musicSound = "";
+        if (crate != null && crate.cutsceneSettings().musicSettings() != null) {
+            musicSound = crate.cutsceneSettings().musicSettings().sound();
+        }
+        inventory.setItem(23, buildItem(Material.MUSIC_DISC_11, "&eMúsica", List.of(
+                "&7Actual: &f" + (musicSound == null || musicSound.isEmpty() ? "ninguna" : musicSound),
+                "&7Click para editar."
+        )));
         inventory.setItem(22, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
         player.openInventory(inventory);
     }
@@ -151,6 +171,10 @@ public class CrateEditorMenu implements Listener {
             case 12 -> promptField(player, crateId, "rewards-pool", "ID del rewards pool");
             case 14 -> toggleType(player, crateId);
             case 16 -> promptField(player, crateId, "open-mode", "Open mode (reward-only, cinematic, etc)");
+            case 19 -> promptField(player, crateId, "cutscene.overlay-model", "Overlay model de la cutscene");
+            case 20 -> toggleCutsceneLock(player, crateId, "movement", "movimiento");
+            case 21 -> toggleCutsceneLock(player, crateId, "hud", "HUD");
+            case 23 -> promptField(player, crateId, "cutscene.music.sound", "Música (ID de sonido)");
             case 22 -> open(player);
             default -> {
             }
@@ -231,6 +255,22 @@ public class CrateEditorMenu implements Listener {
         }, () -> openDetail(player, crateId));
     }
 
+    private void toggleCutsceneLock(Player player, String crateId, String lockKey, String label) {
+        CrateDefinition crate = configLoader.getCrates().get(crateId);
+        boolean current = false;
+        if (crate != null) {
+            current = lockKey.equals("movement")
+                    ? crate.cutsceneSettings().lockMovement()
+                    : crate.cutsceneSettings().hideHud();
+        }
+        boolean next = !current;
+        confirmationMenu.open(player, "&8Confirmar cambio", "Cambiar lock de " + label + " a " + next, () -> {
+            updateCrateField(crateId, "cutscene.locks." + lockKey, next);
+            player.sendMessage(Component.text("Lock actualizado y guardado en YAML."));
+            openDetail(player, crateId);
+        }, () -> openDetail(player, crateId));
+    }
+
     private void createCrate(String id) {
         FileConfiguration config = loadConfig();
         String path = "crates." + id;
@@ -241,6 +281,10 @@ public class CrateEditorMenu implements Listener {
         config.set(path + ".cooldown-seconds", 0);
         config.set(path + ".cost", 0);
         config.set(path + ".permission", "extracrates.open");
+        config.set(path + ".cutscene.overlay-model", "");
+        config.set(path + ".cutscene.locks.movement", true);
+        config.set(path + ".cutscene.locks.hud", true);
+        config.set(path + ".cutscene.music.sound", "");
         config.set(path + ".rewards-pool", "");
         saveConfig(config);
     }
