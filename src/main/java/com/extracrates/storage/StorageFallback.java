@@ -62,6 +62,14 @@ public class StorageFallback implements CrateStorage {
     }
 
     @Override
+    public void clearCooldown(UUID playerId, String crateId) {
+        runWithFallback(
+                () -> primary.clearCooldown(playerId, crateId),
+                () -> fallback.clearCooldown(playerId, crateId)
+        );
+    }
+
+    @Override
     public int getKeyCount(UUID playerId, String crateId) {
         return callWithFallback(
                 () -> primary.getKeyCount(playerId, crateId),

@@ -26,6 +26,14 @@ public class LocalStorage implements CrateStorage {
     }
 
     @Override
+    public void clearCooldown(UUID playerId, String crateId) {
+        Map<String, Instant> userCooldowns = cooldowns.get(playerId);
+        if (userCooldowns != null) {
+            userCooldowns.remove(crateId);
+        }
+    }
+
+    @Override
     public int getKeyCount(UUID playerId, String crateId) {
         Map<String, Integer> userKeys = keys.get(playerId);
         if (userKeys == null) {

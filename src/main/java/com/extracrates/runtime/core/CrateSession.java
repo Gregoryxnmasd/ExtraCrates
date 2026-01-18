@@ -37,6 +37,7 @@ public class CrateSession {
     private final CutscenePath path;
     private final SessionManager sessionManager;
     private final boolean preview;
+    private final OpenState openState;
 
     private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
@@ -58,6 +59,7 @@ public class CrateSession {
     private boolean hudHiddenApplied;
     private float previousWalkSpeed;
     private float previousFlySpeed;
+    private boolean rewardDelivered;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -68,7 +70,8 @@ public class CrateSession {
             List<Reward> rewards,
             CutscenePath path,
             SessionManager sessionManager,
-            boolean preview
+            boolean preview,
+            OpenState openState
     ) {
         this.plugin = plugin;
         this.configLoader = configLoader;
@@ -79,6 +82,7 @@ public class CrateSession {
         this.path = path;
         this.sessionManager = sessionManager;
         this.preview = preview;
+        this.openState = openState;
     }
 
     public void start() {
@@ -318,6 +322,8 @@ public class CrateSession {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
         }
+        rewardDelivered = true;
+        sessionManager.completeOpen(player, crate, reward, openState);
         if (rewardIndex >= rewards.size() - 1) {
             return;
         }
@@ -415,6 +421,7 @@ public class CrateSession {
         } else {
             player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
         }
+        sessionManager.handleSessionEnd(this);
         sessionManager.removeSession(player.getUniqueId());
     }
 
@@ -424,6 +431,30 @@ public class CrateSession {
 
     public boolean isPreview() {
         return preview;
+    }
+
+    public boolean isRewardDelivered() {
+        return rewardDelivered;
+    }
+
+    public OpenState getOpenState() {
+        return openState;
+    }
+
+    public UUID getPlayerId() {
+        return player.getUniqueId();
+    }
+
+    public String getCrateId() {
+        return crate.id();
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public CrateDefinition getCrate() {
+        return crate;
     }
 
     private boolean toggleHud(boolean hidden) {
