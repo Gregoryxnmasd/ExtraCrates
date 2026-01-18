@@ -224,6 +224,9 @@ public class CrateSession {
                         rewardIndex++;
                         nextRewardSwitchTick += rewardSwitchTicks;
                         refreshRewardDisplay();
+                        if (!preview) {
+                            sessionManager.updatePendingReward(player, crate, getCurrentReward());
+                        }
                     }
                 }
             }
@@ -306,18 +309,7 @@ public class CrateSession {
         if (reward == null) {
             return;
         }
-        if (isQaMode()) {
-            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
-        } else {
-            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
-            ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-            player.getInventory().addItem(item);
-
-            for (String command : reward.commands()) {
-                String parsed = command.replace("%player%", player.getName());
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
-            }
-        }
+        sessionManager.tryGrantReward(player, crate, reward);
         if (rewardIndex >= rewards.size() - 1) {
             return;
         }
@@ -351,10 +343,6 @@ public class CrateSession {
             String name = format.replace("%reward_name%", reward.displayName());
             hologram.text(TextUtil.color(name));
         }
-    }
-
-    private boolean isQaMode() {
-        return configLoader.getMainConfig().getBoolean("qa-mode", false);
     }
 
     private ItemStack buildRewardDisplayItem(Reward reward, World world) {
