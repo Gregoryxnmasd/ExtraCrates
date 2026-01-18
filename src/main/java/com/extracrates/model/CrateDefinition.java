@@ -14,6 +14,7 @@ public record CrateDefinition(
         Material keyMaterial,
         int cooldownSeconds,
         double cost,
+        double rerollCost,
         String permission,
         java.util.List<String> allowedWorlds,
         java.util.List<String> blockedWorlds,
@@ -54,6 +55,7 @@ public record CrateDefinition(
         }
         int cooldown = section.getInt("cooldown-seconds", 0);
         double cost = section.getDouble("cost", 0);
+        double rerollCost = section.getDouble("reroll-cost", 0);
         String permission = section.getString("permission", "extracrates.open");
         java.util.List<String> allowedWorlds = section.getStringList("allowed-worlds");
         java.util.List<String> blockedWorlds = section.getStringList("blocked-worlds");
@@ -108,6 +110,7 @@ public record CrateDefinition(
                 keyMaterial,
                 cooldown,
                 cost,
+                rerollCost,
                 permission,
                 allowedWorlds,
                 blockedWorlds,
@@ -444,16 +447,17 @@ public record CrateDefinition(
         }
     }
 
-    public record CutsceneSettings(String overlayModel, boolean lockMovement, boolean hideHud, MusicSettings musicSettings) {
+    public record CutsceneSettings(String overlayModel, boolean lockMovement, boolean hideHud, boolean commandsEnabled, MusicSettings musicSettings) {
         public static CutsceneSettings fromSections(ConfigurationSection section, ConfigurationSection defaults) {
             String overlayModel = readString(section, "overlay-model", defaults, "overlay-model", "pumpkin-model", "");
             boolean lockMovement = readBoolean(section, "locks.movement", defaults, "locks.movement", true);
             boolean hideHud = readBoolean(section, "locks.hud", defaults, "locks.hud", true);
+            boolean commandsEnabled = readBoolean(section, "commands-enabled", defaults, "commands-enabled", true);
             MusicSettings musicSettings = MusicSettings.fromSections(
                     section == null ? null : section.getConfigurationSection("music"),
                     defaults == null ? null : defaults.getConfigurationSection("music")
             );
-            return new CutsceneSettings(overlayModel, lockMovement, hideHud, musicSettings);
+            return new CutsceneSettings(overlayModel, lockMovement, hideHud, commandsEnabled, musicSettings);
         }
 
         private static String readString(ConfigurationSection section, String key, ConfigurationSection defaults, String defaultKey, String fallbackKey, String fallback) {
@@ -480,6 +484,20 @@ public record CrateDefinition(
             }
             return fallback;
         }
+    }
+
+    private static String readOptionalString(ConfigurationSection section, String key) {
+        if (section == null) {
+            return null;
+        }
+        return section.isString(key) ? section.getString(key) : null;
+    }
+
+    private static Integer readOptionalInt(ConfigurationSection section, String key) {
+        if (section == null) {
+            return null;
+        }
+        return section.isInt(key) ? section.getInt(key) : null;
     }
 
     public record MusicSettings(String sound, float volume, float pitch, int fadeInTicks, int fadeOutTicks, String category) {
