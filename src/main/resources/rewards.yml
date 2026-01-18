@@ -1,6 +1,7 @@
 pools:
   legendary_pool:
     roll-count: 1
+    prevent-duplicate-items: false
     rewards:
       dragon_sword:
         chance: 0.5
@@ -31,6 +32,7 @@ pools:
           sound: "entity.player.levelup"
   seasonal_pool:
     roll-count: 1
+    prevent-duplicate-items: false
     rewards:
       candy_bow:
         chance: 2.5
