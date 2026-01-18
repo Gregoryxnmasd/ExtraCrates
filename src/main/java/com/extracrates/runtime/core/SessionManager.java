@@ -41,7 +41,6 @@ import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -205,7 +204,7 @@ public class SessionManager {
     }
 
     public Collection<CrateSession> getSessions() {
-        return Collections.unmodifiableCollection(sessions.values());
+        return List.copyOf(sessions.values());
     }
 
     public void removeSession(UUID playerId) {

@@ -32,7 +32,12 @@ public class SessionListener implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        sessionManager.claimPendingRewards(event.getPlayer());
+        if (plugin.getProtocolEntityHider() != null) {
+            return;
+        }
+        for (CrateSession session : sessionManager.getSessions()) {
+            session.hideEntitiesFrom(event.getPlayer());
+        }
     }
 
     @EventHandler(ignoreCancelled = true)

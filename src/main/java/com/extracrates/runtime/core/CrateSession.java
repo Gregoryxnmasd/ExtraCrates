@@ -50,7 +50,8 @@ public class CrateSession {
 
     private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
-    private Entity hologram;
+    private TextDisplay hologram;
+    private final Set<Entity> visibleEntities = new LinkedHashSet<>();
     private BukkitRunnable task;
     private BukkitRunnable musicTask;
     private BukkitRunnable timeoutTask;
@@ -142,9 +143,7 @@ public class CrateSession {
         String cameraEntityType = config.getString("cutscene.camera-entity", "armorstand");
         boolean armorStandInvisible = config.getBoolean("cutscene.armorstand-invisible", true);
         cameraEntity = CameraEntityFactory.spawn(start, cameraEntityType, armorStandInvisible);
-        trackEntity(cameraEntity);
-        hideFromOthers(cameraEntity);
-        logVerbose("Camara creada: tipo=%s invisible=%s", cameraEntityType, armorStandInvisible);
+        registerVisibleEntity(cameraEntity);
     }
 
     private void applySpectatorMode() {
@@ -206,8 +205,8 @@ public class CrateSession {
             display.setBillboard(Display.Billboard.CENTER);
         });
 
-        hideFromOthers(rewardDisplay);
-        hideFromOthers(hologram);
+        registerVisibleEntity(rewardDisplay);
+        registerVisibleEntity(hologram);
 
         rewardBaseLocation = rewardDisplay.getLocation().clone();
         hologramBaseLocation = hologram.getLocation().clone();
@@ -275,8 +274,17 @@ public class CrateSession {
         }
     }
 
-    private void hideFromOthers(Entity entity) {
+    private void registerVisibleEntity(Entity entity) {
+        if (entity == null) {
+            return;
+        }
         if (!configLoader.getMainConfig().getBoolean("cutscene.hide-others", true)) {
+            return;
+        }
+        visibleEntities.add(entity);
+        ProtocolEntityHider protocolEntityHider = plugin.getProtocolEntityHider();
+        if (protocolEntityHider != null) {
+            protocolEntityHider.trackEntity(player, entity);
             return;
         }
         for (Player online : Bukkit.getOnlinePlayers()) {
@@ -671,7 +679,14 @@ public class CrateSession {
         if (hologram != null && !hologram.isDead()) {
             hologram.remove();
         }
-        if (gamemodeSnapshotTaken && previousGameMode != null) {
+        ProtocolEntityHider protocolEntityHider = plugin.getProtocolEntityHider();
+        if (protocolEntityHider != null) {
+            for (Entity entity : visibleEntities) {
+                protocolEntityHider.untrackEntity(entity);
+            }
+        }
+        visibleEntities.clear();
+        if (previousGameMode != null) {
             player.setGameMode(previousGameMode);
         }
         player.setSpectatorTarget(null);
@@ -799,37 +814,22 @@ public class CrateSession {
         return preview;
     }
 
-    public void handleRerollInput(boolean shift) {
-        if (rerollLocked || rewards == null || rewards.isEmpty()) {
+    public void hideEntitiesFrom(Player target) {
+        if (target == null || target.getUniqueId().equals(player.getUniqueId())) {
             return;
         }
-        if (elapsedTicks < rerollEnabledAtTick) {
-            player.sendActionBar(languageManager.getMessage("session.reroll.blocked"));
+        if (!configLoader.getMainConfig().getBoolean("cutscene.hide-others", true)) {
             return;
         }
-        if (shift) {
-            rerollLocked = true;
-            selectedRewardIndex = rewardIndex;
-            Reward reward = getCurrentReward();
-            Map<String, String> placeholders = new HashMap<>();
-            if (reward != null) {
-                placeholders.put("reward", reward.displayName());
+        for (Entity entity : visibleEntities) {
+            if (entity != null) {
+                target.hideEntity(plugin, entity);
             }
-            player.sendActionBar(languageManager.getMessage("session.reroll.confirmed", placeholders));
-            updateRerollHud();
-            finish();
-            return;
         }
-        rewardIndex = (rewardIndex + 1) % rewards.size();
-        selectedRewardIndex = rewardIndex;
-        refreshRewardDisplay();
-        Reward reward = getCurrentReward();
-        Map<String, String> placeholders = new HashMap<>();
-        if (reward != null) {
-            placeholders.put("reward", reward.displayName());
-        }
-        player.sendActionBar(languageManager.getMessage("session.reroll.advance", placeholders));
-        updateRerollHud();
+    }
+
+    public Collection<Entity> getVisibleEntities() {
+        return Collections.unmodifiableSet(visibleEntities);
     }
 
     private boolean toggleHud(boolean hidden) {
