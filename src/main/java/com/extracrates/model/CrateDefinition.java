@@ -15,6 +15,7 @@ public record CrateDefinition(
         int cooldownSeconds,
         double cost,
         String permission,
+        int maxRerolls,
         Location cameraStart,
         Location rewardAnchor,
         AnimationSettings animation,
@@ -52,6 +53,7 @@ public record CrateDefinition(
         int cooldown = section.getInt("cooldown-seconds", 0);
         double cost = section.getDouble("cost", 0);
         String permission = section.getString("permission", "extracrates.open");
+        int maxRerolls = Math.max(0, section.getInt("max-rerolls", 0));
 
         ConfigurationSection locations = section.getConfigurationSection("locations");
         Location cameraStart = null;
@@ -100,6 +102,7 @@ public record CrateDefinition(
                 cooldown,
                 cost,
                 permission,
+                maxRerolls,
                 cameraStart,
                 rewardAnchor,
                 animation,

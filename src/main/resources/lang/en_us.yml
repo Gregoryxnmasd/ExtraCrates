@@ -15,4 +15,5 @@ session:
   key-required: "&cYou need a key for this crate."
   cooldown: "&cThis crate is on cooldown."
   no-rewards: "&cNo rewards configured."
+  reroll-limit-reached: "&cYou have used all rerolls. Claim the reward."
   reward-received: "&aYou received: %reward%"

@@ -15,4 +15,5 @@ session:
   key-required: "&cNecesitas una llave para esta crate."
   cooldown: "&cEsta crate está en enfriamiento."
   no-rewards: "&cNo hay recompensas configuradas."
+  reroll-limit-reached: "&cHas agotado los rerolls. Reclama la recompensa."
   reward-received: "&aHas recibido: %reward%"
