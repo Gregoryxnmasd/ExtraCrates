@@ -1,8 +1,15 @@
 # Opciones globales
 language: es_es
 qa-mode: false
+accessibility-mode: true
 particles-default: "crit"
 hologram-font: "resourcepack:cutscene_font"
+cooldown-global:
+  normal: 0
+  keyed: 0
+  event: 0
+  seasonal: 0
+  mystery: 0
 gui:
   title: "&8ExtraCrates"
   editor-title: "&0Editor de Crates"
@@ -53,6 +60,8 @@ cutscene:
 sessions:
   max-duration-ticks: 600
   cleanup-on-quit: true
+rate-limit:
+  opens-per-minute: 0
 holograms:
   provider: "display"
   name-format: "&e%reward_name%"
@@ -61,3 +70,6 @@ permissions:
   use-per-crate: true
 debug:
   rolls: false
+rewards:
+  normalize-chances: false
+  warning-threshold: 0

@@ -21,5 +21,7 @@ public interface CrateStorage {
 
     void releaseLock(UUID playerId, String crateId);
 
+    boolean markFirstOpen(UUID playerId);
+
     void close();
 }

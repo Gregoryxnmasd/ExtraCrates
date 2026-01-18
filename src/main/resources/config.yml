@@ -1,5 +1,6 @@
 # Opciones globales
 language: es_es
+accessibility-mode: true
 particles-default: "crit"
 hologram-font: "resourcepack:cutscene_font"
 gui:
@@ -67,12 +68,18 @@ cutscene:
 sessions:
   max-duration-ticks: 600
   cleanup-on-quit: true
+guide:
+  enabled: true
+  step-duration-ticks: 60
 holograms:
   provider: "display"
   name-format: "&e%reward_name%"
   height-offset: 0.8
 permissions:
   use-per-crate: true
+rewards:
+  normalize-chances: false
+  warning-threshold: 0
 storage:
   enabled: false
   type: "mysql"
