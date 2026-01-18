@@ -30,6 +30,7 @@ session:
   cutscene-path-not-found: "&cNo se encontró la ruta de la cutscene."
   key-required: "&cNecesitas una llave para esta crate."
   cooldown: "&cEsta crate está en enfriamiento."
+  outside-allowed-area: "&cDebes estar en el área permitida para abrir esta crate."
   no-rewards: "&cNo hay recompensas configuradas."
   qa-mode: "&eModo QA activo: no se entregan items ni se ejecutan comandos."
   reward-received: "&aHas recibido: %reward%"
