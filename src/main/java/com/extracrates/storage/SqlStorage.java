@@ -22,6 +22,7 @@ public class SqlStorage implements CrateStorage {
     public SqlStorage(StorageSettings settings, Logger logger) {
         this.logger = logger;
         this.pool = new SqlConnectionPool(settings, logger);
+        ensureFirstOpenTable();
     }
 
     @Override
@@ -214,6 +215,26 @@ public class SqlStorage implements CrateStorage {
     }
 
     @Override
+    public boolean markFirstOpen(UUID playerId) {
+        String sql = "INSERT INTO crate_first_opens (player_uuid, opened_at) VALUES (?, ?)";
+        return withConnection(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, playerId.toString());
+                statement.setLong(2, Instant.now().toEpochMilli());
+                statement.executeUpdate();
+                return true;
+            } catch (SQLIntegrityConstraintViolationException ex) {
+                return false;
+            } catch (SQLException ex) {
+                if (isConstraintViolation(ex)) {
+                    return false;
+                }
+                throw ex;
+            }
+        });
+    }
+
+    @Override
     public void close() {
         pool.close();
     }
@@ -235,6 +256,19 @@ public class SqlStorage implements CrateStorage {
                 pool.releaseConnection(connection);
             }
         }
+    }
+
+    private void ensureFirstOpenTable() {
+        String sql = "CREATE TABLE IF NOT EXISTS crate_first_opens ("
+                + "player_uuid VARCHAR(36) PRIMARY KEY,"
+                + "opened_at BIGINT NOT NULL"
+                + ")";
+        withConnection(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.executeUpdate();
+            }
+            return null;
+        });
     }
 
     @FunctionalInterface
