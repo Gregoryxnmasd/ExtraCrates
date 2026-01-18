@@ -3,10 +3,13 @@ package com.extracrates.runtime;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.runtime.core.CrateSession;
 import com.extracrates.runtime.core.SessionManager;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 
 @SuppressWarnings("unused")
 public class SessionListener implements Listener {
@@ -25,6 +28,16 @@ public class SessionListener implements Listener {
         sessionManager.endSession(event.getPlayer().getUniqueId());
     }
 
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        if (plugin.getProtocolEntityHider() != null) {
+            return;
+        }
+        for (CrateSession session : sessionManager.getSessions()) {
+            session.hideEntitiesFrom(event.getPlayer());
+        }
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
         CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
@@ -38,5 +51,31 @@ public class SessionListener implements Listener {
         if (event.getFrom().distanceSquared(event.getTo()) > 0.0001) {
             event.setTo(event.getFrom());
         }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onInteract(PlayerInteractEvent event) {
+        if (!shouldAcceptInput(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onSwap(PlayerSwapHandItemsEvent event) {
+        if (!shouldAcceptInput(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    private boolean shouldAcceptInput(Player player) {
+        CrateSession session = sessionManager.getSession(player.getUniqueId());
+        if (session == null) {
+            return true;
+        }
+        if (session.registerInput()) {
+            return true;
+        }
+        player.sendMessage(plugin.getLanguageManager().getMessage("session.input-debounced"));
+        return false;
     }
 }
