@@ -138,6 +138,39 @@ public class SessionManager {
         sessionRandoms.remove(playerId);
     }
 
+    public int getActiveSessionCount() {
+        return sessions.size();
+    }
+
+    public int getActivePreviewCount() {
+        return (int) sessions.values().stream().filter(CrateSession::isPreview).count();
+    }
+
+    public int getPendingRewardCount() {
+        return sessions.values().stream()
+                .filter(session -> !session.isPreview())
+                .mapToInt(CrateSession::getPendingRewardCount)
+                .sum();
+    }
+
+    public StorageStatus getStorageStatus() {
+        String backend = "local";
+        boolean fallbackActive = false;
+        if (storage instanceof StorageFallback fallback) {
+            backend = "sql";
+            fallbackActive = fallback.isUsingFallback();
+        } else if (storage instanceof LocalStorage) {
+            backend = "local";
+        } else if (storage != null) {
+            backend = storage.getClass().getSimpleName();
+        }
+        return new StorageStatus(storageEnabled, backend, fallbackActive);
+    }
+
+    public SyncBridge getSyncBridge() {
+        return syncBridge;
+    }
+
     private RewardSelector.RewardRollLogger buildRollLogger(Player player) {
         if (!configLoader.getMainConfig().getBoolean("debug.rolls", false)) {
             return null;
@@ -352,5 +385,8 @@ public class SessionManager {
 
     public void flushSyncCaches() {
         cooldowns.clear();
+    }
+
+    public record StorageStatus(boolean enabled, String backend, boolean fallbackActive) {
     }
 }
