@@ -39,6 +39,7 @@ public class CrateSession {
     private final CutscenePath path;
     private final SessionManager sessionManager;
     private final boolean preview;
+    private final int maxRerolls;
 
     private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
@@ -47,6 +48,7 @@ public class CrateSession {
     private BukkitRunnable musicTask;
 
     private int rewardIndex;
+    private int rerollsUsed;
     private int rewardSwitchTicks;
     private int nextRewardSwitchTick;
     private int elapsedTicks;
@@ -83,6 +85,7 @@ public class CrateSession {
         this.path = path;
         this.sessionManager = sessionManager;
         this.preview = preview;
+        this.maxRerolls = Math.max(0, crate.maxRerolls());
     }
 
     public void start() {
@@ -97,6 +100,7 @@ public class CrateSession {
         }
         sendActionBar("session.actionbar-start", Collections.emptyMap());
         rewardIndex = 0;
+        rerollsUsed = 0;
         elapsedTicks = 0;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
@@ -521,6 +525,32 @@ public class CrateSession {
         }
         sessionManager.removeSession(player.getUniqueId());
         logVerbose("Sesion limpiada: jugador=%s crate=%s", player.getName(), crate.id());
+    }
+
+    public void handleRerollInput() {
+        if (maxRerolls > 0 && rerollsUsed >= maxRerolls) {
+            player.sendMessage(languageManager.getMessage("session.reroll-limit-reached"));
+            finish();
+            return;
+        }
+        if (!advanceReward()) {
+            finish();
+            return;
+        }
+        rerollsUsed++;
+    }
+
+    private boolean advanceReward() {
+        if (rewards == null || rewards.isEmpty()) {
+            return false;
+        }
+        if (rewardIndex >= rewards.size() - 1) {
+            return false;
+        }
+        rewardIndex++;
+        nextRewardSwitchTick = elapsedTicks + rewardSwitchTicks;
+        refreshRewardDisplay();
+        return true;
     }
 
     public boolean isMovementLocked() {

@@ -34,6 +34,6 @@ session:
   cooldown: "&cThis crate is on cooldown."
   outside-allowed-area: "&cYou must be inside the allowed area to open this crate."
   no-rewards: "&cNo rewards configured."
-  qa-mode: "&eQA mode active: no items delivered and no commands executed."
+  reroll-limit-reached: "&cYou have used all rerolls. Claim the reward."
   reward-received: "&aYou received: %reward%"
   reroll-no-balance: "&cYou need %amount% to reroll."

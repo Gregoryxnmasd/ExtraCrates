@@ -8,6 +8,7 @@ crates:
     cooldown-seconds: 120
     cost: 0
     permission: "extracrates.open.legendary"
+    max-rerolls: 2
     locations:
       world: "world"
       camera-start: { x: 10.5, y: 65.0, z: -20.5, yaw: 0, pitch: 0 }
@@ -36,6 +37,7 @@ crates:
     open-mode: "reward-only"
     cooldown-seconds: 30
     permission: "extracrates.open.seasonal"
+    max-rerolls: 1
     locations:
       world: "world"
       reward-anchor: { x: -2.0, y: 64.2, z: 5.5 }

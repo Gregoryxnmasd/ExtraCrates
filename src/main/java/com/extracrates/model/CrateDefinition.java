@@ -16,6 +16,7 @@ public record CrateDefinition(
         double cost,
         double rerollCost,
         String permission,
+        int maxRerolls,
         Location cameraStart,
         Location rewardAnchor,
         AllowedArea allowedArea,
@@ -55,6 +56,7 @@ public record CrateDefinition(
         double cost = section.getDouble("cost", 0);
         double rerollCost = section.getDouble("reroll-cost", 0);
         String permission = section.getString("permission", "extracrates.open");
+        int maxRerolls = Math.max(0, section.getInt("max-rerolls", 0));
 
         ConfigurationSection locations = section.getConfigurationSection("locations");
         Location cameraStart = null;
@@ -108,6 +110,7 @@ public record CrateDefinition(
                 cost,
                 rerollCost,
                 permission,
+                maxRerolls,
                 cameraStart,
                 rewardAnchor,
                 allowedArea,
