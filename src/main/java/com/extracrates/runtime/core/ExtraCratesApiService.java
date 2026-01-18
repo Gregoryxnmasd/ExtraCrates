@@ -7,6 +7,10 @@ import org.bukkit.entity.Player;
 
 import java.util.Map;
 
+/**
+ * Primary implementation of the public ExtraCrates API exposed by the plugin,
+ * replacing the legacy {@code ExtraCratesApiImpl} wrapper.
+ */
 public class ExtraCratesApiService implements ExtraCratesApi {
     private final ConfigLoader configLoader;
     private final SessionManager sessionManager;
