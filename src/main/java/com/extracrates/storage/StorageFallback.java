@@ -114,4 +114,12 @@ public class StorageFallback implements CrateStorage {
         primary.close();
         fallback.close();
     }
+
+    CrateStorage activeStorage() {
+        return usingFallback ? fallback : primary;
+    }
+
+    boolean isUsingFallback() {
+        return usingFallback;
+    }
 }

@@ -13,7 +13,10 @@ import com.extracrates.storage.CrateStorage;
 import com.extracrates.storage.LocalStorage;
 import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
+import com.extracrates.storage.StorageMigrationReport;
+import com.extracrates.storage.StorageMigrator;
 import com.extracrates.storage.StorageSettings;
+import com.extracrates.storage.StorageTarget;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
@@ -352,5 +355,11 @@ public class SessionManager {
 
     public void flushSyncCaches() {
         cooldowns.clear();
+    }
+
+    public StorageMigrationReport migrateStorage(StorageTarget target) {
+        StorageSettings settings = StorageSettings.fromConfig(configLoader.getMainConfig());
+        StorageMigrator migrator = new StorageMigrator();
+        return migrator.migrate(storage, settings, target, plugin.getLogger());
     }
 }
