@@ -18,6 +18,10 @@ public class StorageFallback implements CrateStorage {
         this.logger = logger;
     }
 
+    public boolean isUsingFallback() {
+        return usingFallback;
+    }
+
     private <T> T callWithFallback(Supplier<T> primaryCall, Supplier<T> fallbackCall) {
         if (usingFallback) {
             return fallbackCall.get();
@@ -106,6 +110,14 @@ public class StorageFallback implements CrateStorage {
         runWithFallback(
                 () -> primary.releaseLock(playerId, crateId),
                 () -> fallback.releaseLock(playerId, crateId)
+        );
+    }
+
+    @Override
+    public boolean markFirstOpen(UUID playerId) {
+        return callWithFallback(
+                () -> primary.markFirstOpen(playerId),
+                () -> fallback.markFirstOpen(playerId)
         );
     }
 
