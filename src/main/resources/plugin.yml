@@ -19,6 +19,9 @@ permissions:
   extracrates.preview:
     description: Permite previsualizar crates.
     default: true
+  extracrates.reroll:
+    description: Permite rerollear recompensas de crates.
+    default: true
   extracrates.reload:
     description: Permite recargar la configuración de crates.
     default: op

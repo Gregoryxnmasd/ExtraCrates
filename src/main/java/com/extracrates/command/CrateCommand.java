@@ -105,7 +105,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (!sender.hasPermission("extracrates.gui")) {
-                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    sender.sendMessage(languageManager.getMessage("command.no-permission", player, null, null, null));
                     return true;
                 }
                 crateGui.open(player);
@@ -113,7 +113,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             }
             case "editor" -> {
                 if (!(sender instanceof Player player)) {
-                    sender.sendMessage(Component.text("Solo jugadores."));
+                    sender.sendMessage(languageManager.getMessage("command.only-players"));
                     return true;
                 }
                 editorMenu.open(player);
@@ -126,19 +126,31 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 }
                 String permission = sub.equals("preview") ? "extracrates.preview" : "extracrates.open";
                 if (!sender.hasPermission(permission)) {
-                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    sender.sendMessage(languageManager.getMessage("command.no-permission", player, null, null, null));
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage(Component.text("Uso: /crate " + sub + " <id>"));
+                    sender.sendMessage(languageManager.getMessage("command.open-usage", java.util.Map.of("sub", sub)));
                     return true;
                 }
                 CrateDefinition crate = configLoader.getCrates().get(args[1]);
                 if (crate == null) {
-                    sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
+                    sender.sendMessage(languageManager.getMessage("command.crate-not-found", player, null, null, null));
                     return true;
                 }
                 sessionManager.openCrate(player, crate, sub.equals("preview"));
+                return true;
+            }
+            case "reroll" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage(languageManager.getMessage("command.only-players"));
+                    return true;
+                }
+                if (!sender.hasPermission("extracrates.reroll")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                sessionManager.rerollSession(player);
                 return true;
             }
             case "reload" -> {
@@ -152,6 +164,32 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(languageManager.getMessage("command.reload-success"));
                 return true;
             }
+            case "debug" -> {
+                if (!sender.hasPermission("extracrates.reload")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                if (args.length < 3 || !args[1].equalsIgnoreCase("verbose")) {
+                    sender.sendMessage(Component.text("Uso: /crate debug verbose <on|off|toggle>"));
+                    return true;
+                }
+                boolean current = plugin.getConfig().getBoolean("debug.verbose", false);
+                String action = args[2].toLowerCase(Locale.ROOT);
+                boolean next;
+                switch (action) {
+                    case "on", "true", "enable" -> next = true;
+                    case "off", "false", "disable" -> next = false;
+                    case "toggle" -> next = !current;
+                    default -> {
+                        sender.sendMessage(Component.text("Uso: /crate debug verbose <on|off|toggle>"));
+                        return true;
+                    }
+                }
+                plugin.getConfig().set("debug.verbose", next);
+                plugin.saveConfig();
+                sender.sendMessage(Component.text("Debug verbose " + (next ? "activado" : "desactivado") + "."));
+                return true;
+            }
             case "sync" -> {
                 return syncCommand.handle(sender, args);
             }
@@ -161,22 +199,22 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (!sender.hasPermission("extracrates.givekey")) {
-                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    sender.sendMessage(languageManager.getMessage("command.no-permission", player, null, null, null));
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage(languageManager.getMessage("command.givekey-usage"));
+                    sender.sendMessage(languageManager.getMessage("command.givekey-usage", player, null, null, null));
                     return true;
                 }
                 CrateDefinition crate = configLoader.getCrates().get(args[1]);
                 if (crate == null) {
-                    sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
+                    sender.sendMessage(languageManager.getMessage("command.crate-not-found", player, null, null, null));
                     return true;
                 }
                 ItemStack key = new ItemStack(crate.keyMaterial());
                 ItemMeta meta = key.getItemMeta();
                 if (meta != null) {
-                    String keyName = languageManager.getRaw("command.key-item-name", java.util.Map.of("crate_name", crate.displayName()));
+                    String keyName = languageManager.getRaw("command.key-item-name", player, crate, null, null, java.util.Map.of());
                     meta.displayName(TextUtil.color(keyName));
                     if (crate.keyModel() != null && !crate.keyModel().isEmpty()) {
                         int modelData = resourcepackModelResolver.resolve(configLoader, crate.keyModel());
@@ -187,7 +225,46 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     key.setItemMeta(meta);
                 }
                 player.getInventory().addItem(key);
-                sender.sendMessage(languageManager.getMessage("command.givekey-success"));
+                sender.sendMessage(languageManager.getMessage("command.givekey-success", player, crate, null, null));
+                return true;
+            }
+            case "status" -> {
+                if (!sender.hasPermission("extracrates.status")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                List<String> lines = buildStatusLines();
+                lines.forEach(line -> sender.sendMessage(Component.text(line)));
+                if (args.length >= 2 && args[1].equalsIgnoreCase("export")) {
+                    if (args.length < 3) {
+                        sender.sendMessage(Component.text("Uso: /crate status export <archivo>"));
+                        return true;
+                    }
+                    String fileName = args[2];
+                    File output = new File(plugin.getDataFolder(), fileName);
+                    try {
+                        if (output.toPath().getParent() != null) {
+                            Files.createDirectories(output.toPath().getParent());
+                        }
+                        Files.write(output.toPath(), lines, StandardCharsets.UTF_8);
+                        sender.sendMessage(Component.text("Estado exportado a " + output.getPath()));
+                    } catch (IOException ex) {
+                        sender.sendMessage(Component.text("No se pudo exportar el estado: " + ex.getMessage()));
+                    }
+                }
+                return true;
+            }
+            case "claim" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage(languageManager.getMessage("command.only-players"));
+                    return true;
+                }
+                if (!sender.hasPermission("extracrates.open")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                boolean discard = args.length > 1 && args[1].equalsIgnoreCase("discard");
+                sessionManager.claimPendingReward(player, discard);
                 return true;
             }
             case "cutscene" -> {
@@ -196,64 +273,77 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (args.length < 2 || !args[1].equalsIgnoreCase("test")) {
-                    sender.sendMessage(Component.text("Uso: /crate cutscene test <id>"));
+                    sender.sendMessage(languageManager.getMessage("command.cutscene-usage"));
                     return true;
                 }
                 if (args.length < 3) {
-                    sender.sendMessage(Component.text("Uso: /crate cutscene test <id>"));
+                    sender.sendMessage(languageManager.getMessage("command.cutscene-usage"));
                     return true;
                 }
                 com.extracrates.cutscene.CutscenePath path = configLoader.getPaths().get(args[2]);
                 if (path == null) {
-                    sender.sendMessage(Component.text("Ruta de cutscene no encontrada."));
+                    sender.sendMessage(languageManager.getMessage("command.cutscene-path-not-found"));
                     return true;
                 }
                 Particle particle = resolveParticle(path.getParticlePreview());
                 CutscenePreviewSession preview = new CutscenePreviewSession(plugin, player, path, particle, null);
                 preview.start();
-                sender.sendMessage(Component.text("Preview iniciada para ruta '" + path.getId() + "'."));
+                sender.sendMessage(languageManager.getMessage("command.cutscene-preview-started", java.util.Map.of("path", path.getId())));
                 return true;
             }
             case "route" -> {
                 if (!(sender instanceof Player player)) {
-                    sender.sendMessage(Component.text("Solo jugadores."));
+                    sender.sendMessage(languageManager.getMessage("command.only-players"));
                     return true;
                 }
                 if (args.length < 2 || !args[1].equalsIgnoreCase("editor")) {
-                    sender.sendMessage(Component.text("Uso: /crate route editor <id|stop|cancel>"));
+                    sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
                     return true;
                 }
                 if (!sender.hasPermission("extracrates.route.editor")) {
-                    sender.sendMessage(Component.text("Sin permiso."));
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
                     return true;
                 }
                 if (args.length < 3) {
-                    sender.sendMessage(Component.text("Uso: /crate route editor <id|stop|cancel>"));
+                    sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
                     return true;
                 }
                 String action = args[2];
                 if (action.equalsIgnoreCase("stop")) {
                     if (routeEditorManager.endSession(player, true)) {
-                        sender.sendMessage(Component.text("Ruta guardada."));
+                        sender.sendMessage(languageManager.getMessage("command.route-saved"));
                     } else {
-                        sender.sendMessage(Component.text("No tienes un editor activo."));
+                        sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
                     }
                     return true;
                 }
                 if (action.equalsIgnoreCase("cancel")) {
                     if (routeEditorManager.endSession(player, false)) {
-                        sender.sendMessage(Component.text("Editor cancelado."));
+                        sender.sendMessage(languageManager.getMessage("command.route-canceled"));
                     } else {
-                        sender.sendMessage(Component.text("No tienes un editor activo."));
+                        sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
                     }
                     return true;
                 }
                 if (!routeEditorManager.startSession(player, action)) {
-                    sender.sendMessage(Component.text("Ya tienes un editor activo."));
+                    sender.sendMessage(languageManager.getMessage("command.route-already-active"));
                     return true;
                 }
-                sender.sendMessage(Component.text("Editor iniciado para ruta '" + action + "'."));
-                sender.sendMessage(Component.text("Haz clic en bloques para marcar puntos. Usa /crate route editor stop para guardar."));
+                sender.sendMessage(languageManager.getMessage("command.route-started", java.util.Map.of("path", action)));
+                sender.sendMessage(languageManager.getMessage("command.route-instructions"));
+                return true;
+            }
+            case "sessions" -> {
+                if (!sender.hasPermission("extracrates.sessions")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                if (args.length < 2 || !args[1].equalsIgnoreCase("check")) {
+                    sender.sendMessage(Component.text("Uso: /crate sessions check"));
+                    return true;
+                }
+                int cleaned = sessionManager.cleanupInactiveSessions();
+                sender.sendMessage(Component.text("Sesiones inactivas cerradas: " + cleaned));
                 return true;
             }
             case "mass" -> {
@@ -279,8 +369,11 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("editor");
             results.add("open");
             results.add("preview");
+            results.add("claim");
             results.add("cutscene");
+            results.add("reroll");
             results.add("reload");
+            results.add("debug");
             results.add("sync");
             results.add("givekey");
             results.add("route");
@@ -301,6 +394,10 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {
             results.add("editor");
+            return results;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("status")) {
+            results.add("export");
             return results;
         }
         if (args.length >= 2 && args[0].equalsIgnoreCase("sync")) {
