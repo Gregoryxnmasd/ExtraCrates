@@ -46,6 +46,7 @@ cutscene:
   constant-speed: true
   smooth-tick: 2
   reward-delay-ticks: 20
+  input-debounce-ticks: 5
   pumpkin-model: "cutscene_mask"
   slowdown-modifier: -10.0
   min-teleport-distance: 0.05

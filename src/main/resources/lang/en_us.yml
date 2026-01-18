@@ -63,9 +63,4 @@ session:
   no-rewards: "&cNo rewards configured."
   reroll-limit-reached: "&cYou have used all rerolls. Claim the reward."
   reward-received: "&aYou received: %reward%"
-  preview-actionbar: "&ePreview active."
-  reroll-actionbar: "&bReroll %current%/%total%"
-  error:
-    missing-path: "&cCutscene path not found."
-    missing-reward-pool: "&cReward pool not found for this crate."
-    qa-mode: "&eQA mode active: no items are granted and no commands run."
+  input-debounced: "&cPlease wait before interacting again."

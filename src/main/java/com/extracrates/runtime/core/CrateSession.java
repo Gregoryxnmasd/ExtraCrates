@@ -58,7 +58,7 @@ public class CrateSession {
     private int rewardSwitchTicks;
     private int nextRewardSwitchTick;
     private int elapsedTicks;
-    private int totalTicks;
+    private int lastInputTick;
     private Location rewardBaseLocation;
     private Location hologramBaseLocation;
     private Transformation rewardBaseTransform;
@@ -111,6 +111,7 @@ public class CrateSession {
         rewardIndex = 0;
         rerollsUsed = 0;
         elapsedTicks = 0;
+        lastInputTick = -1;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
         resolveUiSettings();
@@ -813,15 +814,17 @@ public class CrateSession {
         return preview;
     }
 
-    private void sendRerollActionBar() {
-        if (rewards == null || rewards.size() <= 1) {
-            return;
+    public boolean registerInput() {
+        int debounceTicks = Math.max(0, configLoader.getMainConfig().getInt("cutscene.input-debounce-ticks", 0));
+        if (debounceTicks <= 0) {
+            lastInputTick = elapsedTicks;
+            return true;
         }
-        Map<String, String> placeholders = Map.of(
-                "current", String.valueOf(rewardIndex + 1),
-                "total", String.valueOf(rewards.size())
-        );
-        languageManager.sendActionBar(player, "session.reroll-actionbar", placeholders);
+        if (lastInputTick >= 0 && elapsedTicks - lastInputTick < debounceTicks) {
+            return false;
+        }
+        lastInputTick = elapsedTicks;
+        return true;
     }
 
     private boolean toggleHud(boolean hidden) {
