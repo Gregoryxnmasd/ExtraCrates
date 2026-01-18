@@ -31,9 +31,13 @@ public final class RewardSelector {
         RewardSelectorSettings safeSettings = settings == null ? RewardSelectorSettings.disabled() : settings;
         warnIfNeeded(pool, safeSettings);
         int rolls = Math.max(1, pool.rollCount());
+        List<Reward> available = pool.preventDuplicateItems() ? new ArrayList<>(pool.rewards()) : null;
         for (int i = 0; i < rolls; i++) {
             RollResult result = selectOne(pool.rewards(), random, safeSettings);
             results.add(result.reward());
+            if (available != null && !available.isEmpty()) {
+                available.remove(result.reward());
+            }
             if (logger != null) {
                 logger.log(result.reward(), result.roll(), result.total());
             }

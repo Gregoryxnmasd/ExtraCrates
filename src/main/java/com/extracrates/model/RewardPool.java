@@ -5,7 +5,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import java.util.ArrayList;
 import java.util.List;
 
-public record RewardPool(String id, int rollCount, List<Reward> rewards) {
+public record RewardPool(String id, int rollCount, boolean preventDuplicateItems, List<Reward> rewards) {
     public RewardPool {
         rewards = rewards == null ? List.of() : List.copyOf(rewards);
     }
@@ -15,6 +15,7 @@ public record RewardPool(String id, int rollCount, List<Reward> rewards) {
             return null;
         }
         int rollCount = section.getInt("roll-count", 1);
+        boolean preventDuplicateItems = section.getBoolean("prevent-duplicate-items", false);
         List<Reward> rewards = new ArrayList<>();
         ConfigurationSection rewardsSection = section.getConfigurationSection("rewards");
         if (rewardsSection != null) {
@@ -25,6 +26,6 @@ public record RewardPool(String id, int rollCount, List<Reward> rewards) {
                 }
             }
         }
-        return new RewardPool(id, rollCount, rewards);
+        return new RewardPool(id, rollCount, preventDuplicateItems, rewards);
     }
 }
