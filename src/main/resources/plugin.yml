@@ -34,3 +34,6 @@ permissions:
   extracrates.sync:
     description: Permite gestionar la sincronización de crates.
     default: op
+  extracrates.status:
+    description: Permite ver el estado del plugin y exportarlo.
+    default: op
