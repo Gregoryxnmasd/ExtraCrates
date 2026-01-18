@@ -109,6 +109,9 @@ public class SessionManager {
         }
         session.start();
         if (!preview) {
+            maybeShowFirstOpenGuide(player);
+        }
+        if (!preview) {
             applyCooldown(player, crate);
         }
         return true;
@@ -352,5 +355,17 @@ public class SessionManager {
 
     public void flushSyncCaches() {
         cooldowns.clear();
+    }
+
+    private void maybeShowFirstOpenGuide(Player player) {
+        if (!configLoader.getMainConfig().getBoolean("guide.enabled", true)) {
+            return;
+        }
+        if (storage == null) {
+            return;
+        }
+        if (storage.markFirstOpen(player.getUniqueId())) {
+            FirstOpenGuide.start(plugin, configLoader, languageManager, player);
+        }
     }
 }

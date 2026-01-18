@@ -110,6 +110,14 @@ public class StorageFallback implements CrateStorage {
     }
 
     @Override
+    public boolean markFirstOpen(UUID playerId) {
+        return callWithFallback(
+                () -> primary.markFirstOpen(playerId),
+                () -> fallback.markFirstOpen(playerId)
+        );
+    }
+
+    @Override
     public void close() {
         primary.close();
         fallback.close();

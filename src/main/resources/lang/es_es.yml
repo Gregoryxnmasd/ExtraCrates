@@ -16,3 +16,16 @@ session:
   cooldown: "&cEsta crate está en enfriamiento."
   no-rewards: "&cNo hay recompensas configuradas."
   reward-received: "&aHas recibido: %reward%"
+guide:
+  step-1:
+    message: "&eGuía: &fUsa &a/crate gui &fpara ver todas las crates disponibles."
+    actionbar: "&ePaso 1/3: &fAbre el menú con &a/crate gui&f."
+    bossbar: "&ePrimeros pasos con ExtraCrates"
+  step-2:
+    message: "&ePaso 2: &fConsigue llaves para abrir crates especiales."
+    actionbar: "&ePaso 2/3: &fNecesitas llaves para crates claveadas."
+    bossbar: "&eLlaves y acceso"
+  step-3:
+    message: "&ePaso 3: &fRevisa el cooldown y disfruta tus recompensas."
+    actionbar: "&ePaso 3/3: &fRecompensas y enfriamientos."
+    bossbar: "&e¡Listo para abrir crates!"
