@@ -47,7 +47,7 @@ public class CrateSession {
     private final CutscenePath path;
     private final SessionManager sessionManager;
     private final boolean preview;
-    private final int maxRerolls;
+    private final OpenState openState;
 
     private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
@@ -91,7 +91,8 @@ public class CrateSession {
             List<Reward> rewards,
             CutscenePath path,
             SessionManager sessionManager,
-            boolean preview
+            boolean preview,
+            OpenState openState
     ) {
         this.plugin = plugin;
         this.configLoader = configLoader;
@@ -102,7 +103,7 @@ public class CrateSession {
         this.path = path;
         this.sessionManager = sessionManager;
         this.preview = preview;
-        this.maxRerolls = Math.max(0, crate.maxRerolls());
+        this.openState = openState;
     }
 
     public void start() {
@@ -509,10 +510,8 @@ public class CrateSession {
                 }
             }
         }
-        if (delivered && !preview) {
-            sessionManager.recordDeliveryCompleted(player, crate, reward, attempt);
-        }
-        SoundUtil.play(player, configLoader.getSettings().getSounds().claim());
+        rewardDelivered = true;
+        sessionManager.completeOpen(player, crate, reward, openState);
         if (rewardIndex >= rewards.size() - 1) {
             return;
         }
@@ -820,25 +819,19 @@ public class CrateSession {
         if (speedModifierKey != null) {
             sessionManager.removeSpectatorModifier(player, speedModifierKey);
         }
-        if (speedSnapshotTaken) {
+        if (crate.cutsceneSettings().lockMovement()) {
             player.setWalkSpeed(previousWalkSpeed);
             player.setFlySpeed(previousFlySpeed);
         }
         if (hudHiddenApplied) {
             toggleHud(false);
         }
-        if (helmetSnapshotTaken) {
-            if (previousHelmet != null) {
-                player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet);
-            } else {
-                player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
-            }
+        if (previousHelmet != null) {
+            player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet);
+        } else {
+            player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
         }
-        if (rerollBossBar != null) {
-            player.hideBossBar(rerollBossBar);
-            rerollBossBar = null;
-        }
-        clearRerollDisplay();
+        sessionManager.handleSessionEnd(this);
         sessionManager.removeSession(player.getUniqueId());
         logVerbose("Sesion limpiada: jugador=%s crate=%s", player.getName(), crate.id());
     }
@@ -942,22 +935,28 @@ public class CrateSession {
         return preview;
     }
 
-    public void hideEntitiesFrom(Player target) {
-        if (target == null || target.getUniqueId().equals(player.getUniqueId())) {
-            return;
-        }
-        if (!configLoader.getMainConfig().getBoolean("cutscene.hide-others", true)) {
-            return;
-        }
-        for (Entity entity : visibleEntities) {
-            if (entity != null) {
-                target.hideEntity(plugin, entity);
-            }
-        }
+    public boolean isRewardDelivered() {
+        return rewardDelivered;
     }
 
-    public Collection<Entity> getVisibleEntities() {
-        return Collections.unmodifiableSet(visibleEntities);
+    public OpenState getOpenState() {
+        return openState;
+    }
+
+    public UUID getPlayerId() {
+        return player.getUniqueId();
+    }
+
+    public String getCrateId() {
+        return crate.id();
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public CrateDefinition getCrate() {
+        return crate;
     }
 
     private boolean toggleHud(boolean hidden) {

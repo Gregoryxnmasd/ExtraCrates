@@ -10,6 +10,8 @@ public interface CrateStorage {
 
     void setCooldown(UUID playerId, String crateId, Instant timestamp);
 
+    void clearCooldown(UUID playerId, String crateId);
+
     int getKeyCount(UUID playerId, String crateId);
 
     boolean consumeKey(UUID playerId, String crateId);

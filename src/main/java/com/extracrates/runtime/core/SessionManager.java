@@ -128,22 +128,33 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
+        OpenState openState = null;
         if (!preview) {
-            updatePendingReward(player, crate, rewards.getFirst());
+            if (storage != null && !storage.acquireLock(player.getUniqueId(), crate.id())) {
+                player.sendMessage(Component.text("Ya tienes una apertura en progreso."));
+                return false;
+            }
+            Instant previousCooldown = getCooldownTimestamp(player, crate.id());
+            boolean keyConsumed = false;
+            if (crate.type() == com.extracrates.model.CrateType.KEYED) {
+                keyConsumed = consumeKey(player, crate);
+                if (!keyConsumed) {
+                    if (storage != null) {
+                        storage.releaseLock(player.getUniqueId(), crate.id());
+                    }
+                    player.sendMessage(Component.text("Necesitas una llave para esta crate."));
+                    return false;
+                }
+            }
+            boolean cooldownApplied = crate.cooldownSeconds() > 0;
+            if (cooldownApplied) {
+                applyCooldown(player, crate);
+            }
+            openState = new OpenState(storage != null, keyConsumed, cooldownApplied, previousCooldown);
         }
-        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview);
+        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview, openState);
         sessions.put(player.getUniqueId(), session);
-        if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
-            consumeKey(player, crate);
-        }
-        if (!preview) {
-            Reward reward = rewards.get(0);
-            setPendingReward(player, crate, reward);
-        }
         session.start();
-        if (!preview) {
-            applyCooldown(player, crate);
-        }
         return true;
     }
 
@@ -170,7 +181,7 @@ public class SessionManager {
     }
 
     public void endSession(UUID playerId) {
-        CrateSession session = sessions.remove(playerId);
+        CrateSession session = sessions.get(playerId);
         if (session != null) {
             session.end();
             logVerbose("Sesion finalizada: jugador=%s", playerId);
@@ -353,26 +364,21 @@ public class SessionManager {
         }
     }
 
-    private long getCooldownRemainingSeconds(Player player, String cooldownKey, int cooldownSeconds) {
-        if (cooldownSeconds <= 0) {
-            return 0;
+    private void restoreCooldown(UUID playerId, String crateId, Instant previous) {
+        Map<String, Instant> userCooldowns = cooldowns.get(playerId);
+        if (previous == null) {
+            if (userCooldowns != null) {
+                userCooldowns.remove(crateId);
+            }
+            if (storage != null) {
+                storage.clearCooldown(playerId, crateId);
+            }
+            return;
         }
-        Instant last = getCooldownTimestamp(player, cooldownKey);
-        if (last == null) {
-            return 0;
+        cooldowns.computeIfAbsent(playerId, key -> new HashMap<>()).put(crateId, previous);
+        if (storage != null) {
+            storage.setCooldown(playerId, crateId, previous);
         }
-        Duration elapsed = Duration.between(last, Instant.now());
-        long remaining = cooldownSeconds - elapsed.getSeconds();
-        return Math.max(remaining, 0);
-    }
-
-    private int getTypeCooldownSeconds(com.extracrates.model.CrateType type) {
-        String key = "cooldown-global." + type.name().toLowerCase();
-        return configLoader.getMainConfig().getInt(key, 0);
-    }
-
-    private String typeCooldownKey(com.extracrates.model.CrateType type) {
-        return "type:" + type.name().toLowerCase();
     }
 
     private boolean hasKey(Player player, CrateDefinition crate) {
@@ -397,11 +403,11 @@ public class SessionManager {
         });
     }
 
-    private void consumeKey(Player player, CrateDefinition crate) {
-        consumeKey(player, crate, true);
+    private boolean consumeKey(Player player, CrateDefinition crate) {
+        return consumeKey(player, crate, true);
     }
 
-    private void consumeKey(Player player, CrateDefinition crate, boolean record) {
+    private boolean consumeKey(Player player, CrateDefinition crate, boolean record) {
         if (storageEnabled) {
             boolean consumed = storage.consumeKey(player.getUniqueId(), crate.id());
             if (consumed && record && syncBridge != null) {
@@ -411,11 +417,14 @@ public class SessionManager {
             } else if (consumed && record) {
                 recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.KEY_CONSUMED, Instant.now());
             }
-            return;
+            return consumed;
+        }
+        if (crate.keyModel() == null || crate.keyModel().isEmpty()) {
+            return true;
         }
         int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.keyModel());
         if (modelData < 0) {
-            return;
+            return false;
         }
         ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {
@@ -438,9 +447,10 @@ public class SessionManager {
                 } else if (record) {
                     recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.KEY_CONSUMED, Instant.now());
                 }
-                return;
+                return true;
             }
         }
+        return false;
     }
 
     private CrateStorage initializeStorage(StorageSettings settings) {
@@ -482,17 +492,80 @@ public class SessionManager {
         }
     }
 
-    public void grantKey(Player player, CrateDefinition crate, int amount) {
-        if (amount <= 0) {
+    public void completeOpen(Player player, CrateDefinition crate, Reward reward, OpenState openState) {
+        if (storage != null) {
+            storage.logOpen(player.getUniqueId(), crate.id(), reward.id(), resolveServerId(), Instant.now());
+            if (openState != null && openState.isLockAcquired() && !openState.isLockReleased()) {
+                storage.releaseLock(player.getUniqueId(), crate.id());
+                openState.markLockReleased();
+            }
+        }
+        recordRewardGranted(player, crate, reward);
+    }
+
+    public void handleSessionEnd(CrateSession session) {
+        if (session == null || session.isPreview()) {
             return;
         }
+        OpenState openState = session.getOpenState();
+        if (openState == null) {
+            return;
+        }
+        if (session.isRewardDelivered()) {
+            if (storage != null && openState.isLockAcquired() && !openState.isLockReleased()) {
+                storage.releaseLock(session.getPlayerId(), session.getCrateId());
+                openState.markLockReleased();
+            }
+            return;
+        }
+        if (openState.isCooldownApplied()) {
+            restoreCooldown(session.getPlayerId(), session.getCrateId(), openState.getPreviousCooldown());
+        }
+        if (openState.isKeyConsumed()) {
+            restoreKey(session.getPlayer(), session.getCrate());
+        }
+        if (storage != null && openState.isLockAcquired() && !openState.isLockReleased()) {
+            storage.releaseLock(session.getPlayerId(), session.getCrateId());
+            openState.markLockReleased();
+        }
+    }
+
+    private void restoreKey(Player player, CrateDefinition crate) {
         if (storageEnabled) {
-            storage.addKey(player.getUniqueId(), crate.id(), amount);
+            storage.addKey(player.getUniqueId(), crate.id(), 1);
             return;
         }
-        ItemStack keyItem = buildKeyItem(crate);
-        keyItem.setAmount(amount);
-        player.getInventory().addItem(keyItem);
+        ItemStack key = buildKeyItem(crate);
+        Map<Integer, ItemStack> remaining = player.getInventory().addItem(key);
+        if (!remaining.isEmpty()) {
+            remaining.values().forEach(item -> player.getWorld().dropItemNaturally(player.getLocation(), item));
+        }
+    }
+
+    private ItemStack buildKeyItem(CrateDefinition crate) {
+        ItemStack key = new ItemStack(crate.keyMaterial());
+        ItemMeta meta = key.getItemMeta();
+        if (meta == null) {
+            return key;
+        }
+        String keyName = languageManager.getRaw("command.key-item-name", Map.of("crate_name", crate.displayName()));
+        meta.displayName(TextUtil.color(keyName));
+        if (crate.keyModel() != null && !crate.keyModel().isEmpty()) {
+            int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.keyModel());
+            if (modelData >= 0) {
+                meta.setCustomModelData(modelData);
+            }
+        }
+        key.setItemMeta(meta);
+        return key;
+    }
+
+    private String resolveServerId() {
+        if (syncBridge != null && syncBridge.getSettings() != null) {
+            return syncBridge.getSettings().getServerId();
+        }
+        String serverId = configLoader.getMainConfig().getString("sync.server-id", "local");
+        return serverId != null ? serverId : "local";
     }
 
     public void applyRemoteCooldown(UUID playerId, String crateId, Instant timestamp) {

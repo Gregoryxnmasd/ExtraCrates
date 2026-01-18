@@ -68,6 +68,19 @@ public class SqlStorage implements CrateStorage {
     }
 
     @Override
+    public void clearCooldown(UUID playerId, String crateId) {
+        withConnection(connection -> {
+            String deleteSql = "DELETE FROM crate_cooldowns WHERE player_uuid=? AND crate_id=?";
+            try (PreparedStatement delete = connection.prepareStatement(deleteSql)) {
+                delete.setString(1, playerId.toString());
+                delete.setString(2, crateId);
+                delete.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    @Override
     public int getKeyCount(UUID playerId, String crateId) {
         String sql = "SELECT amount FROM crate_keys WHERE player_uuid=? AND crate_id=?";
         return withConnection(connection -> {
