@@ -25,6 +25,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.*;
 
 public class CrateSession {
@@ -48,6 +50,7 @@ public class CrateSession {
     private int rewardSwitchTicks;
     private int nextRewardSwitchTick;
     private int elapsedTicks;
+    private int totalTicks;
     private Location rewardBaseLocation;
     private Location hologramBaseLocation;
     private Transformation rewardBaseTransform;
@@ -204,9 +207,9 @@ public class CrateSession {
             finish();
             return;
         }
+        totalTicks = Math.max(0, timeline.size() - 1);
         task = new BukkitRunnable() {
             int tick = 0;
-            final int totalTicks = Math.max(0, timeline.size() - 1);
 
             @Override
             public void run() {
@@ -336,6 +339,14 @@ public class CrateSession {
             return null;
         }
         return rewards.get(rewardIndex);
+    }
+
+    public @Nullable Reward getActiveReward() {
+        return getCurrentReward();
+    }
+
+    public int getRemainingTicks() {
+        return Math.max(0, totalTicks - elapsedTicks);
     }
 
     private void refreshRewardDisplay() {
