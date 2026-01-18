@@ -4,15 +4,24 @@ crates:
     type: "keyed"
     # open-mode: reward-only | full | preview-only
     open-mode: "reward-only"
+    reroll-enable-ticks: 0
+    ui-mode: "none"
+    actionbar-message: ""
     key-model: "legendary_key"
     key-material: "TRIPWIRE_HOOK"
     cooldown-seconds: 120
     cost: 0
+    reroll-cost: 0
     permission: "extracrates.open.legendary"
+    max-rerolls: 2
     locations:
       world: "world"
       camera-start: { x: 10.5, y: 65.0, z: -20.5, yaw: 0, pitch: 0 }
       reward-anchor: { x: 12.0, y: 65.5, z: -16.0 }
+    allowed-area:
+      world: "world"
+      min: { x: 8.0, y: 64.0, z: -24.0 }
+      max: { x: 16.0, y: 70.0, z: -12.0 }
     animation:
       path: "legendary_path"
       reward-anchor: { x: 0.5, y: 1.2, z: 0.5 }
@@ -43,8 +52,13 @@ crates:
     type: "event"
     # open-mode: reward-only | full | preview-only
     open-mode: "reward-only"
+    reroll-enable-ticks: 0
+    ui-mode: "none"
+    actionbar-message: ""
     cooldown-seconds: 30
+    reroll-cost: 0
     permission: "extracrates.open.seasonal"
+    max-rerolls: 1
     locations:
       world: "world"
       reward-anchor: { x: -2.0, y: 64.2, z: 5.5 }
