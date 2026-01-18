@@ -159,21 +159,8 @@ public class CrateSession {
             return;
         }
 
-        rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
-            display.setItemStack(buildRewardDisplayItem(reward, anchor.getWorld()));
-        });
-        hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
-            String format = reward.hologram();
-            if (format == null || format.isEmpty()) {
-                format = crate.animation().hologramFormat();
-            }
-            if (format == null || format.isEmpty()) {
-                format = "%reward_name%";
-            }
-            String name = format.replace("%reward_name%", reward.displayName());
-            display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
-            display.setBillboard(Display.Billboard.CENTER);
-        });
+        rewardDisplay = createRewardDisplay(displayLocation, reward);
+        hologram = createHologram(displayLocation.clone().add(0, 0.4, 0), reward);
 
         hideFromOthers(rewardDisplay);
         hideFromOthers(hologram);
@@ -343,14 +330,75 @@ public class CrateSession {
         if (reward == null) {
             return;
         }
-        if (rewardDisplay != null) {
+        Location displayLocation = resolveRewardDisplayLocation();
+        if (rewardDisplay == null || rewardDisplay.isDead()) {
+            rewardDisplay = createRewardDisplay(displayLocation, reward);
+            if (rewardBaseLocation == null) {
+                rewardBaseLocation = rewardDisplay.getLocation().clone();
+            }
+            if (rewardBaseTransform == null) {
+                rewardBaseTransform = rewardDisplay.getTransformation();
+            }
+            if (rewardBaseTransform != null) {
+                rewardDisplay.setTransformation(rewardBaseTransform);
+            }
+        } else {
             rewardDisplay.setItemStack(buildRewardDisplayItem(reward, rewardDisplay.getWorld()));
         }
-        if (hologram != null) {
+        hideFromOthers(rewardDisplay);
+
+        Location hologramLocation = resolveHologramLocation(displayLocation);
+        if (hologram == null || hologram.isDead()) {
+            hologram = createHologram(hologramLocation, reward);
+            if (hologramBaseLocation == null) {
+                hologramBaseLocation = hologram.getLocation().clone();
+            }
+        } else {
             String format = crate.animation().hologramFormat();
+            if (format == null || format.isEmpty()) {
+                format = "%reward_name%";
+            }
             String name = format.replace("%reward_name%", reward.displayName());
             hologram.text(TextUtil.color(name));
         }
+        hideFromOthers(hologram);
+    }
+
+    private Location resolveRewardDisplayLocation() {
+        if (rewardBaseLocation != null) {
+            return rewardBaseLocation.clone();
+        }
+        Location anchor = crate.rewardAnchor() != null ? crate.rewardAnchor() : player.getLocation().add(0, 1.5, 0);
+        CrateDefinition.RewardFloatSettings floatSettings = crate.animation().rewardFloatSettings();
+        return anchor.clone().add(0, floatSettings.height(), 0);
+    }
+
+    private Location resolveHologramLocation(Location displayLocation) {
+        if (hologramBaseLocation != null) {
+            return hologramBaseLocation.clone();
+        }
+        return displayLocation.clone().add(0, 0.4, 0);
+    }
+
+    private ItemDisplay createRewardDisplay(Location displayLocation, Reward reward) {
+        return displayLocation.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
+            display.setItemStack(buildRewardDisplayItem(reward, displayLocation.getWorld()));
+        });
+    }
+
+    private TextDisplay createHologram(Location hologramLocation, Reward reward) {
+        return hologramLocation.getWorld().spawn(hologramLocation, TextDisplay.class, display -> {
+            String format = reward.hologram();
+            if (format == null || format.isEmpty()) {
+                format = crate.animation().hologramFormat();
+            }
+            if (format == null || format.isEmpty()) {
+                format = "%reward_name%";
+            }
+            String name = format.replace("%reward_name%", reward.displayName());
+            display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
+            display.setBillboard(Display.Billboard.CENTER);
+        });
     }
 
     private boolean isQaMode() {
