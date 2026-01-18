@@ -204,6 +204,7 @@ public class CrateSession {
             finish();
             return;
         }
+        executeCutsceneCommands("on-start", null);
         task = new BukkitRunnable() {
             int tick = 0;
             final int totalTicks = Math.max(0, timeline.size() - 1);
@@ -295,9 +296,11 @@ public class CrateSession {
     }
 
     private void finish() {
+        Reward reward = getCurrentReward();
         if (!preview) {
             executeReward();
         }
+        executeCutsceneCommands("on-end", reward);
         end();
     }
 
@@ -355,6 +358,31 @@ public class CrateSession {
 
     private boolean isQaMode() {
         return configLoader.getMainConfig().getBoolean("qa-mode", false);
+    }
+
+    private void executeCutsceneCommands(String key, Reward reward) {
+        if (!crate.cutsceneSettings().commandsEnabled()) {
+            return;
+        }
+        List<String> commands = configLoader.getMainConfig().getStringList("cutscene." + key);
+        if (commands == null || commands.isEmpty()) {
+            return;
+        }
+        String rewardId = reward != null ? reward.id() : "";
+        String rewardName = reward != null ? reward.displayName() : "";
+        for (String command : commands) {
+            if (command == null || command.isBlank()) {
+                continue;
+            }
+            String parsed = command
+                    .replace("%player%", player.getName())
+                    .replace("%player_uuid%", player.getUniqueId().toString())
+                    .replace("%crate_id%", crate.id())
+                    .replace("%crate_name%", crate.displayName())
+                    .replace("%reward_id%", rewardId)
+                    .replace("%reward_name%", rewardName);
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        }
     }
 
     private ItemStack buildRewardDisplayItem(Reward reward, World world) {
