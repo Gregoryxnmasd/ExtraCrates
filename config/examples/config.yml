@@ -74,6 +74,4 @@ permissions:
   use-per-crate: true
 debug:
   rolls: false
-rewards:
-  normalize-chances: false
-  warning-threshold: 0
+  reward-commands: false
