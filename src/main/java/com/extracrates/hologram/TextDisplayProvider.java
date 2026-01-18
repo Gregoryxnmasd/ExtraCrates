@@ -30,12 +30,12 @@ public class TextDisplayProvider implements HologramProvider {
             return null;
         }
         TextDisplay display = location.getWorld().spawn(location, TextDisplay.class, entity -> {
-            entity.text(text);
-            entity.setBillboard(Display.Billboard.CENTER);
             NamespacedKey fontKey = NamespacedKey.fromString(settings.getFontKey());
             if (fontKey != null) {
-                entity.setFont(fontKey);
+                text = text.font(fontKey);
             }
+            entity.text(text);
+            entity.setBillboard(Display.Billboard.CENTER);
             HologramSettings.TextAnimationSettings animations = settings.getTextAnimationSettings();
             if (animations.isEnabled()) {
                 entity.setInterpolationDelay(Math.max(0, animations.getInterpolationDelay()));
