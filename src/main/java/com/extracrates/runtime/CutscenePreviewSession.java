@@ -40,9 +40,11 @@ public class CutscenePreviewSession {
             return;
         }
         int totalTicks = (int) Math.max(1, path.getDurationSeconds() * 20);
-        long period = Math.max(1L, totalTicks / Math.max(1, timeline.size()));
+        int maxParticlesPerTick = Math.max(1, plugin.getConfig().getInt("cutscene.preview-particles-per-tick", 6));
+        int baseParticlesPerTick = Math.max(1, (int) Math.ceil(timeline.size() / (double) totalTicks));
         task = new BukkitRunnable() {
             int index = 0;
+            int elapsedTicks = 0;
 
             @Override
             public void run() {
@@ -51,11 +53,20 @@ public class CutscenePreviewSession {
                     finish();
                     return;
                 }
-                Location point = timeline.get(index++);
-                player.getWorld().spawnParticle(particle, point, 1, 0, 0, 0, 0);
+                int ticksRemaining = Math.max(1, totalTicks - elapsedTicks);
+                int pointsRemaining = timeline.size() - index;
+                int desiredPerTick = (int) Math.ceil(pointsRemaining / (double) ticksRemaining);
+                int particlesPerTick = Math.min(maxParticlesPerTick, Math.max(baseParticlesPerTick, desiredPerTick));
+                Location nextPoint = timeline.get(index);
+                int throttledPerTick = applyDistanceThrottle(particlesPerTick, nextPoint);
+                for (int i = 0; i < throttledPerTick && index < timeline.size(); i++) {
+                    Location point = timeline.get(index++);
+                    player.getWorld().spawnParticle(particle, point, 1, 0, 0, 0, 0);
+                }
+                elapsedTicks++;
             }
         };
-        task.runTaskTimer(plugin, 0L, period);
+        task.runTaskTimer(plugin, 0L, 1L);
     }
 
     public void end() {
@@ -73,5 +84,11 @@ public class CutscenePreviewSession {
         if (onFinish != null) {
             onFinish.run();
         }
+    }
+
+    private int applyDistanceThrottle(int particlesPerTick, Location point) {
+        double distance = player.getLocation().distance(point);
+        double factor = Math.max(1.0, distance / 16.0);
+        return Math.max(1, (int) Math.floor(particlesPerTick / factor));
     }
 }
