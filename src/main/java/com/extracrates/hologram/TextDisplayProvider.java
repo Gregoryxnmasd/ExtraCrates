@@ -31,10 +31,11 @@ public class TextDisplayProvider implements HologramProvider {
         }
         TextDisplay display = location.getWorld().spawn(location, TextDisplay.class, entity -> {
             NamespacedKey fontKey = NamespacedKey.fromString(settings.getFontKey());
+            Component displayText = text;
             if (fontKey != null) {
-                text = text.font(fontKey);
+                displayText = displayText.font(fontKey);
             }
-            entity.text(text);
+            entity.text(displayText);
             entity.setBillboard(Display.Billboard.CENTER);
             HologramSettings.TextAnimationSettings animations = settings.getTextAnimationSettings();
             if (animations.isEnabled()) {
