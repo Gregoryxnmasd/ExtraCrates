@@ -6,7 +6,6 @@ import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
 import org.bukkit.enchantments.Enchantment;
 
 import java.io.File;
@@ -15,9 +14,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 public class ConfigValidator {
@@ -32,36 +33,69 @@ public class ConfigValidator {
     public ValidationReport validate() {
         List<String> warnings = new ArrayList<>();
         Map<String, RewardPool> rewardPools = configLoader.getRewardPools();
-
-        for (CrateDefinition crate : configLoader.getCrates().values()) {
-            String poolId = crate.rewardsPool();
-            if (poolId == null || poolId.isBlank()) {
-                warnings.add("La crate '" + crate.id() + "' no tiene rewards-pool definido.");
-                continue;
-            }
-            if (!rewardPools.containsKey(poolId)) {
-                warnings.add("La crate '" + crate.id() + "' usa un rewards-pool inválido: '" + poolId + "'.");
-            }
-        }
+        Set<String> invalidPools = new HashSet<>();
+        Set<String> invalidCrates = new HashSet<>();
 
         for (RewardPool pool : rewardPools.values()) {
+            boolean poolInvalid = false;
             if (pool.rewards().isEmpty()) {
                 warnings.add("El pool de recompensas '" + pool.id() + "' está vacío.");
+                poolInvalid = true;
             }
             for (Reward reward : pool.rewards()) {
+                List<String> issues = new ArrayList<>();
                 String itemName = reward.item();
-                Material material = Material.matchMaterial(itemName.toUpperCase(Locale.ROOT));
-                if (material == null) {
-                    warnings.add("Material desconocido en recompensa '" + reward.id() + "' (pool '" + pool.id() + "'): '" + itemName + "'.");
+                if (itemName == null || itemName.isBlank()) {
+                    issues.add("item vacío");
+                } else {
+                    Material material = Material.matchMaterial(itemName.toUpperCase(Locale.ROOT));
+                    if (material == null) {
+                        issues.add("item desconocido '" + itemName + "'");
+                    }
                 }
+                List<String> invalidEnchantments = new ArrayList<>();
                 for (String enchantmentKey : reward.enchantments().keySet()) {
                     Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(enchantmentKey.toLowerCase(Locale.ROOT)));
                     if (enchantment == null) {
-                        warnings.add("Encantamiento inválido en recompensa '" + reward.id() + "' (pool '" + pool.id() + "'): '" + enchantmentKey + "'.");
+                        invalidEnchantments.add(enchantmentKey);
                     }
                 }
+                if (!invalidEnchantments.isEmpty()) {
+                    issues.add("encantamientos inválidos " + invalidEnchantments);
+                }
+                boolean hasBlankCommand = reward.commands().stream().anyMatch(command -> command == null || command.isBlank());
+                if (reward.commands().isEmpty() || hasBlankCommand) {
+                    issues.add("comandos vacíos");
+                }
+                if (!issues.isEmpty()) {
+                    warnings.add("Recompensa inválida '" + reward.id() + "' (pool '" + pool.id() + "'): " + String.join(", ", issues) + ".");
+                    poolInvalid = true;
+                }
+            }
+            if (poolInvalid) {
+                invalidPools.add(pool.id());
             }
         }
+
+        for (CrateDefinition crate : new ArrayList<>(configLoader.getCrates().values())) {
+            String poolId = crate.rewardsPool();
+            if (poolId == null || poolId.isBlank()) {
+                warnings.add("La crate '" + crate.id() + "' no tiene rewards-pool definido.");
+                invalidCrates.add(crate.id());
+                continue;
+            }
+            if (!rewardPools.containsKey(poolId)) {
+                warnings.add("La crate '" + crate.id() + "' usa un rewards-pool inexistente: '" + poolId + "'.");
+                invalidCrates.add(crate.id());
+                continue;
+            }
+            if (invalidPools.contains(poolId)) {
+                warnings.add("La crate '" + crate.id() + "' fue bloqueada por usar el pool inválido '" + poolId + "'.");
+                invalidCrates.add(crate.id());
+            }
+        }
+
+        configLoader.removeCratesById(invalidCrates);
 
         return new ValidationReport(warnings);
     }

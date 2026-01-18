@@ -17,6 +17,7 @@ public record CrateDefinition(
         String permission,
         Location cameraStart,
         Location rewardAnchor,
+        AllowedArea allowedArea,
         AnimationSettings animation,
         CutsceneSettings cutsceneSettings,
         String rewardsPool
@@ -56,12 +57,15 @@ public record CrateDefinition(
         ConfigurationSection locations = section.getConfigurationSection("locations");
         Location cameraStart = null;
         Location rewardAnchor = null;
+        String worldName = null;
+        World world = null;
         if (locations != null) {
-            String worldName = locations.getString("world", "world");
-            World world = org.bukkit.Bukkit.getWorld(worldName);
+            worldName = locations.getString("world", "world");
+            world = org.bukkit.Bukkit.getWorld(worldName);
             if (world == null) {
                 java.util.List<World> worlds = org.bukkit.Bukkit.getWorlds();
                 world = worlds.isEmpty() ? null : worlds.getFirst();
+                worldName = world != null ? world.getName() : worldName;
             }
             if (world != null) {
                 ConfigurationSection camera = locations.getConfigurationSection("camera-start");
@@ -87,6 +91,7 @@ public record CrateDefinition(
             }
         }
 
+        AllowedArea allowedArea = AllowedArea.fromSection(section.getConfigurationSection("allowed-area"), worldName);
         AnimationSettings animation = AnimationSettings.fromSection(section.getConfigurationSection("animation"));
         CutsceneSettings cutsceneSettings = CutsceneSettings.fromSections(section.getConfigurationSection("cutscene"), defaults == null ? null : defaults.getConfigurationSection("cutscene"));
         String rewardsPool = section.getString("rewards-pool", "");
@@ -102,6 +107,7 @@ public record CrateDefinition(
                 permission,
                 cameraStart,
                 rewardAnchor,
+                allowedArea,
                 animation,
                 cutsceneSettings,
                 rewardsPool
@@ -131,6 +137,45 @@ public record CrateDefinition(
             RewardFloatSettings rewardFloatSettings = RewardFloatSettings.fromSection(section.getConfigurationSection("reward-float"));
             RewardDisplaySettings rewardDisplaySettings = RewardDisplaySettings.fromSection(section.getConfigurationSection("reward-display"));
             return new AnimationSettings(path, rewardModel, hologram, rewardFloatSettings, rewardDisplaySettings);
+        }
+    }
+
+    public record AllowedArea(String worldName, double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {
+        public static AllowedArea fromSection(ConfigurationSection section, String defaultWorld) {
+            if (section == null) {
+                return null;
+            }
+            ConfigurationSection min = section.getConfigurationSection("min");
+            ConfigurationSection max = section.getConfigurationSection("max");
+            if (min == null || max == null) {
+                return null;
+            }
+            String worldName = section.getString("world", defaultWorld);
+            if (worldName == null || worldName.isBlank()) {
+                return null;
+            }
+            double minX = Math.min(min.getDouble("x"), max.getDouble("x"));
+            double minY = Math.min(min.getDouble("y"), max.getDouble("y"));
+            double minZ = Math.min(min.getDouble("z"), max.getDouble("z"));
+            double maxX = Math.max(min.getDouble("x"), max.getDouble("x"));
+            double maxY = Math.max(min.getDouble("y"), max.getDouble("y"));
+            double maxZ = Math.max(min.getDouble("z"), max.getDouble("z"));
+            return new AllowedArea(worldName, minX, minY, minZ, maxX, maxY, maxZ);
+        }
+
+        public boolean contains(Location location) {
+            if (location == null || location.getWorld() == null) {
+                return false;
+            }
+            if (!location.getWorld().getName().equals(worldName)) {
+                return false;
+            }
+            double x = location.getX();
+            double y = location.getY();
+            double z = location.getZ();
+            return x >= minX && x <= maxX
+                    && y >= minY && y <= maxY
+                    && z >= minZ && z <= maxZ;
         }
     }
 
