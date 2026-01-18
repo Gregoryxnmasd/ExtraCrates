@@ -111,6 +111,11 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.open-mode-preview-only"));
             return false;
         }
+        String openMode = normalizeOpenMode(crate.openMode());
+        if (!preview && openMode.equals("preview-only")) {
+            player.sendMessage(Component.text("Esta crate solo permite previews."));
+            return false;
+        }
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
             player.sendMessage(languageManager.getMessage("session.error.missing-reward-pool"));
@@ -130,22 +135,28 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
-        if (rewardOnly) {
-            player.sendMessage(languageManager.getMessage("session.open-mode-reward-only"));
+        if (openMode.equals("reward-only")) {
             Reward reward = rewards.get(0);
-            if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
-                consumeKey(player, crate);
-            }
             if (preview) {
-                player.sendMessage(languageManager.getMessage("session.preview-reward", Map.of("reward", reward.displayName())));
+                player.sendMessage(Component.text("Preview de recompensa: ").append(TextUtil.color(reward.displayName())));
             } else {
-                deliverReward(player, reward);
+                if (isQaMode()) {
+                    player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
+                } else {
+                    player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
+                    ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+                    player.getInventory().addItem(item);
+                    for (String command : reward.commands()) {
+                        String parsed = command.replace("%player%", player.getName());
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+                    }
+                }
+                if (crate.type() == com.extracrates.model.CrateType.KEYED) {
+                    consumeKey(player, crate);
+                }
                 applyCooldown(player, crate);
             }
             return true;
-        }
-        if (cinematic) {
-            player.sendMessage(languageManager.getMessage("session.open-mode-cinematic"));
         }
         CutscenePath path = resolveCutscenePath(crate, player);
         CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview);
@@ -290,28 +301,15 @@ public class SessionManager {
         if (openMode == null || openMode.isBlank()) {
             return "reward-only";
         }
-        return openMode.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private void deliverReward(Player player, Reward reward) {
-        if (reward == null) {
-            return;
-        }
-        if (configLoader.getMainConfig().getBoolean("qa-mode", false)) {
-            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
-            return;
-        }
-        player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.displayName())));
-        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-        player.getInventory().addItem(item);
-        for (String command : reward.commands()) {
-            String parsed = command.replace("%player%", player.getName());
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
-        }
+        return openMode.toLowerCase(java.util.Locale.ROOT);
     }
 
     private boolean isOnCooldown(Player player, CrateDefinition crate) {
         return getCooldownRemainingSeconds(player, crate) > 0;
+    }
+
+    private boolean isQaMode() {
+        return configLoader.getMainConfig().getBoolean("qa-mode", false);
     }
 
     public long getCooldownRemainingSeconds(Player player, CrateDefinition crate) {

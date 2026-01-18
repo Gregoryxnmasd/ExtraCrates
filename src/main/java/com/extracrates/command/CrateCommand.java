@@ -153,6 +153,10 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(languageManager.getMessage("command.no-permission", player, null, null, null));
                     return true;
                 }
+                if (sub.equals("preview") && !configLoader.getMainConfig().getBoolean("gui.preview-enabled", true)) {
+                    sender.sendMessage(Component.text("Las previews están deshabilitadas en la configuración."));
+                    return true;
+                }
                 if (args.length < 2) {
                     sender.sendMessage(languageManager.getMessage("command.open-usage", java.util.Map.of("sub", sub)));
                     return true;
