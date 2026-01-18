@@ -6,6 +6,7 @@ import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.runtime.CameraEntityFactory;
+import com.extracrates.runtime.ProtocolEntityHider;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
@@ -107,6 +108,7 @@ public class CrateSession {
         String cameraEntityType = config.getString("cutscene.camera-entity", "armorstand");
         boolean armorStandInvisible = config.getBoolean("cutscene.armorstand-invisible", true);
         cameraEntity = CameraEntityFactory.spawn(start, cameraEntityType, armorStandInvisible);
+        trackEntity(cameraEntity);
         hideFromOthers(cameraEntity);
     }
 
@@ -175,6 +177,9 @@ public class CrateSession {
             display.setBillboard(Display.Billboard.CENTER);
         });
 
+        trackEntity(rewardDisplay);
+        trackEntity(hologram);
+
         hideFromOthers(rewardDisplay);
         hideFromOthers(hologram);
 
@@ -191,6 +196,24 @@ public class CrateSession {
             if (!online.getUniqueId().equals(player.getUniqueId())) {
                 online.hideEntity(plugin, entity);
             }
+        }
+    }
+
+    public void hideEntitiesFrom(Player viewer) {
+        if (!configLoader.getMainConfig().getBoolean("cutscene.hide-others", true)) {
+            return;
+        }
+        if (viewer.getUniqueId().equals(player.getUniqueId())) {
+            return;
+        }
+        if (cameraEntity != null) {
+            viewer.hideEntity(plugin, cameraEntity);
+        }
+        if (rewardDisplay != null) {
+            viewer.hideEntity(plugin, rewardDisplay);
+        }
+        if (hologram != null) {
+            viewer.hideEntity(plugin, hologram);
         }
     }
 
@@ -383,6 +406,9 @@ public class CrateSession {
             musicTask.cancel();
         }
         stopMusic();
+        untrackEntity(cameraEntity);
+        untrackEntity(rewardDisplay);
+        untrackEntity(hologram);
         if (cameraEntity != null && !cameraEntity.isDead()) {
             if (cameraEntity instanceof ArmorStand armorStand) {
                 armorStand.remove();
@@ -416,6 +442,20 @@ public class CrateSession {
             player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
         }
         sessionManager.removeSession(player.getUniqueId());
+    }
+
+    private void trackEntity(Entity entity) {
+        ProtocolEntityHider hider = plugin.getProtocolEntityHider();
+        if (hider != null && entity != null) {
+            hider.trackEntity(player, entity);
+        }
+    }
+
+    private void untrackEntity(Entity entity) {
+        ProtocolEntityHider hider = plugin.getProtocolEntityHider();
+        if (hider != null && entity != null) {
+            hider.untrackEntity(entity);
+        }
     }
 
     public boolean isMovementLocked() {
