@@ -280,6 +280,7 @@ public class CrateEditorMenu implements Listener {
         config.set(path + ".key-model", "");
         config.set(path + ".cooldown-seconds", 0);
         config.set(path + ".cost", 0);
+        config.set(path + ".reroll-cost", 0);
         config.set(path + ".permission", "extracrates.open");
         config.set(path + ".cutscene.overlay-model", "");
         config.set(path + ".cutscene.locks.movement", true);
