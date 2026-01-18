@@ -26,8 +26,12 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class CrateSession {
+    private static final ConcurrentMap<RewardDisplayCacheKey, ItemStack> REWARD_DISPLAY_CACHE = new ConcurrentHashMap<>();
+
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final LanguageManager languageManager;
@@ -358,13 +362,35 @@ public class CrateSession {
     }
 
     private ItemStack buildRewardDisplayItem(Reward reward, World world) {
+        boolean debugTimings = configLoader.getMainConfig().getBoolean("debug.timings", false);
+        long start = debugTimings ? System.nanoTime() : 0L;
+        RewardDisplayCacheKey cacheKey = new RewardDisplayCacheKey(
+                reward.id(),
+                world != null ? world.getName() : "unknown",
+                crate.animation().rewardModel()
+        );
+        ItemStack cached = REWARD_DISPLAY_CACHE.get(cacheKey);
+        if (cached != null) {
+            if (debugTimings) {
+                logTiming(cacheKey, true, start);
+            }
+            return cached.clone();
+        }
         ItemStack item = ItemUtil.buildItem(reward, world, configLoader, plugin.getMapImageCache());
         String rewardModel = crate.animation().rewardModel();
         if (rewardModel == null || rewardModel.isEmpty()) {
+            REWARD_DISPLAY_CACHE.put(cacheKey, item.clone());
+            if (debugTimings) {
+                logTiming(cacheKey, false, start);
+            }
             return item;
         }
         ItemMeta meta = item.getItemMeta();
         if (meta == null) {
+            REWARD_DISPLAY_CACHE.put(cacheKey, item.clone());
+            if (debugTimings) {
+                logTiming(cacheKey, false, start);
+            }
             return item;
         }
         int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, rewardModel);
@@ -372,7 +398,27 @@ public class CrateSession {
             meta.setCustomModelData(modelData);
             item.setItemMeta(meta);
         }
+        REWARD_DISPLAY_CACHE.put(cacheKey, item.clone());
+        if (debugTimings) {
+            logTiming(cacheKey, false, start);
+        }
         return item;
+    }
+
+    public static void clearRewardDisplayCache() {
+        REWARD_DISPLAY_CACHE.clear();
+    }
+
+    private void logTiming(RewardDisplayCacheKey cacheKey, boolean cacheHit, long start) {
+        double ms = (System.nanoTime() - start) / 1_000_000.0;
+        plugin.getLogger().info(String.format(
+                "CrateSession.buildRewardDisplayItem reward=%s world=%s model=%s cache=%s timeMs=%.3f",
+                cacheKey.rewardId(),
+                cacheKey.world(),
+                cacheKey.model(),
+                cacheHit ? "hit" : "miss",
+                ms
+        ));
     }
 
     public void end() {
@@ -508,6 +554,14 @@ public class CrateSession {
             return SoundCategory.valueOf(categoryName.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
             return SoundCategory.MUSIC;
+        }
+    }
+
+    private record RewardDisplayCacheKey(String rewardId, String world, String model) {
+        private RewardDisplayCacheKey {
+            rewardId = rewardId != null ? rewardId : "unknown";
+            world = world != null ? world : "unknown";
+            model = model != null ? model : "";
         }
     }
 }

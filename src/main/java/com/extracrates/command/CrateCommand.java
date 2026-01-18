@@ -9,7 +9,9 @@ import com.extracrates.route.RouteEditorManager;
 import com.extracrates.runtime.CutscenePreviewSession;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.runtime.core.SessionManager;
+import com.extracrates.runtime.core.CrateSession;
 import com.extracrates.util.ResourcepackModelResolver;
+import com.extracrates.util.ItemUtil;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Particle;
@@ -123,6 +125,8 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 plugin.reloadConfig();
                 configLoader.loadAll();
                 languageManager.load();
+                ItemUtil.clearItemCache();
+                CrateSession.clearRewardDisplayCache();
                 sender.sendMessage(languageManager.getMessage("command.reload-success"));
                 return true;
             }
