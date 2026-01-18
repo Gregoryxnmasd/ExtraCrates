@@ -1,6 +1,7 @@
 # Opciones globales
 language: es_es
 qa-mode: false
+accessibility-mode: true
 particles-default: "crit"
 hologram-font: "resourcepack:cutscene_font"
 cooldown-global:
