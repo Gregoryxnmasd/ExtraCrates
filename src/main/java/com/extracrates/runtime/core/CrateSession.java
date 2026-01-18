@@ -53,11 +53,14 @@ public class CrateSession {
     private Transformation rewardBaseTransform;
 
     private GameMode previousGameMode;
+    private Entity previousSpectatorTarget;
     private NamespacedKey speedModifierKey;
     private ItemStack previousHelmet;
-    private boolean hudHiddenApplied;
     private float previousWalkSpeed;
     private float previousFlySpeed;
+    private ItemStack[] previousInventoryContents;
+    private ItemStack[] previousArmorContents;
+    private ItemStack previousOffHand;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -82,6 +85,7 @@ public class CrateSession {
     }
 
     public void start() {
+        capturePlayerState();
         if (path == null) {
             player.sendMessage(Component.text("No se encontró la ruta de la cutscene."));
             finish();
@@ -92,9 +96,6 @@ public class CrateSession {
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
         Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
-        previousGameMode = player.getGameMode();
-        previousWalkSpeed = player.getWalkSpeed();
-        previousFlySpeed = player.getFlySpeed();
         spawnCamera(start);
         applySpectatorMode();
         spawnRewardDisplay();
@@ -118,12 +119,10 @@ public class CrateSession {
         }
         NamespacedKey parsedKey = NamespacedKey.fromString(keyText.toLowerCase(Locale.ROOT), plugin);
         speedModifierKey = parsedKey != null ? parsedKey : new NamespacedKey(plugin, "crate-cutscene");
-        previousGameMode = player.getGameMode();
         double modifierValue = config.getDouble("cutscene.slowdown-modifier", -10.0);
         sessionManager.applySpectator(player, speedModifierKey, modifierValue);
         player.setSpectatorTarget(cameraEntity);
 
-        previousHelmet = player.getInventory().getHelmet();
         String overlayModel = crate.cutsceneSettings().overlayModel();
         if (overlayModel != null && !overlayModel.isEmpty()) {
             ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
@@ -139,7 +138,7 @@ public class CrateSession {
         }
 
         if (crate.cutsceneSettings().hideHud()) {
-            hudHiddenApplied = toggleHud(true);
+            toggleHud(true);
         }
         if (crate.cutsceneSettings().lockMovement()) {
             player.setWalkSpeed(0.0f);
@@ -295,10 +294,10 @@ public class CrateSession {
     }
 
     private void finish() {
+        end();
         if (!preview) {
             executeReward();
         }
-        end();
     }
 
     private void executeReward() {
@@ -396,26 +395,67 @@ public class CrateSession {
         if (hologram != null && !hologram.isDead()) {
             hologram.remove();
         }
-        if (previousGameMode != null) {
-            player.setGameMode(previousGameMode);
-        }
-        player.setSpectatorTarget(null);
+        restoreInventory();
+        restorePlayerState();
         if (speedModifierKey != null) {
             sessionManager.removeSpectatorModifier(player, speedModifierKey);
         }
-        if (crate.cutsceneSettings().lockMovement()) {
-            player.setWalkSpeed(previousWalkSpeed);
-            player.setFlySpeed(previousFlySpeed);
-        }
-        if (hudHiddenApplied) {
-            toggleHud(false);
-        }
-        if (previousHelmet != null) {
-            player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet);
-        } else {
-            player.sendEquipmentChange(player, EquipmentSlot.HEAD, new ItemStack(Material.AIR));
-        }
+        player.setWalkSpeed(previousWalkSpeed);
+        player.setFlySpeed(previousFlySpeed);
+        toggleHud(false);
+        player.sendEquipmentChange(player, EquipmentSlot.HEAD, previousHelmet != null ? previousHelmet : new ItemStack(Material.AIR));
         sessionManager.removeSession(player.getUniqueId());
+    }
+
+    private void capturePlayerState() {
+        previousGameMode = player.getGameMode();
+        previousSpectatorTarget = player.getSpectatorTarget();
+        previousWalkSpeed = player.getWalkSpeed();
+        previousFlySpeed = player.getFlySpeed();
+        previousHelmet = cloneItemStack(player.getInventory().getHelmet());
+        previousInventoryContents = cloneItemStackArray(player.getInventory().getContents());
+        previousArmorContents = cloneItemStackArray(player.getInventory().getArmorContents());
+        previousOffHand = cloneItemStack(player.getInventory().getItemInOffHand());
+    }
+
+    private void restorePlayerState() {
+        GameMode restoreMode = previousGameMode != null ? previousGameMode : GameMode.SURVIVAL;
+        if (restoreMode == GameMode.SPECTATOR) {
+            restoreMode = GameMode.SURVIVAL;
+        }
+        player.setGameMode(restoreMode);
+        player.setSpectatorTarget(previousSpectatorTarget);
+    }
+
+    private void restoreInventory() {
+        if (previousInventoryContents == null) {
+            return;
+        }
+        player.getInventory().setContents(cloneItemStackArray(previousInventoryContents));
+        if (previousArmorContents != null) {
+            player.getInventory().setArmorContents(cloneItemStackArray(previousArmorContents));
+        }
+        if (previousOffHand != null) {
+            player.getInventory().setItemInOffHand(previousOffHand.clone());
+        } else {
+            player.getInventory().setItemInOffHand(null);
+        }
+        player.updateInventory();
+    }
+
+    private ItemStack cloneItemStack(ItemStack item) {
+        return item != null ? item.clone() : null;
+    }
+
+    private ItemStack[] cloneItemStackArray(ItemStack[] items) {
+        if (items == null) {
+            return null;
+        }
+        ItemStack[] clone = new ItemStack[items.length];
+        for (int i = 0; i < items.length; i++) {
+            clone[i] = cloneItemStack(items[i]);
+        }
+        return clone;
     }
 
     public boolean isMovementLocked() {
