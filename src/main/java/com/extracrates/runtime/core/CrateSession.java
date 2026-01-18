@@ -87,6 +87,11 @@ public class CrateSession {
             finish();
             return;
         }
+        if (isAccessibilityMode()) {
+            startAccessibilitySession();
+            return;
+        }
+        sendActionBar("session.actionbar-start", Collections.emptyMap());
         rewardIndex = 0;
         elapsedTicks = 0;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
@@ -100,6 +105,27 @@ public class CrateSession {
         spawnRewardDisplay();
         startMusic();
         startCutscene();
+    }
+
+    private void startAccessibilitySession() {
+        sendActionBar("session.actionbar-accessibility", Collections.emptyMap());
+        rewardIndex = 0;
+        elapsedTicks = 0;
+        rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
+        nextRewardSwitchTick = rewardSwitchTicks;
+        spawnRewardDisplay();
+        task = new BukkitRunnable() {
+            int tick = 0;
+
+            @Override
+            public void run() {
+                if (tick++ >= rewardSwitchTicks) {
+                    cancel();
+                    finish();
+                }
+            }
+        };
+        task.runTaskTimer(plugin, 0L, 1L);
     }
 
     private void spawnCamera(Location start) {
@@ -310,6 +336,7 @@ public class CrateSession {
             player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
         } else {
             player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
+            sendActionBar("session.actionbar-reward", Map.of("reward", reward.displayName()));
             ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
             player.getInventory().addItem(item);
 
@@ -355,6 +382,14 @@ public class CrateSession {
 
     private boolean isQaMode() {
         return configLoader.getMainConfig().getBoolean("qa-mode", false);
+    }
+
+    private boolean isAccessibilityMode() {
+        return configLoader.getMainConfig().getBoolean("accessibility-mode", false);
+    }
+
+    private void sendActionBar(String key, Map<String, String> placeholders) {
+        player.sendActionBar(languageManager.getMessage(key, placeholders));
     }
 
     private ItemStack buildRewardDisplayItem(Reward reward, World world) {

@@ -16,3 +16,6 @@ session:
   cooldown: "&cEsta crate está en enfriamiento."
   no-rewards: "&cNo hay recompensas configuradas."
   reward-received: "&aHas recibido: %reward%"
+  actionbar-start: "&eAbriendo crate..."
+  actionbar-accessibility: "&eModo accesibilidad: animación mínima."
+  actionbar-reward: "&aRecompensa: %reward%"
