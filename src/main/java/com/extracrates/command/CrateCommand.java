@@ -11,7 +11,6 @@ import com.extracrates.config.ConfigLoader;
 import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Particle;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -68,7 +67,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             @NotNull String[] args
     ) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route"));
+            sender.sendMessage(languageManager.getMessage("command.usage"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -87,7 +86,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             }
             case "editor" -> {
                 if (!(sender instanceof Player player)) {
-                    sender.sendMessage(Component.text("Solo jugadores."));
+                    sender.sendMessage(languageManager.getMessage("command.only-players"));
                     return true;
                 }
                 editorMenu.open(player);
@@ -104,7 +103,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage(Component.text("Uso: /crate " + sub + " <id>"));
+                    sender.sendMessage(languageManager.getMessage("command.open-usage", java.util.Map.of("sub", sub)));
                     return true;
                 }
                 CrateDefinition crate = configLoader.getCrates().get(args[1]);
@@ -170,64 +169,64 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (args.length < 2 || !args[1].equalsIgnoreCase("test")) {
-                    sender.sendMessage(Component.text("Uso: /crate cutscene test <id>"));
+                    sender.sendMessage(languageManager.getMessage("command.cutscene-usage"));
                     return true;
                 }
                 if (args.length < 3) {
-                    sender.sendMessage(Component.text("Uso: /crate cutscene test <id>"));
+                    sender.sendMessage(languageManager.getMessage("command.cutscene-usage"));
                     return true;
                 }
                 com.extracrates.cutscene.CutscenePath path = configLoader.getPaths().get(args[2]);
                 if (path == null) {
-                    sender.sendMessage(Component.text("Ruta de cutscene no encontrada."));
+                    sender.sendMessage(languageManager.getMessage("command.cutscene-path-not-found"));
                     return true;
                 }
                 Particle particle = resolveParticle(path.getParticlePreview());
                 CutscenePreviewSession preview = new CutscenePreviewSession(plugin, player, path, particle, null);
                 preview.start();
-                sender.sendMessage(Component.text("Preview iniciada para ruta '" + path.getId() + "'."));
+                sender.sendMessage(languageManager.getMessage("command.cutscene-preview-started", java.util.Map.of("path", path.getId())));
                 return true;
             }
             case "route" -> {
                 if (!(sender instanceof Player player)) {
-                    sender.sendMessage(Component.text("Solo jugadores."));
+                    sender.sendMessage(languageManager.getMessage("command.only-players"));
                     return true;
                 }
                 if (args.length < 2 || !args[1].equalsIgnoreCase("editor")) {
-                    sender.sendMessage(Component.text("Uso: /crate route editor <id|stop|cancel>"));
+                    sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
                     return true;
                 }
                 if (!sender.hasPermission("extracrates.route.editor")) {
-                    sender.sendMessage(Component.text("Sin permiso."));
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
                     return true;
                 }
                 if (args.length < 3) {
-                    sender.sendMessage(Component.text("Uso: /crate route editor <id|stop|cancel>"));
+                    sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
                     return true;
                 }
                 String action = args[2];
                 if (action.equalsIgnoreCase("stop")) {
                     if (routeEditorManager.endSession(player, true)) {
-                        sender.sendMessage(Component.text("Ruta guardada."));
+                        sender.sendMessage(languageManager.getMessage("command.route-saved"));
                     } else {
-                        sender.sendMessage(Component.text("No tienes un editor activo."));
+                        sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
                     }
                     return true;
                 }
                 if (action.equalsIgnoreCase("cancel")) {
                     if (routeEditorManager.endSession(player, false)) {
-                        sender.sendMessage(Component.text("Editor cancelado."));
+                        sender.sendMessage(languageManager.getMessage("command.route-canceled"));
                     } else {
-                        sender.sendMessage(Component.text("No tienes un editor activo."));
+                        sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
                     }
                     return true;
                 }
                 if (!routeEditorManager.startSession(player, action)) {
-                    sender.sendMessage(Component.text("Ya tienes un editor activo."));
+                    sender.sendMessage(languageManager.getMessage("command.route-already-active"));
                     return true;
                 }
-                sender.sendMessage(Component.text("Editor iniciado para ruta '" + action + "'."));
-                sender.sendMessage(Component.text("Haz clic en bloques para marcar puntos. Usa /crate route editor stop para guardar."));
+                sender.sendMessage(languageManager.getMessage("command.route-started", java.util.Map.of("path", action)));
+                sender.sendMessage(languageManager.getMessage("command.route-instructions"));
                 return true;
             }
             default -> {

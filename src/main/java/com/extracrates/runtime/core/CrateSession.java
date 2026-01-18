@@ -10,7 +10,6 @@ import com.extracrates.config.LanguageManager;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
-import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Display;
@@ -83,7 +82,7 @@ public class CrateSession {
 
     public void start() {
         if (path == null) {
-            player.sendMessage(Component.text("No se encontró la ruta de la cutscene."));
+            player.sendMessage(languageManager.getMessage("session.cutscene-path-not-found"));
             finish();
             return;
         }
@@ -307,9 +306,9 @@ public class CrateSession {
             return;
         }
         if (isQaMode()) {
-            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
+            player.sendMessage(languageManager.getMessage("session.qa-mode"));
         } else {
-            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
+            player.sendMessage(languageManager.getMessage("session.reward-received", java.util.Map.of("reward", reward.displayName())));
             ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
             player.getInventory().addItem(item);
 

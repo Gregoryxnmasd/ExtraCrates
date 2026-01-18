@@ -17,7 +17,6 @@ import com.extracrates.storage.StorageSettings;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -79,21 +78,21 @@ public class SessionManager {
 
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
-            player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
+            player.sendMessage(languageManager.getMessage("session.already-in-progress"));
             return false;
         }
         CutscenePath path = resolveCutscenePath(crate, player);
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
-            player.sendMessage(Component.text("No se encontró el pool de recompensas para esta crate."));
+            player.sendMessage(languageManager.getMessage("session.reward-pool-not-found"));
             return false;
         }
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
-            player.sendMessage(Component.text("Necesitas una llave para esta crate."));
+            player.sendMessage(languageManager.getMessage("session.key-required"));
             return false;
         }
         if (!preview && isOnCooldown(player, crate)) {
-            player.sendMessage(Component.text("Esta crate está en cooldown."));
+            player.sendMessage(languageManager.getMessage("session.cooldown"));
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
