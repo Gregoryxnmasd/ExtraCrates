@@ -490,7 +490,34 @@ public class CrateSession {
         if (reward == null) {
             return;
         }
-        sessionManager.tryGrantReward(player, crate, reward);
+        boolean delivered = false;
+        int attempt = 0;
+        int maxAttempts = 2;
+        while (!delivered && attempt < maxAttempts) {
+            attempt++;
+            if (!preview) {
+                sessionManager.recordDeliveryStarted(player, crate, reward, attempt);
+            }
+            try {
+                deliverReward(reward);
+                delivered = true;
+            } catch (Exception ex) {
+                plugin.getLogger().warning(String.format(
+                        "No se pudo entregar recompensa %s para %s (intento %d): %s",
+                        reward.id(),
+                        player.getName(),
+                        attempt,
+                        ex.getMessage()
+                ));
+                if (attempt >= maxAttempts && !preview) {
+                    sessionManager.recordDeliveryPending(player, crate, reward, attempt);
+                }
+            }
+        }
+        if (delivered && !preview) {
+            sessionManager.recordDeliveryCompleted(player, crate, reward, attempt);
+        }
+        SoundUtil.play(player, configLoader.getSettings().getSounds().claim());
         if (rewardIndex >= rewards.size() - 1) {
             return;
         }
@@ -502,15 +529,19 @@ public class CrateSession {
         }
     }
 
-    public void reroll(List<Reward> newRewards) {
-        if (newRewards == null || newRewards.isEmpty()) {
+    private void deliverReward(Reward reward) {
+        if (isQaMode()) {
+            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
             return;
         }
-        this.rewards = new ArrayList<>(newRewards);
-        rewardIndex = 0;
-        elapsedTicks = 0;
-        nextRewardSwitchTick = rewardSwitchTicks;
-        refreshRewardDisplay();
+        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+        player.getInventory().addItem(item);
+
+        for (String command : reward.commands()) {
+            String parsed = command.replace("%player%", player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        }
     }
 
     private Reward getCurrentReward() {

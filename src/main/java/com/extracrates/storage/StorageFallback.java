@@ -99,34 +99,10 @@ public class StorageFallback implements CrateStorage {
     }
 
     @Override
-    public Optional<PendingReward> getPendingReward(UUID playerId, String crateId) {
-        return callWithFallback(
-                () -> primary.getPendingReward(playerId, crateId),
-                () -> fallback.getPendingReward(playerId, crateId)
-        );
-    }
-
-    @Override
-    public List<PendingReward> getPendingRewards(UUID playerId) {
-        return callWithFallback(
-                () -> primary.getPendingRewards(playerId),
-                () -> fallback.getPendingRewards(playerId)
-        );
-    }
-
-    @Override
-    public void setPendingReward(UUID playerId, String crateId, String rewardId, Instant timestamp) {
+    public void recordDelivery(UUID playerId, String crateId, String rewardId, DeliveryStatus status, int attempt, Instant timestamp) {
         runWithFallback(
-                () -> primary.setPendingReward(playerId, crateId, rewardId, timestamp),
-                () -> fallback.setPendingReward(playerId, crateId, rewardId, timestamp)
-        );
-    }
-
-    @Override
-    public boolean markRewardDelivered(UUID playerId, String crateId, String rewardId, Instant timestamp) {
-        return callWithFallback(
-                () -> primary.markRewardDelivered(playerId, crateId, rewardId, timestamp),
-                () -> fallback.markRewardDelivered(playerId, crateId, rewardId, timestamp)
+                () -> primary.recordDelivery(playerId, crateId, rewardId, status, attempt, timestamp),
+                () -> fallback.recordDelivery(playerId, crateId, rewardId, status, attempt, timestamp)
         );
     }
 

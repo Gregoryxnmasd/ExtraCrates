@@ -14,7 +14,7 @@ public class LocalStorage implements CrateStorage {
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Map<String, Integer>> keys = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> locks = new HashMap<>();
-    private final Map<UUID, Map<String, PendingReward>> pendingRewards = new HashMap<>();
+    private final Map<UUID, Map<String, Map<String, DeliveryRecord>>> deliveries = new HashMap<>();
 
     @Override
     public Optional<Instant> getCooldown(UUID playerId, String crateId) {
@@ -140,6 +140,14 @@ public class LocalStorage implements CrateStorage {
     }
 
     @Override
+    public void recordDelivery(UUID playerId, String crateId, String rewardId, DeliveryStatus status, int attempt, Instant timestamp) {
+        deliveries
+                .computeIfAbsent(playerId, key -> new HashMap<>())
+                .computeIfAbsent(crateId, key -> new HashMap<>())
+                .put(rewardId, new DeliveryRecord(status, attempt, timestamp));
+    }
+
+    @Override
     public boolean acquireLock(UUID playerId, String crateId) {
         Map<String, Instant> userLocks = locks.computeIfAbsent(playerId, key -> new HashMap<>());
         if (userLocks.containsKey(crateId)) {
@@ -158,59 +166,13 @@ public class LocalStorage implements CrateStorage {
     }
 
     @Override
-    public Optional<PendingReward> getPendingReward(UUID playerId) {
-        return Optional.ofNullable(pendingRewards.get(playerId));
-    }
-
-    @Override
-    public void setPendingReward(UUID playerId, String crateId, String rewardId) {
-        pendingRewards.put(playerId, new PendingReward(crateId, rewardId, PendingRewardStatus.PENDING));
-    }
-
-    @Override
-    public void markRewardDelivered(UUID playerId, String crateId, String rewardId) {
-        pendingRewards.put(playerId, new PendingReward(crateId, rewardId, PendingRewardStatus.DELIVERED));
-    }
-
-    @Override
     public void close() {
-        clearAll();
-    }
-
-    void setKeyCount(UUID playerId, String crateId, int amount) {
-        if (amount <= 0) {
-            Map<String, Integer> userKeys = keys.get(playerId);
-            if (userKeys != null) {
-                userKeys.remove(crateId);
-                if (userKeys.isEmpty()) {
-                    keys.remove(playerId);
-                }
-            }
-            return;
-        }
-        keys.computeIfAbsent(playerId, key -> new HashMap<>()).put(crateId, amount);
-    }
-
-    Map<UUID, Map<String, Instant>> getCooldownsSnapshot() {
-        Map<UUID, Map<String, Instant>> snapshot = new HashMap<>();
-        for (Map.Entry<UUID, Map<String, Instant>> entry : cooldowns.entrySet()) {
-            snapshot.put(entry.getKey(), new HashMap<>(entry.getValue()));
-        }
-        return snapshot;
-    }
-
-    Map<UUID, Map<String, Integer>> getKeysSnapshot() {
-        Map<UUID, Map<String, Integer>> snapshot = new HashMap<>();
-        for (Map.Entry<UUID, Map<String, Integer>> entry : keys.entrySet()) {
-            snapshot.put(entry.getKey(), new HashMap<>(entry.getValue()));
-        }
-        return snapshot;
-    }
-
-    void clearAll() {
         cooldowns.clear();
         keys.clear();
         locks.clear();
-        pendingRewards.clear();
+        deliveries.clear();
+    }
+
+    private record DeliveryRecord(DeliveryStatus status, int attempt, Instant timestamp) {
     }
 }
