@@ -6,6 +6,7 @@ import com.extracrates.config.LanguageManager;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.cutscene.CutscenePoint;
 import com.extracrates.economy.EconomyService;
+import com.extracrates.event.CrateOpenEvent;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
@@ -30,6 +31,7 @@ import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -102,7 +104,27 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
-        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview);
+        CrateOpenEvent openEvent = new CrateOpenEvent(player, crate, rewards, preview);
+        Bukkit.getPluginManager().callEvent(openEvent);
+        if (openEvent.isCancelled()) {
+            return false;
+        }
+        List<Reward> sessionRewards = openEvent.getRewards();
+        if (sessionRewards == null || sessionRewards.isEmpty()) {
+            player.sendMessage(languageManager.getMessage("session.no-rewards"));
+            return false;
+        }
+        CrateSession session = new CrateSession(
+                plugin,
+                configLoader,
+                languageManager,
+                player,
+                crate,
+                new ArrayList<>(sessionRewards),
+                path,
+                this,
+                preview
+        );
         sessions.put(player.getUniqueId(), session);
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED) {
             consumeKey(player, crate);

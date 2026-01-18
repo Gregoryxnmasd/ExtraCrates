@@ -3,6 +3,7 @@ package com.extracrates.runtime.core;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.cutscene.CutscenePath;
+import com.extracrates.event.CrateRewardEvent;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.runtime.CameraEntityFactory;
@@ -303,6 +304,15 @@ public class CrateSession {
 
     private void executeReward() {
         Reward reward = getCurrentReward();
+        if (reward == null) {
+            return;
+        }
+        CrateRewardEvent rewardEvent = new CrateRewardEvent(player, crate, reward, preview);
+        Bukkit.getPluginManager().callEvent(rewardEvent);
+        if (rewardEvent.isCancelled()) {
+            return;
+        }
+        reward = rewardEvent.getReward();
         if (reward == null) {
             return;
         }
