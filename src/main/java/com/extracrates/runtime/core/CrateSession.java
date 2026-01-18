@@ -48,6 +48,7 @@ public class CrateSession {
     private int rewardSwitchTicks;
     private int nextRewardSwitchTick;
     private int elapsedTicks;
+    private Location rewardAnchorLocation;
     private Location rewardBaseLocation;
     private Location hologramBaseLocation;
     private Transformation rewardBaseTransform;
@@ -152,12 +153,13 @@ public class CrateSession {
             return;
         }
         Location anchor = crate.rewardAnchor() != null ? crate.rewardAnchor() : player.getLocation().add(0, 1.5, 0);
-        CrateDefinition.RewardFloatSettings floatSettings = crate.animation().rewardFloatSettings();
-        Location displayLocation = anchor.clone().add(0, floatSettings.height(), 0);
         Reward reward = getCurrentReward();
         if (reward == null) {
             return;
         }
+        rewardAnchorLocation = anchor.clone();
+        CrateDefinition.RewardFloatSettings floatSettings = resolveFloatSettings(reward);
+        Location displayLocation = anchor.clone().add(0, floatSettings.height(), 0);
 
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
             display.setItemStack(buildRewardDisplayItem(reward, anchor.getWorld()));
@@ -347,10 +349,17 @@ public class CrateSession {
             rewardDisplay.setItemStack(buildRewardDisplayItem(reward, rewardDisplay.getWorld()));
         }
         if (hologram != null) {
-            String format = crate.animation().hologramFormat();
+            String format = reward.hologram();
+            if (format == null || format.isEmpty()) {
+                format = crate.animation().hologramFormat();
+            }
+            if (format == null || format.isEmpty()) {
+                format = "%reward_name%";
+            }
             String name = format.replace("%reward_name%", reward.displayName());
             hologram.text(TextUtil.color(name));
         }
+        updateRewardDisplayLocations(reward);
     }
 
     private boolean isQaMode() {
@@ -373,6 +382,26 @@ public class CrateSession {
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    private CrateDefinition.RewardFloatSettings resolveFloatSettings(Reward reward) {
+        if (reward != null && reward.rewardFloatSettings() != null) {
+            return reward.rewardFloatSettings();
+        }
+        return crate.animation().rewardFloatSettings();
+    }
+
+    private void updateRewardDisplayLocations(Reward reward) {
+        if (rewardDisplay == null || hologram == null || rewardAnchorLocation == null) {
+            return;
+        }
+        CrateDefinition.RewardFloatSettings floatSettings = resolveFloatSettings(reward);
+        Location displayLocation = rewardAnchorLocation.clone().add(0, floatSettings.height(), 0);
+        rewardDisplay.teleport(displayLocation);
+        hologram.teleport(displayLocation.clone().add(0, 0.4, 0));
+        rewardBaseLocation = rewardDisplay.getLocation().clone();
+        hologramBaseLocation = hologram.getLocation().clone();
+        rewardBaseTransform = rewardDisplay.getTransformation();
     }
 
     public void end() {
