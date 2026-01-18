@@ -8,7 +8,7 @@ softdepend: [ProtocolLib]
 commands:
   crate:
     description: Gestiona crates y sus opciones principales.
-    usage: /<command> <gui|open|preview|cutscene|reload|givekey|route|sync|crates|pools|rewards>
+    usage: /<command> <gui|open|preview|cutscene|reload|givekey|route|sync|migrate>
 permissions:
   extracrates.gui:
     description: Permite abrir el GUI de crates.
@@ -37,8 +37,8 @@ permissions:
   extracrates.sync:
     description: Permite gestionar la sincronización de crates.
     default: op
-  extracrates.crate.create:
-    description: Permite crear crates desde comando.
+  extracrates.migrate:
+    description: Permite migrar datos entre storages.
     default: op
   extracrates.crate.edit:
     description: Permite editar crates desde comando.

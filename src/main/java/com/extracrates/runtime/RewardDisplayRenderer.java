@@ -60,7 +60,7 @@ public class RewardDisplayRenderer {
         this.player = player;
         this.crate = crate;
         this.reward = reward;
-        this.floatSettings = resolveFloatSettings(crate, reward);
+        this.floatSettings = crate.animation().rewardFloatSettings();
         this.displaySettings = resolveDisplaySettings(crate, reward);
         this.animations = parseAnimations(reward.effects() != null ? reward.effects().animation() : "");
     }
@@ -329,5 +329,14 @@ public class RewardDisplayRenderer {
         } catch (IllegalArgumentException ignored) {
             return null;
         }
+    }
+
+    private CrateDefinition.RewardDisplaySettings resolveDisplaySettings(CrateDefinition crate, Reward reward) {
+        CrateDefinition.RewardDisplaySettings base = crate.animation().rewardDisplaySettings();
+        if (reward == null || reward.rewardDisplayOverrides() == null) {
+            return base;
+        }
+        CrateDefinition.RewardDisplaySettings merged = reward.rewardDisplayOverrides().applyTo(base);
+        return merged != null ? merged : base;
     }
 }
