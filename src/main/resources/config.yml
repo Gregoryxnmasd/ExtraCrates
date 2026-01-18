@@ -62,6 +62,10 @@ cutscene:
   armorstand-invisible: true
   camera-entity: "armor_stand"
   speed-modifier-uuid: "c0c0a1f2-7a89-4a2c-88a7-9f53b0d6f8b1"
+  on-start:
+    - "say %player% inició la cutscene de %crate_id%"
+  on-end:
+    - "say %player% terminó la cutscene de %crate_id% y obtuvo %reward_name%"
   locks:
     movement: true
     hud: true

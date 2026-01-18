@@ -234,7 +234,7 @@ public class CrateSession {
             finish();
             return;
         }
-        totalTicks = Math.max(0, timeline.size() - 1);
+        executeCutsceneCommands("on-start", null);
         task = new BukkitRunnable() {
             int tick = 0;
 
@@ -334,10 +334,11 @@ public class CrateSession {
     }
 
     private void finish() {
+        Reward reward = getCurrentReward();
         if (!preview) {
             executeReward();
         }
-        logVerbose("Sesion finalizando: jugador=%s crate=%s preview=%s", player.getName(), crate.id(), preview);
+        executeCutsceneCommands("on-end", reward);
         end();
     }
 
@@ -434,12 +435,29 @@ public class CrateSession {
         return configLoader.getMainConfig().getBoolean("qa-mode", false);
     }
 
-    private boolean isAccessibilityMode() {
-        return configLoader.getMainConfig().getBoolean("accessibility-mode", false);
-    }
-
-    private void sendActionBar(String key, Map<String, String> placeholders) {
-        player.sendActionBar(languageManager.getMessage(key, placeholders));
+    private void executeCutsceneCommands(String key, Reward reward) {
+        if (!crate.cutsceneSettings().commandsEnabled()) {
+            return;
+        }
+        List<String> commands = configLoader.getMainConfig().getStringList("cutscene." + key);
+        if (commands == null || commands.isEmpty()) {
+            return;
+        }
+        String rewardId = reward != null ? reward.id() : "";
+        String rewardName = reward != null ? reward.displayName() : "";
+        for (String command : commands) {
+            if (command == null || command.isBlank()) {
+                continue;
+            }
+            String parsed = command
+                    .replace("%player%", player.getName())
+                    .replace("%player_uuid%", player.getUniqueId().toString())
+                    .replace("%crate_id%", crate.id())
+                    .replace("%crate_name%", crate.displayName())
+                    .replace("%reward_id%", rewardId)
+                    .replace("%reward_name%", rewardName);
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        }
     }
 
     private ItemStack buildRewardDisplayItem(Reward reward, World world) {
