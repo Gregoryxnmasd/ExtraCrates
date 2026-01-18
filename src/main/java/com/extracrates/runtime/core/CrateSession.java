@@ -54,14 +54,18 @@ public class CrateSession {
     private final Set<Entity> visibleEntities = new LinkedHashSet<>();
     private BukkitRunnable task;
     private BukkitRunnable musicTask;
-    private BukkitRunnable timeoutTask;
+    private BukkitRunnable watchdogTask;
 
     private int rewardIndex;
     private int rerollsUsed;
     private int rewardSwitchTicks;
     private int nextRewardSwitchTick;
     private int elapsedTicks;
-    private int rerollEnabledAtTick;
+    private int maxDurationTicks;
+    private long sessionStartMillis;
+    private long lastTaskTickMillis;
+    private boolean ending;
+    private boolean ended;
     private Location rewardBaseLocation;
     private Location hologramBaseLocation;
     private Transformation rewardBaseTransform;
@@ -118,7 +122,9 @@ public class CrateSession {
         lastInputTick = -1;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
-        rerollEnabledAtTick = Math.max(0, configLoader.getMainConfig().getInt("cutscene.reroll-enabled-tick", 0));
+        maxDurationTicks = Math.max(0, configLoader.getMainConfig().getInt("sessions.max-duration-ticks", 0));
+        sessionStartMillis = System.currentTimeMillis();
+        lastTaskTickMillis = sessionStartMillis;
         Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
         previousGameMode = player.getGameMode();
         gamemodeSnapshotTaken = true;
@@ -132,6 +138,7 @@ public class CrateSession {
         startMusic();
         scheduleTimeout();
         startCutscene();
+        startWatchdog();
     }
 
     public CrateDefinition getCrate() {
@@ -328,26 +335,25 @@ public class CrateSession {
         double minTeleportDistanceSquared = minTeleportDistance * minTeleportDistance;
         task = new BukkitRunnable() {
             int tick = 0;
-            final int totalTicks = Math.max(0, timeline.size() - 1);
-            Location lastTeleportLocation = cameraEntity.getLocation();
+            final int totalTicks = resolveTotalTicks(timeline);
+            final int lastIndex = timeline.size() - 1;
 
             @Override
             public void run() {
-                if (tick > totalTicks) {
-                    logVerbose("Cutscene completa: tick=%d total=%d", tick, totalTicks);
+                if (tick >= totalTicks) {
                     cancel();
                     finish();
                     return;
                 }
-                int currentTick = tick;
-                Location point = timeline.get(tick++);
-                if (lastTeleportLocation == null || lastTeleportLocation.distanceSquared(point) >= minTeleportDistanceSquared) {
-                    cameraEntity.teleport(point);
-                    lastTeleportLocation = point;
-                }
+                double progress = totalTicks <= 1 ? 1.0 : tick / (double) (totalTicks - 1);
+                int index = lastIndex <= 0 ? 0 : (int) Math.round(progress * lastIndex);
+                Location point = timeline.get(Math.min(lastIndex, Math.max(0, index)));
+                tick++;
+                cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
                 elapsedTicks++;
-                if (!rerollLocked && rewards.size() > 1 && rewardSwitchTicks > 0) {
+                lastTaskTickMillis = System.currentTimeMillis();
+                if (rewards.size() > 1 && rewardSwitchTicks > 0) {
                     while (elapsedTicks >= nextRewardSwitchTick && rewardIndex < rewards.size() - 1) {
                         rewardIndex++;
                         nextRewardSwitchTick += rewardSwitchTicks;
@@ -363,24 +369,45 @@ public class CrateSession {
         task.runTaskTimer(plugin, 0L, 1L);
     }
 
-    private void scheduleTimeout() {
-        int maxDurationTicks = configLoader.getMainConfig().getInt("sessions.max-duration-ticks", 0);
-        if (maxDurationTicks <= 0) {
-            return;
+    private int resolveTotalTicks(List<Location> timeline) {
+        if (path != null) {
+            int durationTicks = (int) Math.round(path.getDurationSeconds() * 20.0);
+            if (durationTicks > 0) {
+                return durationTicks;
+            }
         }
-        timeoutTask = new BukkitRunnable() {
-            int ticks = 0;
+        return Math.max(1, timeline.size());
+    }
 
+    private void startWatchdog() {
+        if (watchdogTask != null) {
+            watchdogTask.cancel();
+        }
+        watchdogTask = new BukkitRunnable() {
             @Override
             public void run() {
-                ticks++;
-                if (ticks > maxDurationTicks) {
+                if (ending || ended) {
                     cancel();
+                    return;
+                }
+                long now = System.currentTimeMillis();
+                if (maxDurationTicks > 0) {
+                    long elapsedRealTicks = (now - sessionStartMillis) / 50L;
+                    if (elapsedRealTicks > maxDurationTicks) {
+                        finish();
+                        return;
+                    }
+                }
+                if (task == null || task.isCancelled()) {
+                    end();
+                    return;
+                }
+                if (now - lastTaskTickMillis > 2000L) {
                     end();
                 }
             }
         };
-        timeoutTask.runTaskTimer(plugin, 1L, 1L);
+        watchdogTask.runTaskTimer(plugin, 20L, 20L);
     }
 
     private List<Location> buildTimeline(World world, CutscenePath path) {
@@ -447,7 +474,10 @@ public class CrateSession {
     }
 
     private void finish() {
-        end();
+        if (ending || ended) {
+            return;
+        }
+        ending = true;
         if (!preview) {
             executeReward();
         }
@@ -653,14 +683,19 @@ public class CrateSession {
     }
 
     public void end() {
+        if (ended) {
+            return;
+        }
+        ended = true;
+        ending = true;
         if (task != null) {
             task.cancel();
         }
         if (musicTask != null) {
             musicTask.cancel();
         }
-        if (timeoutTask != null) {
-            timeoutTask.cancel();
+        if (watchdogTask != null) {
+            watchdogTask.cancel();
         }
         stopMusic();
         untrackEntity(cameraEntity);
