@@ -1,8 +1,8 @@
 package com.extracrates.route;
 
 import com.extracrates.ExtraCratesPlugin;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.cutscene.CutscenePoint;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.entity.Player;
@@ -14,6 +14,7 @@ import java.util.List;
 
 public class RouteEditorSession {
     private final ExtraCratesPlugin plugin;
+    private final LanguageManager languageManager;
     private final Player player;
     private final String pathId;
     private final Particle previewParticle;
@@ -23,6 +24,7 @@ public class RouteEditorSession {
 
     public RouteEditorSession(ExtraCratesPlugin plugin, Player player, String pathId, Particle previewParticle, String particleName) {
         this.plugin = plugin;
+        this.languageManager = plugin.getLanguageManager();
         this.player = player;
         this.pathId = pathId;
         this.previewParticle = previewParticle;
@@ -60,11 +62,17 @@ public class RouteEditorSession {
 
     public void addPoint(Location location, float yaw, float pitch) {
         points.add(new CutscenePoint(location.getX(), location.getY(), location.getZ(), yaw, pitch));
-        player.sendMessage(Component.text("Punto agregado (#" + points.size() + "): "
-                + formatNumber(location.getX()) + ", "
-                + formatNumber(location.getY()) + ", "
-                + formatNumber(location.getZ())
-                + " (yaw " + formatNumber(yaw) + ", pitch " + formatNumber(pitch) + ")"));
+        player.sendMessage(languageManager.getMessage(
+                "route.editor.point-added",
+                java.util.Map.of(
+                        "count", String.valueOf(points.size()),
+                        "x", formatNumber(location.getX()),
+                        "y", formatNumber(location.getY()),
+                        "z", formatNumber(location.getZ()),
+                        "yaw", formatNumber(yaw),
+                        "pitch", formatNumber(pitch)
+                )
+        ));
         renderPreview();
     }
 
