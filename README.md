@@ -3,6 +3,16 @@
 Base inicial para un plugin de Paper 1.21 orientado a un sistema complejo de cajas.
 La estructura está preparada para escalar y adaptarse a proxies en el futuro.
 
+## Configuración
+En `config.yml` puedes definir cómo se muestran los mensajes de recompensas con `ui-mode`:
+
+| Valor | Descripción |
+| --- | --- |
+| `bossbar` | Muestra el mensaje como BossBar (si no hay soporte, hace fallback a ActionBar). |
+| `actionbar` | Envía el mensaje por ActionBar. |
+| `both` | Usa BossBar + ActionBar simultáneamente (con fallback a ActionBar si BossBar no está disponible). |
+| `none` | Desactiva la UI de mensajes. |
+
 ## Características incluidas
 - `plugin.yml` configurado con nombre **ExtraCrates** y paquete base `me.savaduki.extracrates`.
 - Clase principal `ExtraCratesPlugin` con comando `/extracrates` para verificar el estado.
