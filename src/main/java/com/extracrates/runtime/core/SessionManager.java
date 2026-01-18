@@ -88,6 +88,10 @@ public class SessionManager {
             player.sendMessage(Component.text("No se encontró el pool de recompensas para esta crate."));
             return false;
         }
+        if (!isPlayerInAllowedArea(player, crate)) {
+            player.sendMessage(languageManager.getMessage("session.outside-allowed-area"));
+            return false;
+        }
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
             player.sendMessage(Component.text("Necesitas una llave para esta crate."));
             return false;
@@ -175,6 +179,14 @@ public class SessionManager {
             return null;
         }
         return configLoader.getRewardPools().get(crate.rewardsPool());
+    }
+
+    private boolean isPlayerInAllowedArea(Player player, CrateDefinition crate) {
+        CrateDefinition.AllowedArea allowedArea = crate.allowedArea();
+        if (allowedArea == null) {
+            return true;
+        }
+        return allowedArea.contains(player.getLocation());
     }
 
     private boolean isOnCooldown(Player player, CrateDefinition crate) {

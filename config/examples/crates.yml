@@ -12,6 +12,10 @@ crates:
       world: "world"
       camera-start: { x: 10.5, y: 65.0, z: -20.5, yaw: 0, pitch: 0 }
       reward-anchor: { x: 12.0, y: 65.5, z: -16.0 }
+    allowed-area:
+      world: "world"
+      min: { x: 8.0, y: 64.0, z: -24.0 }
+      max: { x: 16.0, y: 70.0, z: -12.0 }
     animation:
       path: "legendary_path"
       reward-anchor: { x: 0.5, y: 1.2, z: 0.5 }
