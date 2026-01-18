@@ -16,7 +16,9 @@ public record CrateDefinition(
         double cost,
         double rerollCost,
         String permission,
-        int maxRerolls,
+        Integer rerollEnableTicks,
+        String uiMode,
+        String actionbarMessage,
         Location cameraStart,
         Location rewardAnchor,
         AllowedArea allowedArea,
@@ -56,7 +58,9 @@ public record CrateDefinition(
         double cost = section.getDouble("cost", 0);
         double rerollCost = section.getDouble("reroll-cost", 0);
         String permission = section.getString("permission", "extracrates.open");
-        int maxRerolls = Math.max(0, section.getInt("max-rerolls", 0));
+        Integer rerollEnableTicks = readOptionalInt(section, "reroll-enable-ticks");
+        String uiMode = readOptionalString(section, "ui-mode");
+        String actionbarMessage = readOptionalString(section, "actionbar-message");
 
         ConfigurationSection locations = section.getConfigurationSection("locations");
         Location cameraStart = null;
@@ -110,7 +114,9 @@ public record CrateDefinition(
                 cost,
                 rerollCost,
                 permission,
-                maxRerolls,
+                rerollEnableTicks,
+                uiMode,
+                actionbarMessage,
                 cameraStart,
                 rewardAnchor,
                 allowedArea,
@@ -480,6 +486,20 @@ public record CrateDefinition(
             }
             return fallback;
         }
+    }
+
+    private static String readOptionalString(ConfigurationSection section, String key) {
+        if (section == null) {
+            return null;
+        }
+        return section.isString(key) ? section.getString(key) : null;
+    }
+
+    private static Integer readOptionalInt(ConfigurationSection section, String key) {
+        if (section == null) {
+            return null;
+        }
+        return section.isInt(key) ? section.getInt(key) : null;
     }
 
     public record MusicSettings(String sound, float volume, float pitch, int fadeInTicks, int fadeOutTicks, String category) {
