@@ -4,6 +4,9 @@ crates:
     type: "keyed"
     # open-mode: reward-only | full | preview-only
     open-mode: "reward-only"
+    reroll-enable-ticks: 0
+    ui-mode: "none"
+    actionbar-message: ""
     key-model: "legendary_key"
     key-material: "TRIPWIRE_HOOK"
     cooldown-seconds: 120
@@ -42,6 +45,9 @@ crates:
     type: "event"
     # open-mode: reward-only | full | preview-only
     open-mode: "reward-only"
+    reroll-enable-ticks: 0
+    ui-mode: "none"
+    actionbar-message: ""
     cooldown-seconds: 30
     permission: "extracrates.open.seasonal"
     locations:

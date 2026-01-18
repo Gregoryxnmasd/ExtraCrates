@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 public class ConfigValidator {
@@ -32,6 +33,7 @@ public class ConfigValidator {
     public ValidationReport validate() {
         List<String> warnings = new ArrayList<>();
         Map<String, RewardPool> rewardPools = configLoader.getRewardPools();
+        Set<String> uiModes = Set.of("actionbar", "chat", "none");
 
         for (CrateDefinition crate : configLoader.getCrates().values()) {
             String poolId = crate.rewardsPool();
@@ -41,6 +43,25 @@ public class ConfigValidator {
             }
             if (!rewardPools.containsKey(poolId)) {
                 warnings.add("La crate '" + crate.id() + "' usa un rewards-pool inválido: '" + poolId + "'.");
+            }
+            Integer rerollTicks = crate.rerollEnableTicks();
+            if (rerollTicks != null && rerollTicks < 0) {
+                warnings.add("La crate '" + crate.id() + "' tiene reroll-enable-ticks negativo: " + rerollTicks + ".");
+            }
+            String uiMode = crate.uiMode();
+            if (uiMode != null && !uiMode.isBlank()) {
+                String normalized = uiMode.trim().toLowerCase(Locale.ROOT);
+                if (!uiModes.contains(normalized)) {
+                    warnings.add("La crate '" + crate.id() + "' usa ui-mode inválido: '" + uiMode + "'.");
+                }
+                String actionbarMessage = crate.actionbarMessage();
+                if (!"none".equals(normalized) && (actionbarMessage == null || actionbarMessage.isBlank())) {
+                    warnings.add("La crate '" + crate.id() + "' tiene ui-mode sin actionbar-message definido.");
+                }
+            }
+            String actionbarMessage = crate.actionbarMessage();
+            if (actionbarMessage != null && actionbarMessage.isBlank()) {
+                warnings.add("La crate '" + crate.id() + "' tiene actionbar-message vacío.");
             }
         }
 

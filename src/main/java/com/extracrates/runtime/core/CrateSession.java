@@ -43,6 +43,7 @@ public class CrateSession {
     private TextDisplay hologram;
     private BukkitRunnable task;
     private BukkitRunnable musicTask;
+    private BukkitRunnable uiTask;
 
     private int rewardIndex;
     private int rewardSwitchTicks;
@@ -58,6 +59,9 @@ public class CrateSession {
     private boolean hudHiddenApplied;
     private float previousWalkSpeed;
     private float previousFlySpeed;
+    private int rerollEnableTicks;
+    private String uiMode;
+    private String actionbarMessage;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -91,6 +95,7 @@ public class CrateSession {
         elapsedTicks = 0;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
+        resolveUiSettings();
         Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
         previousGameMode = player.getGameMode();
         previousWalkSpeed = player.getWalkSpeed();
@@ -99,6 +104,7 @@ public class CrateSession {
         applySpectatorMode();
         spawnRewardDisplay();
         startMusic();
+        scheduleUiMessage();
         startCutscene();
     }
 
@@ -382,6 +388,9 @@ public class CrateSession {
         if (musicTask != null) {
             musicTask.cancel();
         }
+        if (uiTask != null) {
+            uiTask.cancel();
+        }
         stopMusic();
         if (cameraEntity != null && !cameraEntity.isDead()) {
             if (cameraEntity instanceof ArmorStand armorStand) {
@@ -508,6 +517,68 @@ public class CrateSession {
             return SoundCategory.valueOf(categoryName.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
             return SoundCategory.MUSIC;
+        }
+    }
+
+    private void resolveUiSettings() {
+        rerollEnableTicks = resolveRerollEnableTicks();
+        uiMode = resolveUiMode();
+        actionbarMessage = resolveActionbarMessage();
+    }
+
+    private int resolveRerollEnableTicks() {
+        Integer overrideTicks = crate.rerollEnableTicks();
+        if (overrideTicks != null) {
+            return overrideTicks;
+        }
+        return configLoader.getMainConfig().getInt("reroll-enable-ticks", 0);
+    }
+
+    private String resolveUiMode() {
+        String overrideMode = crate.uiMode();
+        if (overrideMode != null && !overrideMode.isBlank()) {
+            return overrideMode;
+        }
+        return configLoader.getMainConfig().getString("ui-mode", "none");
+    }
+
+    private String resolveActionbarMessage() {
+        String overrideMessage = crate.actionbarMessage();
+        if (overrideMessage != null && !overrideMessage.isBlank()) {
+            return overrideMessage;
+        }
+        return configLoader.getMainConfig().getString("actionbar-message", "");
+    }
+
+    private void scheduleUiMessage() {
+        if (actionbarMessage == null || actionbarMessage.isBlank()) {
+            return;
+        }
+        String mode = uiMode == null ? "" : uiMode.trim().toLowerCase(Locale.ROOT);
+        if (mode.isEmpty() || "none".equals(mode)) {
+            return;
+        }
+        int delay = Math.max(0, rerollEnableTicks);
+        if (delay <= 0) {
+            sendUiMessage(mode, actionbarMessage);
+            return;
+        }
+        uiTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                sendUiMessage(mode, actionbarMessage);
+            }
+        };
+        uiTask.runTaskLater(plugin, delay);
+    }
+
+    private void sendUiMessage(String mode, String message) {
+        Component component = TextUtil.color(message);
+        switch (mode) {
+            case "actionbar" -> player.sendActionBar(component);
+            case "chat" -> player.sendMessage(component);
+            default -> {
+            }
         }
     }
 }

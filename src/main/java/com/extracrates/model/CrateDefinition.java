@@ -15,6 +15,9 @@ public record CrateDefinition(
         int cooldownSeconds,
         double cost,
         String permission,
+        Integer rerollEnableTicks,
+        String uiMode,
+        String actionbarMessage,
         Location cameraStart,
         Location rewardAnchor,
         AnimationSettings animation,
@@ -52,6 +55,9 @@ public record CrateDefinition(
         int cooldown = section.getInt("cooldown-seconds", 0);
         double cost = section.getDouble("cost", 0);
         String permission = section.getString("permission", "extracrates.open");
+        Integer rerollEnableTicks = readOptionalInt(section, "reroll-enable-ticks");
+        String uiMode = readOptionalString(section, "ui-mode");
+        String actionbarMessage = readOptionalString(section, "actionbar-message");
 
         ConfigurationSection locations = section.getConfigurationSection("locations");
         Location cameraStart = null;
@@ -100,6 +106,9 @@ public record CrateDefinition(
                 cooldown,
                 cost,
                 permission,
+                rerollEnableTicks,
+                uiMode,
+                actionbarMessage,
                 cameraStart,
                 rewardAnchor,
                 animation,
@@ -429,6 +438,20 @@ public record CrateDefinition(
             }
             return fallback;
         }
+    }
+
+    private static String readOptionalString(ConfigurationSection section, String key) {
+        if (section == null) {
+            return null;
+        }
+        return section.isString(key) ? section.getString(key) : null;
+    }
+
+    private static Integer readOptionalInt(ConfigurationSection section, String key) {
+        if (section == null) {
+            return null;
+        }
+        return section.isInt(key) ? section.getInt(key) : null;
     }
 
     public record MusicSettings(String sound, float volume, float pitch, int fadeInTicks, int fadeOutTicks, String category) {
