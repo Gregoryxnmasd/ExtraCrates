@@ -101,8 +101,8 @@ public class SessionManager {
             return false;
         }
         if (!preview && isOnCooldown(player, crate)) {
-            player.sendMessage(Component.text("Esta crate está en cooldown."));
-            logVerbose("Fallido: jugador=%s crate=%s (cooldown)", player.getName(), crate.id());
+            long remaining = getCooldownRemainingSeconds(player, crate);
+            player.sendMessage(Component.text("Esta crate está en cooldown. Restante: " + remaining + "s"));
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
@@ -271,16 +271,9 @@ public class SessionManager {
     }
 
     public long getCooldownRemainingSeconds(Player player, CrateDefinition crate) {
-        if (crate.cooldownSeconds() <= 0) {
-            return 0;
-        }
-        Instant last = getCooldownTimestamp(player, crate.id());
-        if (last == null) {
-            return 0;
-        }
-        Duration elapsed = Duration.between(last, Instant.now());
-        long remaining = crate.cooldownSeconds() - elapsed.getSeconds();
-        return Math.max(remaining, 0);
+        long crateRemaining = getCooldownRemainingSeconds(player, crate.id(), crate.cooldownSeconds());
+        long typeRemaining = getCooldownRemainingSeconds(player, typeCooldownKey(crate.type()), getTypeCooldownSeconds(crate.type()));
+        return Math.max(crateRemaining, typeRemaining);
     }
 
     private Instant getCooldownTimestamp(Player player, String crateId) {
@@ -302,49 +295,45 @@ public class SessionManager {
     }
 
     private void applyCooldown(Player player, CrateDefinition crate) {
-        applyCooldown(player, crate, Instant.now(), true);
+        Instant now = Instant.now();
+        applyCooldown(player, crate.id(), crate.cooldownSeconds(), now, true);
+        applyCooldown(player, typeCooldownKey(crate.type()), getTypeCooldownSeconds(crate.type()), now, true);
     }
 
-    private void applyCooldown(Player player, CrateDefinition crate, Instant timestamp, boolean record) {
-        if (crate.cooldownSeconds() <= 0) {
+    private void applyCooldown(Player player, String cooldownKey, int cooldownSeconds, Instant timestamp, boolean record) {
+        if (cooldownSeconds <= 0) {
             return;
         }
         Instant appliedAt = timestamp != null ? timestamp : Instant.now();
-        cooldowns.computeIfAbsent(player.getUniqueId(), key -> new HashMap<>()).put(crate.id(), appliedAt);
+        cooldowns.computeIfAbsent(player.getUniqueId(), key -> new HashMap<>()).put(cooldownKey, appliedAt);
         if (storage != null) {
-            storage.setCooldown(player.getUniqueId(), crate.id(), appliedAt);
+            storage.setCooldown(player.getUniqueId(), cooldownKey, appliedAt);
         }
         if (record && syncBridge != null) {
-            syncBridge.recordCooldown(player.getUniqueId(), crate.id());
+            syncBridge.recordCooldown(player.getUniqueId(), cooldownKey);
         }
     }
 
-    private boolean isRateLimited(Player player) {
-        int limit = configLoader.getMainConfig().getInt("rate-limit.opens-per-minute", 0);
-        if (limit <= 0) {
-            return false;
+    private long getCooldownRemainingSeconds(Player player, String cooldownKey, int cooldownSeconds) {
+        if (cooldownSeconds <= 0) {
+            return 0;
         }
-        Deque<Instant> opens = recentOpens.computeIfAbsent(player.getUniqueId(), key -> new ArrayDeque<>());
-        pruneOldOpens(opens, Instant.now());
-        return opens.size() >= limit;
+        Instant last = getCooldownTimestamp(player, cooldownKey);
+        if (last == null) {
+            return 0;
+        }
+        Duration elapsed = Duration.between(last, Instant.now());
+        long remaining = cooldownSeconds - elapsed.getSeconds();
+        return Math.max(remaining, 0);
     }
 
-    private void recordOpen(Player player) {
-        int limit = configLoader.getMainConfig().getInt("rate-limit.opens-per-minute", 0);
-        if (limit <= 0) {
-            return;
-        }
-        Deque<Instant> opens = recentOpens.computeIfAbsent(player.getUniqueId(), key -> new ArrayDeque<>());
-        Instant now = Instant.now();
-        pruneOldOpens(opens, now);
-        opens.addLast(now);
+    private int getTypeCooldownSeconds(com.extracrates.model.CrateType type) {
+        String key = "cooldown-global." + type.name().toLowerCase();
+        return configLoader.getMainConfig().getInt(key, 0);
     }
 
-    private void pruneOldOpens(Deque<Instant> opens, Instant now) {
-        Instant threshold = now.minusSeconds(60);
-        while (!opens.isEmpty() && opens.peekFirst().isBefore(threshold)) {
-            opens.removeFirst();
-        }
+    private String typeCooldownKey(com.extracrates.model.CrateType type) {
+        return "type:" + type.name().toLowerCase();
     }
 
     private boolean hasKey(Player player, CrateDefinition crate) {

@@ -3,6 +3,12 @@ language: es_es
 qa-mode: false
 particles-default: "crit"
 hologram-font: "resourcepack:cutscene_font"
+cooldown-global:
+  normal: 0
+  keyed: 0
+  event: 0
+  seasonal: 0
+  mystery: 0
 gui:
   title: "&8ExtraCrates"
   editor-title: "&0Editor de Crates"
