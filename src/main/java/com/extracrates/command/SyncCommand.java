@@ -14,26 +14,28 @@ public class SyncCommand {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final SyncBridge syncBridge;
+    private final LanguageManager languageManager;
 
-    public SyncCommand(ExtraCratesPlugin plugin, ConfigLoader configLoader, SyncBridge syncBridge) {
+    public SyncCommand(ExtraCratesPlugin plugin, ConfigLoader configLoader, SyncBridge syncBridge, LanguageManager languageManager) {
         this.plugin = plugin;
         this.configLoader = configLoader;
         this.syncBridge = syncBridge;
+        this.languageManager = languageManager;
     }
 
     public boolean handle(CommandSender sender, String[] args) {
         if (!sender.hasPermission("extracrates.sync")) {
-            sender.sendMessage(Component.text("Sin permiso."));
+            sender.sendMessage(languageManager.getMessage("command.no-permission"));
             return true;
         }
         if (args.length < 2) {
-            sender.sendMessage(Component.text("Uso: /crate sync <status|reload|flush>"));
+            sender.sendMessage(languageManager.getMessage("command.sync-usage"));
             return true;
         }
         switch (args[1].toLowerCase()) {
             case "status" -> {
                 for (String line : syncBridge.getStatusLines()) {
-                    sender.sendMessage(Component.text(line));
+                    sender.sendMessage(languageManager.getMessage("command.sync-status-line", java.util.Map.of("line", line)));
                 }
             }
             case "reload" -> {
@@ -46,10 +48,10 @@ public class SyncCommand {
             }
             case "flush" -> {
                 syncBridge.flush();
-                sender.sendMessage(Component.text("Caches de sync limpiadas."));
+                sender.sendMessage(languageManager.getMessage("command.sync-flushed"));
             }
             default -> {
-                sender.sendMessage(Component.text("Subcomando desconocido."));
+                sender.sendMessage(languageManager.getMessage("command.unknown-subcommand"));
             }
         }
         return true;
