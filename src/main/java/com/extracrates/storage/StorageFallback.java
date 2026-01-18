@@ -1,6 +1,7 @@
 package com.extracrates.storage;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -16,6 +17,10 @@ public class StorageFallback implements CrateStorage {
         this.primary = primary;
         this.fallback = fallback;
         this.logger = logger;
+    }
+
+    public boolean isUsingFallback() {
+        return usingFallback;
     }
 
     private <T> T callWithFallback(Supplier<T> primaryCall, Supplier<T> fallbackCall) {
@@ -102,6 +107,14 @@ public class StorageFallback implements CrateStorage {
     }
 
     @Override
+    public List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset) {
+        return callWithFallback(
+                () -> primary.getOpenHistory(playerId, filter, limit, offset),
+                () -> fallback.getOpenHistory(playerId, filter, limit, offset)
+        );
+    }
+
+    @Override
     public boolean acquireLock(UUID playerId, String crateId) {
         return callWithFallback(
                 () -> primary.acquireLock(playerId, crateId),
@@ -114,6 +127,30 @@ public class StorageFallback implements CrateStorage {
         runWithFallback(
                 () -> primary.releaseLock(playerId, crateId),
                 () -> fallback.releaseLock(playerId, crateId)
+        );
+    }
+
+    @Override
+    public Optional<PendingReward> getPendingReward(UUID playerId) {
+        return callWithFallback(
+                () -> primary.getPendingReward(playerId),
+                () -> fallback.getPendingReward(playerId)
+        );
+    }
+
+    @Override
+    public void setPendingReward(UUID playerId, PendingReward pendingReward) {
+        runWithFallback(
+                () -> primary.setPendingReward(playerId, pendingReward),
+                () -> fallback.setPendingReward(playerId, pendingReward)
+        );
+    }
+
+    @Override
+    public void clearPendingReward(UUID playerId) {
+        runWithFallback(
+                () -> primary.clearPendingReward(playerId),
+                () -> fallback.clearPendingReward(playerId)
         );
     }
 
