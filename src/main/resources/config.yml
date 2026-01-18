@@ -1,5 +1,6 @@
 # Opciones globales
 language: es_es
+accessibility-mode: true
 particles-default: "crit"
 hologram-font: "resourcepack:cutscene_font"
 gui:
@@ -59,6 +60,9 @@ holograms:
   height-offset: 0.8
 permissions:
   use-per-crate: true
+rewards:
+  normalize-chances: false
+  warning-threshold: 0
 storage:
   enabled: false
   type: "mysql"

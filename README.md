@@ -24,6 +24,19 @@ mvn -U clean package
 ```
 El artefacto resultante se generará en `target/extracrates-<version>.jar`.
 
+## API pública (Bukkit services)
+El servicio `ExtraCratesApi` expone métodos para consultar el estado de las cutscenes activas.
+Para compatibilidad hacia atrás, los métodos nuevos tienen implementaciones por defecto
+que devuelven valores seguros cuando el plugin que integra aún no los implementa.
+
+```java
+ExtraCratesApi api = ...;
+
+boolean active = api.hasActiveSession(player);
+Reward reward = api.getCurrentReward(player); // null si no hay sesión activa
+int remainingTicks = api.getRemainingTicks(player); // -1 si no hay sesión activa
+```
+
 ## Próximos pasos sugeridos
 - Implementar carga de crates y recompensas desde `config.yml` o archivos dedicados.
 - Añadir persistencia y sincronización con proxy para redes.
