@@ -29,3 +29,13 @@ CREATE TABLE IF NOT EXISTS crate_locks (
   locked_at BIGINT NOT NULL,
   PRIMARY KEY (player_uuid, crate_id)
 );
+
+CREATE TABLE IF NOT EXISTS crate_deliveries (
+  player_uuid TEXT NOT NULL,
+  crate_id TEXT NOT NULL,
+  reward_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  attempt INT NOT NULL,
+  updated_at BIGINT NOT NULL,
+  PRIMARY KEY (player_uuid, crate_id, reward_id)
+);

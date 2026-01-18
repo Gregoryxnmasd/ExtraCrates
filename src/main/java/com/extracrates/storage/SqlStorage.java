@@ -156,6 +156,30 @@ public class SqlStorage implements CrateStorage {
     }
 
     @Override
+    public void recordDelivery(UUID playerId, String crateId, String rewardId, DeliveryStatus status, int attempt, Instant timestamp) {
+        withConnection(connection -> {
+            String deleteSql = "DELETE FROM crate_deliveries WHERE player_uuid=? AND crate_id=? AND reward_id=?";
+            String insertSql = "INSERT INTO crate_deliveries (player_uuid, crate_id, reward_id, status, attempt, updated_at) VALUES (?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement delete = connection.prepareStatement(deleteSql)) {
+                delete.setString(1, playerId.toString());
+                delete.setString(2, crateId);
+                delete.setString(3, rewardId);
+                delete.executeUpdate();
+            }
+            try (PreparedStatement insert = connection.prepareStatement(insertSql)) {
+                insert.setString(1, playerId.toString());
+                insert.setString(2, crateId);
+                insert.setString(3, rewardId);
+                insert.setString(4, status.name());
+                insert.setInt(5, attempt);
+                insert.setLong(6, timestamp.toEpochMilli());
+                insert.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    @Override
     public boolean acquireLock(UUID playerId, String crateId) {
         String sql = "INSERT INTO crate_locks (player_uuid, crate_id, locked_at) VALUES (?, ?, ?)";
         return withConnection(connection -> {

@@ -306,17 +306,32 @@ public class CrateSession {
         if (reward == null) {
             return;
         }
-        if (isQaMode()) {
-            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
-        } else {
-            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
-            ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-            player.getInventory().addItem(item);
-
-            for (String command : reward.commands()) {
-                String parsed = command.replace("%player%", player.getName());
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        boolean delivered = false;
+        int attempt = 0;
+        int maxAttempts = 2;
+        while (!delivered && attempt < maxAttempts) {
+            attempt++;
+            if (!preview) {
+                sessionManager.recordDeliveryStarted(player, crate, reward, attempt);
             }
+            try {
+                deliverReward(reward);
+                delivered = true;
+            } catch (Exception ex) {
+                plugin.getLogger().warning(String.format(
+                        "No se pudo entregar recompensa %s para %s (intento %d): %s",
+                        reward.id(),
+                        player.getName(),
+                        attempt,
+                        ex.getMessage()
+                ));
+                if (attempt >= maxAttempts && !preview) {
+                    sessionManager.recordDeliveryPending(player, crate, reward, attempt);
+                }
+            }
+        }
+        if (delivered && !preview) {
+            sessionManager.recordDeliveryCompleted(player, crate, reward, attempt);
         }
         if (rewardIndex >= rewards.size() - 1) {
             return;
@@ -325,6 +340,21 @@ public class CrateSession {
             rewardIndex++;
             nextRewardSwitchTick += rewardSwitchTicks;
             refreshRewardDisplay();
+        }
+    }
+
+    private void deliverReward(Reward reward) {
+        if (isQaMode()) {
+            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
+            return;
+        }
+        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+        player.getInventory().addItem(item);
+
+        for (String command : reward.commands()) {
+            String parsed = command.replace("%player%", player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
         }
     }
 

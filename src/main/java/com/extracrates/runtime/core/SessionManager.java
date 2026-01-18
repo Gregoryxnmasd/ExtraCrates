@@ -10,6 +10,7 @@ import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.storage.CrateStorage;
+import com.extracrates.storage.DeliveryStatus;
 import com.extracrates.storage.LocalStorage;
 import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
@@ -325,6 +326,25 @@ public class SessionManager {
         if (syncBridge != null) {
             syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), reward.id());
         }
+    }
+
+    public void recordDeliveryStarted(Player player, CrateDefinition crate, Reward reward, int attempt) {
+        recordDeliveryStatus(player, crate, reward, DeliveryStatus.STARTED, attempt);
+    }
+
+    public void recordDeliveryCompleted(Player player, CrateDefinition crate, Reward reward, int attempt) {
+        recordDeliveryStatus(player, crate, reward, DeliveryStatus.COMPLETED, attempt);
+    }
+
+    public void recordDeliveryPending(Player player, CrateDefinition crate, Reward reward, int attempt) {
+        recordDeliveryStatus(player, crate, reward, DeliveryStatus.PENDING, attempt);
+    }
+
+    private void recordDeliveryStatus(Player player, CrateDefinition crate, Reward reward, DeliveryStatus status, int attempt) {
+        if (storage == null || reward == null || crate == null || player == null) {
+            return;
+        }
+        storage.recordDelivery(player.getUniqueId(), crate.id(), reward.id(), status, attempt, Instant.now());
     }
 
     public void applyRemoteCooldown(UUID playerId, String crateId, Instant timestamp) {

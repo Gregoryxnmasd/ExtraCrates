@@ -94,6 +94,14 @@ public class StorageFallback implements CrateStorage {
     }
 
     @Override
+    public void recordDelivery(UUID playerId, String crateId, String rewardId, DeliveryStatus status, int attempt, Instant timestamp) {
+        runWithFallback(
+                () -> primary.recordDelivery(playerId, crateId, rewardId, status, attempt, timestamp),
+                () -> fallback.recordDelivery(playerId, crateId, rewardId, status, attempt, timestamp)
+        );
+    }
+
+    @Override
     public boolean acquireLock(UUID playerId, String crateId) {
         return callWithFallback(
                 () -> primary.acquireLock(playerId, crateId),

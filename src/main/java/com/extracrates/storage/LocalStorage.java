@@ -10,6 +10,7 @@ public class LocalStorage implements CrateStorage {
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Map<String, Integer>> keys = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> locks = new HashMap<>();
+    private final Map<UUID, Map<String, Map<String, DeliveryRecord>>> deliveries = new HashMap<>();
 
     @Override
     public Optional<Instant> getCooldown(UUID playerId, String crateId) {
@@ -68,6 +69,14 @@ public class LocalStorage implements CrateStorage {
     }
 
     @Override
+    public void recordDelivery(UUID playerId, String crateId, String rewardId, DeliveryStatus status, int attempt, Instant timestamp) {
+        deliveries
+                .computeIfAbsent(playerId, key -> new HashMap<>())
+                .computeIfAbsent(crateId, key -> new HashMap<>())
+                .put(rewardId, new DeliveryRecord(status, attempt, timestamp));
+    }
+
+    @Override
     public boolean acquireLock(UUID playerId, String crateId) {
         Map<String, Instant> userLocks = locks.computeIfAbsent(playerId, key -> new HashMap<>());
         if (userLocks.containsKey(crateId)) {
@@ -90,5 +99,9 @@ public class LocalStorage implements CrateStorage {
         cooldowns.clear();
         keys.clear();
         locks.clear();
+        deliveries.clear();
+    }
+
+    private record DeliveryRecord(DeliveryStatus status, int attempt, Instant timestamp) {
     }
 }
