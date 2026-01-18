@@ -419,7 +419,8 @@ public class SessionManager {
 
     public void recordRewardGranted(Player player, CrateDefinition crate, Reward reward) {
         if (syncBridge != null) {
-            syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), reward.id());
+            String rewardId = resolveHistoryRewardId(crate, reward);
+            syncBridge.recordRewardGranted(player.getUniqueId(), crate.id(), rewardId);
         }
     }
 
@@ -450,6 +451,22 @@ public class SessionManager {
         cooldowns.clear();
     }
 
-    public record StorageStatus(boolean enabled, String backend, boolean fallbackActive) {
+    private String resolveHistoryRewardId(CrateDefinition crate, Reward reward) {
+        if (reward == null) {
+            plugin.getLogger().warning("Recompensa nula al registrar historial para crate " + crate.id() + ". Guardando unknown.");
+            return "unknown";
+        }
+        RewardPool pool = resolveRewardPool(crate);
+        if (pool == null) {
+            plugin.getLogger().warning("Pool de recompensas no encontrado para crate " + crate.id() + ". Guardando unknown.");
+            return "unknown";
+        }
+        String rewardId = reward.id();
+        boolean exists = pool.rewards().stream().anyMatch(entry -> entry.id().equalsIgnoreCase(rewardId));
+        if (!exists) {
+            plugin.getLogger().warning("Recompensa '" + rewardId + "' no existe en pool '" + pool.id() + "'. Guardando unknown.");
+            return "unknown";
+        }
+        return rewardId;
     }
 }
