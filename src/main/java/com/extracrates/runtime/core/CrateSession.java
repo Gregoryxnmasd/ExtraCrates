@@ -318,6 +318,7 @@ public class CrateSession {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             }
         }
+        sessionManager.recordRewardGranted(player, crate, reward);
         if (rewardIndex >= rewards.size() - 1) {
             return;
         }

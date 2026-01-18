@@ -9,9 +9,13 @@ import com.extracrates.route.RouteEditorManager;
 import com.extracrates.runtime.CutscenePreviewSession;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.runtime.core.SessionManager;
+import com.extracrates.sync.CrateHistoryEntry;
+import com.extracrates.sync.SyncEventType;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -23,6 +27,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -68,7 +74,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             @NotNull String[] args
     ) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route"));
+            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route|history"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -230,6 +236,70 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Component.text("Haz clic en bloques para marcar puntos. Usa /crate route editor stop para guardar."));
                 return true;
             }
+            case "history" -> {
+                if (!sender.hasPermission("extracrates.history")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage(Component.text("Uso: /crate history <player> [crate] [page]"));
+                    return true;
+                }
+                OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+                if (target == null || (!target.isOnline() && !target.hasPlayedBefore())) {
+                    sender.sendMessage(Component.text("Jugador no encontrado."));
+                    return true;
+                }
+                String crateId = null;
+                int page = 1;
+                if (args.length >= 3) {
+                    if (isInteger(args[2])) {
+                        page = parsePage(args[2]);
+                    } else {
+                        crateId = args[2];
+                    }
+                }
+                if (args.length >= 4) {
+                    crateId = args[2];
+                    if (!isInteger(args[3])) {
+                        sender.sendMessage(Component.text("Página inválida."));
+                        return true;
+                    }
+                    page = parsePage(args[3]);
+                }
+                if (crateId != null && !configLoader.getCrates().containsKey(crateId)) {
+                    sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
+                    return true;
+                }
+                int pageSize = 10;
+                int offset = Math.max(0, page - 1) * pageSize;
+                List<CrateHistoryEntry> history = sessionManager.getHistory(target.getUniqueId(), crateId, pageSize + 1, offset);
+                boolean hasNext = history.size() > pageSize;
+                if (hasNext) {
+                    history = history.subList(0, pageSize);
+                }
+                if (history.isEmpty()) {
+                    sender.sendMessage(Component.text("Sin historial para este jugador."));
+                    return true;
+                }
+                String header = "Historial de crates de " + target.getName()
+                        + (crateId != null ? " (" + crateId + ")" : "")
+                        + " - Página " + page;
+                sender.sendMessage(Component.text(header));
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
+                for (CrateHistoryEntry entry : history) {
+                    String line = "- [" + formatter.format(entry.timestamp()) + "] "
+                            + formatEvent(entry.type(), entry.crateId(), entry.rewardId());
+                    sender.sendMessage(Component.text(line));
+                }
+                if (page > 1) {
+                    sender.sendMessage(Component.text("Anterior: " + buildHistoryCommand(args[1], crateId, page - 1)));
+                }
+                if (hasNext) {
+                    sender.sendMessage(Component.text("Siguiente: " + buildHistoryCommand(args[1], crateId, page + 1)));
+                }
+                return true;
+            }
             default -> {
                 sender.sendMessage(languageManager.getMessage("command.unknown-subcommand"));
                 return true;
@@ -255,7 +325,21 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             results.add("sync");
             results.add("givekey");
             results.add("route");
+            results.add("history");
             return results;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("history")) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                results.add(player.getName());
+            }
+            return results;
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("history")) {
+            results.addAll(configLoader.getCrates().keySet());
+            results.add("1");
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("history")) {
+            results.add("1");
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {
             results.add("editor");
@@ -286,5 +370,46 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         } catch (IllegalArgumentException ignored) {
             return Particle.END_ROD;
         }
+    }
+
+    private boolean isInteger(String value) {
+        try {
+            Integer.parseInt(value);
+            return true;
+        } catch (NumberFormatException ex) {
+            return false;
+        }
+    }
+
+    private int parsePage(String value) {
+        try {
+            int parsed = Integer.parseInt(value);
+            return Math.max(parsed, 1);
+        } catch (NumberFormatException ex) {
+            return 1;
+        }
+    }
+
+    private String formatEvent(SyncEventType type, String crateId, String rewardId) {
+        String label = switch (type) {
+            case CRATE_OPEN -> "Apertura";
+            case REWARD_GRANTED -> "Recompensa";
+            case KEY_CONSUMED -> "Llave usada";
+            case COOLDOWN_SET -> "Cooldown";
+        };
+        String detail = "crate=" + crateId;
+        if (rewardId != null && !rewardId.isBlank() && type == SyncEventType.REWARD_GRANTED) {
+            detail += " reward=" + rewardId;
+        }
+        return label + " " + detail;
+    }
+
+    private String buildHistoryCommand(String playerName, String crateId, int page) {
+        StringBuilder command = new StringBuilder("/crate history ").append(playerName);
+        if (crateId != null && !crateId.isBlank()) {
+            command.append(" ").append(crateId);
+        }
+        command.append(" ").append(page);
+        return command.toString();
     }
 }
