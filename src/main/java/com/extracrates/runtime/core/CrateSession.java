@@ -21,7 +21,6 @@ import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.TextDisplay;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -47,7 +46,7 @@ public class CrateSession {
 
     private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
-    private TextDisplay hologram;
+    private Entity hologram;
     private BukkitRunnable task;
     private BukkitRunnable musicTask;
     private BukkitRunnable uiTask;
@@ -190,18 +189,7 @@ public class CrateSession {
         rewardDisplay = anchor.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
             display.setItemStack(buildRewardDisplayItem(reward, anchor.getWorld()));
         });
-        hologram = anchor.getWorld().spawn(displayLocation.clone().add(0, 0.4, 0), TextDisplay.class, display -> {
-            String format = reward.hologram();
-            if (format == null || format.isEmpty()) {
-                format = crate.animation().hologramFormat();
-            }
-            if (format == null || format.isEmpty()) {
-                format = "%reward_name%";
-            }
-            String name = format.replace("%reward_name%", reward.displayName());
-            display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
-            display.setBillboard(Display.Billboard.CENTER);
-        });
+        hologram = spawnHologramEntity(displayLocation.clone().add(0, 0.4, 0), reward);
 
         hideFromOthers(rewardDisplay);
         hideFromOthers(hologram);
@@ -210,6 +198,66 @@ public class CrateSession {
         hologramBaseLocation = hologram.getLocation().clone();
         rewardBaseTransform = rewardDisplay.getTransformation();
         logVerbose("Reward display creado: reward=%s", reward.id());
+    }
+
+    private Entity spawnHologramEntity(Location location, Reward reward) {
+        Component textComponent = buildHologramComponent(reward);
+        Class<? extends Entity> textDisplayClass = resolveTextDisplayClass();
+        if (textDisplayClass != null) {
+            return location.getWorld().spawn(location, textDisplayClass, display -> {
+                setTextDisplayText(display, textComponent);
+                setTextDisplayBillboard(display, Display.Billboard.CENTER);
+            });
+        }
+        return location.getWorld().spawn(location, ArmorStand.class, stand -> {
+            stand.setInvisible(true);
+            stand.setMarker(true);
+            stand.setSmall(true);
+            stand.setGravity(false);
+            stand.setCustomName(TextUtil.serializeLegacy(textComponent));
+            stand.setCustomNameVisible(true);
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private Class<? extends Entity> resolveTextDisplayClass() {
+        try {
+            return (Class<? extends Entity>) Class.forName("org.bukkit.entity.TextDisplay");
+        } catch (ClassNotFoundException ex) {
+            return null;
+        }
+    }
+
+    private Component buildHologramComponent(Reward reward) {
+        String name = resolveHologramText(reward);
+        return configLoader.getSettings().applyHologramFont(TextUtil.color(name));
+    }
+
+    private String resolveHologramText(Reward reward) {
+        String format = reward.hologram();
+        if (format == null || format.isEmpty()) {
+            format = crate.animation().hologramFormat();
+        }
+        if (format == null || format.isEmpty()) {
+            format = "%reward_name%";
+        }
+        return format.replace("%reward_name%", reward.displayName());
+    }
+
+    private void setTextDisplayText(Entity entity, Component component) {
+        try {
+            java.lang.reflect.Method method = entity.getClass().getMethod("text", Component.class);
+            method.invoke(entity, component);
+        } catch (ReflectiveOperationException ignored) {
+        }
+    }
+
+    private void setTextDisplayBillboard(Entity entity, Display.Billboard billboard) {
+        try {
+            java.lang.reflect.Method method = entity.getClass().getMethod("setBillboard", Display.Billboard.class);
+            method.invoke(entity, billboard);
+        } catch (ReflectiveOperationException ignored) {
+        }
     }
 
     private void hideFromOthers(Entity entity) {
@@ -495,15 +543,13 @@ public class CrateSession {
             rewardDisplay.setItemStack(buildRewardDisplayItem(reward, rewardDisplay.getWorld()));
         }
         if (hologram != null) {
-            String format = reward.hologram();
-            if (format == null || format.isEmpty()) {
-                format = crate.animation().hologramFormat();
+            Component textComponent = buildHologramComponent(reward);
+            if (hologram instanceof ArmorStand armorStand) {
+                armorStand.setCustomName(TextUtil.serializeLegacy(textComponent));
+                armorStand.setCustomNameVisible(true);
+            } else {
+                setTextDisplayText(hologram, textComponent);
             }
-            if (format == null || format.isEmpty()) {
-                format = "%reward_name%";
-            }
-            String name = format.replace("%reward_name%", reward.displayName());
-            hologram.text(TextUtil.color(name));
         }
         SoundUtil.play(player, configLoader.getSettings().getSounds().reroll());
     }
