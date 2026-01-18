@@ -122,9 +122,25 @@ public class LocalStorage implements CrateStorage {
     }
 
     @Override
+    public Optional<PendingReward> getPendingReward(UUID playerId) {
+        return Optional.ofNullable(pendingRewards.get(playerId));
+    }
+
+    @Override
+    public void setPendingReward(UUID playerId, PendingReward pendingReward) {
+        pendingRewards.put(playerId, pendingReward);
+    }
+
+    @Override
+    public void clearPendingReward(UUID playerId) {
+        pendingRewards.remove(playerId);
+    }
+
+    @Override
     public void close() {
         cooldowns.clear();
         keys.clear();
         locks.clear();
+        pendingRewards.clear();
     }
 }

@@ -19,6 +19,10 @@ public class StorageFallback implements CrateStorage {
         this.logger = logger;
     }
 
+    public boolean isUsingFallback() {
+        return usingFallback;
+    }
+
     private <T> T callWithFallback(Supplier<T> primaryCall, Supplier<T> fallbackCall) {
         if (usingFallback) {
             return fallbackCall.get();
@@ -115,6 +119,30 @@ public class StorageFallback implements CrateStorage {
         runWithFallback(
                 () -> primary.releaseLock(playerId, crateId),
                 () -> fallback.releaseLock(playerId, crateId)
+        );
+    }
+
+    @Override
+    public Optional<PendingReward> getPendingReward(UUID playerId) {
+        return callWithFallback(
+                () -> primary.getPendingReward(playerId),
+                () -> fallback.getPendingReward(playerId)
+        );
+    }
+
+    @Override
+    public void setPendingReward(UUID playerId, PendingReward pendingReward) {
+        runWithFallback(
+                () -> primary.setPendingReward(playerId, pendingReward),
+                () -> fallback.setPendingReward(playerId, pendingReward)
+        );
+    }
+
+    @Override
+    public void clearPendingReward(UUID playerId) {
+        runWithFallback(
+                () -> primary.clearPendingReward(playerId),
+                () -> fallback.clearPendingReward(playerId)
         );
     }
 
