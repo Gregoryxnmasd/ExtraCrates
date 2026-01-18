@@ -1,7 +1,7 @@
 package com.extracrates.util;
 
 import com.extracrates.cutscene.CutscenePath;
-import com.extracrates.model.CutscenePoint;
+import com.extracrates.cutscene.CutscenePoint;
 import org.bukkit.Location;
 import org.bukkit.World;
 
