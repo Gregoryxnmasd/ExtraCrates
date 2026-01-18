@@ -85,25 +85,22 @@ public class SessionManager {
 
     public boolean openCrate(Player player, CrateDefinition crate, boolean preview) {
         if (sessions.containsKey(player.getUniqueId())) {
-            player.sendMessage(Component.text("Ya tienes una cutscene en progreso."));
-            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
+            player.sendMessage(languageManager.getMessage("session.already-in-progress", player, crate, null, null));
             return false;
         }
         CutscenePath path = resolveCutscenePath(crate, player);
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
-            player.sendMessage(Component.text("No se encontró el pool de recompensas para esta crate."));
-            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
+            player.sendMessage(languageManager.getMessage("session.no-rewards", player, crate, null, null));
             return false;
         }
         if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
-            player.sendMessage(Component.text("Necesitas una llave para esta crate."));
-            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
+            player.sendMessage(languageManager.getMessage("session.key-required", player, crate, null, null));
             return false;
         }
         if (!preview && isOnCooldown(player, crate)) {
-            player.sendMessage(Component.text("Esta crate está en cooldown."));
-            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
+            long cooldownRemaining = getCooldownRemainingSeconds(player, crate);
+            player.sendMessage(languageManager.getMessage("session.cooldown", player, crate, null, cooldownRemaining));
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
@@ -114,8 +111,7 @@ public class SessionManager {
                 buildRewardSelectorSettings()
         );
         if (rewards.isEmpty()) {
-            player.sendMessage(languageManager.getMessage("session.no-rewards"));
-            SoundUtil.play(player, configLoader.getSettings().getSounds().error());
+            player.sendMessage(languageManager.getMessage("session.no-rewards", player, crate, null, null));
             return false;
         }
         CrateSession session = new CrateSession(

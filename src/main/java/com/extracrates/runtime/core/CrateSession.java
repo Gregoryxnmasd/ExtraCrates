@@ -359,7 +359,7 @@ public class CrateSession {
         if (isQaMode()) {
             player.sendMessage(languageManager.getMessage("session.qa-mode"));
         } else {
-            player.sendMessage(languageManager.getMessage("session.reward-received", java.util.Map.of("reward", reward.displayName())));
+            player.sendMessage(languageManager.getMessage("session.reward-received", player, crate, reward, null));
             ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
             player.getInventory().addItem(item);
 
