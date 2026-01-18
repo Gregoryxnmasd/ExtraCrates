@@ -13,11 +13,17 @@ permissions:
   extracrates.gui:
     description: Permite abrir el GUI de crates.
     default: true
+  extracrates.history:
+    description: Permite ver el historial de aperturas.
+    default: true
   extracrates.open:
     description: Permite abrir crates.
     default: true
   extracrates.preview:
     description: Permite previsualizar crates.
+    default: true
+  extracrates.reroll:
+    description: Permite rerollear recompensas de crates.
     default: true
   extracrates.reload:
     description: Permite recargar la configuración de crates.
