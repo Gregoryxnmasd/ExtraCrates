@@ -2,8 +2,8 @@ package com.extracrates.route;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.cutscene.CutscenePoint;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.configuration.ConfigurationSection;
@@ -19,11 +19,13 @@ import java.util.logging.Level;
 public class RouteEditorManager {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private final LanguageManager languageManager;
     private final Map<UUID, RouteEditorSession> sessions = new HashMap<>();
 
     public RouteEditorManager(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
         this.plugin = plugin;
         this.configLoader = configLoader;
+        this.languageManager = plugin.getLanguageManager();
     }
 
     public boolean startSession(Player player, String pathId) {
@@ -108,9 +110,15 @@ public class RouteEditorManager {
         try {
             config.save(file);
             configLoader.loadAll();
-            player.sendMessage(Component.text("Ruta '" + session.getPathId() + "' guardada con " + points.size() + " puntos."));
+            player.sendMessage(languageManager.getMessage(
+                    "route.editor.saved",
+                    java.util.Map.of(
+                            "path", session.getPathId(),
+                            "count", String.valueOf(points.size())
+                    )
+            ));
         } catch (IOException ex) {
-            player.sendMessage(Component.text("No se pudo guardar paths.yml."));
+            player.sendMessage(languageManager.getMessage("route.editor.save-failed"));
             plugin.getLogger().log(Level.WARNING, "No se pudo guardar paths.yml para la ruta '" + session.getPathId() + "'.", ex);
         }
     }
