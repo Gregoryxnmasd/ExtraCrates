@@ -58,6 +58,7 @@ public class CrateSession {
     private boolean hudHiddenApplied;
     private float previousWalkSpeed;
     private float previousFlySpeed;
+    private boolean rewardDelivered;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -306,18 +307,9 @@ public class CrateSession {
         if (reward == null) {
             return;
         }
-        if (isQaMode()) {
-            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
-        } else {
-            player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
-            ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-            player.getInventory().addItem(item);
-
-            for (String command : reward.commands()) {
-                String parsed = command.replace("%player%", player.getName());
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
-            }
-        }
+        sessionManager.grantReward(player, crate, reward);
+        sessionManager.markRewardDelivered(player, crate, reward);
+        rewardDelivered = true;
         if (rewardIndex >= rewards.size() - 1) {
             return;
         }
@@ -351,10 +343,9 @@ public class CrateSession {
             String name = format.replace("%reward_name%", reward.displayName());
             hologram.text(TextUtil.color(name));
         }
-    }
-
-    private boolean isQaMode() {
-        return configLoader.getMainConfig().getBoolean("qa-mode", false);
+        if (!rewardDelivered) {
+            sessionManager.updatePendingReward(player, crate, reward, preview);
+        }
     }
 
     private ItemStack buildRewardDisplayItem(Reward reward, World world) {
@@ -424,6 +415,14 @@ public class CrateSession {
 
     public boolean isPreview() {
         return preview;
+    }
+
+    public Reward getActiveReward() {
+        return getCurrentReward();
+    }
+
+    public CrateDefinition getCrate() {
+        return crate;
     }
 
     private boolean toggleHud(boolean hidden) {
