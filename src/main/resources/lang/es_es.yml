@@ -88,3 +88,362 @@ route:
     mode-changed: "&eModo de captura: &f%mode%."
     source-changed: "&eFuente de captura: &f%source%."
     marker-moved: "&aMarker movido a tu posición actual."
+
+editor:
+  common:
+    none: "&7Ninguno"
+    current: "&7Actual: &f%value%"
+    click-edit: "&7Click para editar."
+    click-select: "&7Click para seleccionar."
+    click-toggle: "&7Click para alternar."
+    click-preview: "&7Click para previsualizar."
+    click-start-editor: "&7Click para iniciar el editor."
+  input:
+    prompt: "&eEscribe en el chat: &f%prompt%&e. &7Escribe &fcancel&7 para cancelar."
+    pending: "&cYa tienes una entrada pendiente. Escribe &fcancel&c para cancelar."
+    cancelled: "&eEntrada cancelada."
+    invalid-id: "&cPor favor ingresa un ID válido."
+  confirmation:
+    title:
+      create: "&8Confirmar creación"
+      clone: "&8Confirmar clonación"
+      delete: "&8Confirmar borrado"
+      change: "&8Confirmar cambio"
+    confirm-button: "&aConfirmar"
+    cancel-button: "&cCancelar"
+    cancel-description: "&7Volver al menú anterior."
+    confirm-name: "&aConfirmar"
+    cancel-name: "&cCancelar"
+    cancel-lore: "&7Cancelar esta acción."
+  menu:
+    title: "&8Editor"
+    action:
+      crates:
+        name: "&eCrates"
+        lore: "&7Crear, editar y borrar crates."
+      rewards:
+        name: "&aRewards"
+        lore: "&7Gestionar pools y recompensas."
+      paths:
+        name: "&bPaths"
+        lore: "&7Gestionar rutas cinemáticas."
+      keys:
+        name: "&dLlaves"
+        lore: "&7Buscar jugadores y gestionar llaves."
+    nav:
+      close:
+        name: "&cCerrar"
+        lore: "&7Salir del editor."
+  crates:
+    list:
+      title: "&8Editor de Crates"
+      create:
+        name: "&aCrear crate"
+        lore: "&7Crea un crate desde cero."
+      back:
+        name: "&eVolver"
+        lore: "&7Regresar al menú principal."
+      item:
+        lore:
+          id: "&7ID: &f%id%"
+          type: "&7Tipo: &f%type%"
+          rewards: "&7Pool de rewards: &f%pool%"
+          hint: "&7Click izquierdo para editar. Click derecho para clonar. Shift+click derecho para borrar."
+    detail:
+      title: "&8Crate: %crate%"
+      display-name:
+        name: "&eNombre"
+      rewards-pool:
+        name: "&ePool de rewards"
+      type:
+        name: "&eTipo"
+      open-mode:
+        name: "&eModo de apertura"
+      overlay:
+        name: "&eOverlay de cutscene"
+      lock-movement:
+        name: "&eBloquear movimiento"
+      lock-hud:
+        name: "&eBloquear HUD"
+      music:
+        name: "&eMúsica"
+      delete:
+        name: "&cBorrar crate"
+        lore: "&7Eliminar este crate."
+      back:
+        name: "&eVolver"
+        lore: "&7Regresar al listado de crates."
+    pools:
+      title: "&8Pool de rewards: %crate%"
+    paths:
+      title: "&8Path de cutscene: %crate%"
+      back:
+        name: "&eVolver"
+        lore: "&7Regresar al detalle del crate."
+  crate:
+    prompt:
+      new-id: "Ingresa el ID del crate"
+      clone-id: "Ingresa el ID para clonar %id%"
+      display-name: "Ingresa el nombre visible"
+      open-mode: "Ingresa el modo de apertura (reward-only, preview-only, cinematic)"
+      overlay-model: "Ingresa el ID del overlay"
+      music-sound: "Ingresa el ID del sonido"
+    confirm:
+      create: "¿Crear crate %id%?"
+      clone: "¿Clonar crate %source% a %target%?"
+      delete: "¿Borrar crate %id%?"
+      update-field: "¿Actualizar %field% para el crate %id%?"
+      change-type: "¿Cambiar tipo de crate a %type%?"
+      change-lock: "¿Alternar bloqueo de %label%?"
+    label:
+      lock-movement: "movimiento"
+      lock-hud: "HUD"
+    success:
+      created: "&aCrate creado."
+      cloned: "&aCrate clonado."
+      deleted: "&aCrate borrado."
+      updated: "&aCrate actualizado."
+      type-updated: "&aTipo de crate actualizado."
+      lock-updated: "&aBloqueo actualizado."
+  paths:
+    list:
+      title: "&8Editor de Paths"
+      create:
+        name: "&aCrear path"
+        lore: "&7Crea una nueva ruta de cámara."
+      back:
+        name: "&eVolver"
+        lore: "&7Regresar al menú principal."
+      item:
+        lore:
+          id: "&7ID: &f%id%"
+          duration: "&7Duración: &f%duration%s"
+          points: "&7Puntos: &f%points%"
+          hint: "&7Click izquierdo para editar. Click derecho para clonar. Shift+click derecho para borrar."
+    detail:
+      title: "&8Path: %path%"
+      edit-points:
+        name: "&eEditar puntos"
+        block-mode: "&7Block mode: click en bloques."
+        free-mode: "&7Free mode: &f/crate route editor add&7."
+        source: "&7Fuente: &f/crate route editor source <player|marker>&7."
+        save: "&7Guarda con &f/crate route editor stop&7."
+      duration:
+        name: "&eDuración"
+      smoothing:
+        name: "&eSmoothing"
+      particles:
+        name: "&ePartículas"
+      constant-speed:
+        name: "&eVelocidad constante"
+      preview:
+        name: "&ePreview"
+        lore: "&7Muestra partículas sobre la ruta."
+      step-resolution:
+        name: "&eResolución de paso"
+      delete:
+        name: "&cBorrar path"
+        lore: "&7Eliminar este path."
+      back:
+        name: "&eVolver"
+        lore: "&7Regresar al listado de paths."
+  path:
+    prompt:
+      new-id: "Ingresa el ID del path"
+      clone-id: "Ingresa el nuevo ID para clonar %id%"
+      duration: "Ingresa la duración en segundos"
+      smoothing: "Ingresa el modo de smoothing"
+      particle-preview: "Ingresa el ID de partícula"
+      step-resolution: "Ingresa la resolución de paso"
+    confirm:
+      create: "¿Crear path %id%?"
+      clone: "¿Clonar path %source% a %target%?"
+      delete: "¿Borrar path %id%?"
+      update-field: "¿Actualizar %field% para el path %id%?"
+      change-constant-speed: "¿Cambiar velocidad constante a %value%?"
+    error:
+      already-exists: "&cYa existe un path con ese ID."
+      missing-path: "&cPath no encontrado."
+    warning:
+      active-session: "&cYa tienes una sesión de editor activa."
+    info:
+      preview-stopped: "&ePreview detenido."
+    success:
+      created: "&aPath creado."
+      cloned: "&aPath clonado."
+      deleted: "&aPath borrado."
+      updated: "&aPath actualizado."
+      constant-speed-updated: "&aVelocidad constante actualizada."
+      preview-started: "&aPreview iniciado."
+      preview-finished: "&aPreview finalizado."
+  rewards:
+    list:
+      title: "&8Pools de Rewards"
+      create:
+        name: "&aCrear pool"
+        lore: "&7Crea un nuevo pool de rewards."
+      back:
+        name: "&eVolver"
+        lore: "&7Regresar al menú principal."
+      item:
+        lore:
+          id: "&7ID: &f%id%"
+          roll-count: "&7Tiradas: &f%roll_count%"
+          rewards: "&7Recompensas: &f%rewards%"
+          hint: "&7Click izquierdo para editar. Click derecho para clonar. Shift+click derecho para borrar."
+    pool:
+      title: "&8Pool: %pool%"
+      roll-count:
+        name: "&eCantidad de tiradas"
+      create-reward:
+        name: "&aCrear reward"
+        lore: "&7Agregar nueva reward."
+      delete:
+        name: "&cBorrar pool"
+        lore: "&7Eliminar este pool."
+      back:
+        name: "&eVolver"
+        lore: "&7Regresar a pools."
+    reward:
+      title: "&8Reward: %reward%"
+      current: "&7Actual: &f%value%"
+      click-edit: "&7Click para editar."
+      delete:
+        name: "&cBorrar reward"
+        lore: "&7Eliminar esta reward."
+      back:
+        name: "&eVolver"
+        lore: "&7Regresar al pool."
+      detail:
+        display-name:
+          name: "&eNombre"
+        chance:
+          name: "&eChance"
+        item:
+          name: "&eItem"
+        amount:
+          name: "&eCantidad"
+        commands:
+          name: "&eComandos"
+        enchantments:
+          name: "&eEncantamientos"
+        glow:
+          name: "&eGlow"
+        custom-model:
+          name: "&eCustom model"
+        map-image:
+          name: "&eImagen de mapa"
+      item-lore:
+        id: "&7ID: &f%id%"
+        chance: "&7Chance: &f%chance%"
+        item: "&7Item: &f%item%"
+        hint: "&7Click izquierdo para editar. Click derecho para clonar. Shift+click derecho para borrar."
+  reward:
+    prompt:
+      new-pool-id: "Ingresa el ID del pool"
+      clone-pool-id: "Ingresa el nuevo ID para clonar %id%"
+      roll-count: "Ingresa la cantidad de tiradas"
+      new-reward-id: "Ingresa el ID de la reward"
+      clone-reward-id: "Ingresa el nuevo ID para clonar %id%"
+      display-name: "Ingresa el nombre visible"
+      chance: "Ingresa el chance"
+      item: "Ingresa el material"
+      amount: "Ingresa la cantidad"
+      commands: "Ingresa comandos (separa con ;)"
+      enchantments: "Ingresa encantamientos (llave:nivel, separados por coma)"
+      glow: "Ingresa true/false"
+      custom-model: "Ingresa el ID del modelo o 'none'"
+      map-image: "Ingresa el ID de la imagen o 'none'"
+    confirm:
+      create-pool: "¿Crear pool %id%?"
+      clone-pool: "¿Clonar pool %source% a %target%?"
+      delete-pool: "¿Borrar pool %id%?"
+      update-roll-count: "¿Actualizar tiradas para %id%?"
+      create-reward: "¿Crear reward %id%?"
+      clone-reward: "¿Clonar reward %source% a %target%?"
+      delete-reward: "¿Borrar reward %id%?"
+      update-field: "¿Actualizar %field% para la reward %id%?"
+    success:
+      pool-created: "&aPool creado."
+      pool-cloned: "&aPool clonado."
+      pool-deleted: "&aPool borrado."
+      pool-updated: "&aPool actualizado."
+      reward-created: "&aReward creada."
+      reward-cloned: "&aReward clonada."
+      reward-deleted: "&aReward borrada."
+      reward-updated: "&aReward actualizada."
+    error:
+      invalid-value: "&cPor favor ingresa un valor válido."
+      invalid-chance-min: "&cEl chance debe ser 0 o mayor."
+      invalid-chance-number: "&cEl chance debe ser un número."
+      invalid-amount-min: "&cLa cantidad debe ser al menos 1."
+      invalid-amount-number: "&cLa cantidad debe ser un número."
+      invalid-material: "&cMaterial inválido: %material%"
+      invalid-glow: "&cGlow debe ser true/false."
+      invalid-commands: "&cIngresa al menos un comando."
+      invalid-enchant-format: "&cLos encantamientos deben ser llave:nivel."
+      invalid-enchant-key: "&cEncantamiento desconocido: %key%"
+      invalid-enchant-level: "&cNivel inválido para %key%"
+      invalid-enchantments: "&cIngresa al menos un encantamiento."
+  keys:
+    title:
+      search: "&8Llaves - Buscar"
+      list: "&8Llaves: %player%"
+      detail: "&8Llaves: %crate% (%player%)"
+    search:
+      find:
+        name: "&eBuscar jugador"
+        lore: "&7Buscar un jugador para gestionar llaves."
+      player:
+        name: "&eJugador"
+        lore: "&7Seleccionado: &f%player%"
+      manage:
+        name: "&aGestionar llaves"
+        lore: "&7Abrir gestor de llaves."
+      none:
+        name: "&cSin jugador"
+        lore: "&7Selecciona un jugador primero."
+      manage-disabled:
+        name: "&7Gestionar llaves"
+        lore: "&7Selecciona un jugador primero."
+    nav:
+      clear:
+        name: "&cBorrar selección"
+        lore: "&7Limpiar jugador seleccionado."
+      back-main:
+        name: "&eVolver"
+        lore: "&7Regresar al menú principal."
+      back-search:
+        name: "&eVolver"
+        lore: "&7Regresar a búsqueda."
+      back-list:
+        name: "&eVolver"
+        lore: "&7Regresar al listado."
+    detail:
+      add:
+        name: "&aSumar"
+        lore: "&7Agregar 1 llave."
+      remove:
+        name: "&cQuitar"
+        lore: "&7Quitar 1 llave."
+      status:
+        name: "&eLlaves"
+        crate: "&7Crate: &f%crate%"
+        count: "&7Cantidad: &f%count%"
+    list:
+      item:
+        lore:
+          id: "&7ID: &f%id%"
+          keys: "&7Llaves: &f%keys%"
+          hint: "&7Click para gestionar llaves."
+    item:
+      key-name: "%crate% &7llave"
+  key:
+    prompt:
+      player-name: "Ingresa el nombre del jugador"
+    error:
+      invalid-player: "&cPor favor ingresa un nombre válido."
+      player-not-found: "&cJugador no encontrado."
+      player-online-required: "&cEl jugador debe estar conectado."
+      no-keys: "&cNo hay llaves para quitar."
+      inventory-full: "&cEl inventario del jugador está lleno."

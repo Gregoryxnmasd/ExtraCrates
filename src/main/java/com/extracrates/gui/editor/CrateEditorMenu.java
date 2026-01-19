@@ -33,14 +33,11 @@ import java.util.UUID;
 public class CrateEditorMenu implements Listener {
     // Layout: acciones principales al centro, navegación en fila inferior.
     private static final int SLOT_LIST_CREATE = 45;
-    private static final int SLOT_LIST_DELETE = 47;
     private static final int SLOT_LIST_BACK = 49;
-    private static final int SLOT_LIST_REFRESH = 53;
     private static final int SLOT_DETAIL_DELETE = 18;
     private static final int SLOT_DETAIL_BACK = 22;
-    private static final int SLOT_DETAIL_REFRESH = 26;
-    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 48, 50, 51, 52};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
+    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52, 53};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25, 26};
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -64,7 +61,7 @@ public class CrateEditorMenu implements Listener {
         this.inputManager = inputManager;
         this.confirmationMenu = confirmationMenu;
         this.parent = parent;
-        this.title = TextUtil.color("&8Editor de Crates");
+        this.title = TextUtil.color(text("editor.crates.list.title"));
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -80,56 +77,64 @@ public class CrateEditorMenu implements Listener {
             }
         }
         fillListNavigation(inventory);
-        inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE, "&aCrear crate", List.of("&7Nuevo crate desde cero.")));
-        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
-        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE,
+                text("editor.crates.list.create.name"),
+                List.of(text("editor.crates.list.create.lore"))));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
+                text("editor.crates.list.back.name"),
+                List.of(text("editor.crates.list.back.lore"))));
         player.openInventory(inventory);
     }
 
     private void openDetail(Player player, String crateId) {
         activeCrate.put(player.getUniqueId(), crateId);
-        Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color(text("editor.crates.detail.title", Map.of("crate", crateId))));
+        Inventory inventory = Bukkit.createInventory(player, 27, detailTitle(crateId));
         CrateDefinition crate = configLoader.getCrates().get(crateId);
-        inventory.setItem(9, buildItem(Material.NAME_TAG, "&eDisplay Name", List.of(
-                "&7Actual: &f" + (crate != null ? crate.displayName() : crateId),
-                "&7Click para editar."
+        inventory.setItem(9, buildItem(Material.NAME_TAG, text("editor.crates.detail.display-name.name"), List.of(
+                text("editor.common.current", Map.of("value", crate != null ? crate.displayName() : crateId)),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(10, buildItem(Material.CHEST_MINECART, "&eRewards Pool", List.of(
-                "&7Actual: &f" + (crate != null ? crate.rewardsPool() : ""),
-                "&7Click para seleccionar."
+        inventory.setItem(10, buildItem(Material.CHEST_MINECART, text("editor.crates.detail.rewards-pool.name"), List.of(
+                text("editor.common.current", Map.of("value", crate != null ? crate.rewardsPool() : "")),
+                text("editor.common.click-select")
         )));
-        inventory.setItem(11, buildItem(Material.COMPARATOR, "&eTipo", List.of(
-                "&7Actual: &f" + (crate != null ? crate.type().name() : "NORMAL"),
-                "&7Click para alternar."
+        inventory.setItem(11, buildItem(Material.COMPARATOR, text("editor.crates.detail.type.name"), List.of(
+                text("editor.common.current", Map.of("value", crate != null ? crate.type().name() : "NORMAL")),
+                text("editor.common.click-toggle")
         )));
-        inventory.setItem(12, buildItem(Material.PAPER, "&eOpen Mode", List.of(
-                "&7Actual: &f" + (crate != null ? crate.openMode() : "reward-only"),
-                "&7Click para editar."
+        inventory.setItem(12, buildItem(Material.PAPER, text("editor.crates.detail.open-mode.name"), List.of(
+                text("editor.common.current", Map.of("value", crate != null ? crate.openMode() : "reward-only")),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(13, buildItem(Material.CARVED_PUMPKIN, "&eCutscene overlay", List.of(
-                "&7Actual: &f" + (crate != null ? crate.cutsceneSettings().overlayModel() : ""),
-                "&7Click para editar."
+        inventory.setItem(13, buildItem(Material.CARVED_PUMPKIN, text("editor.crates.detail.overlay.name"), List.of(
+                text("editor.common.current", Map.of("value", crate != null ? crate.cutsceneSettings().overlayModel() : "")),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(14, buildItem(Material.IRON_BOOTS, "&eLock movimiento", List.of(
-                "&7Actual: &f" + (crate != null && crate.cutsceneSettings().lockMovement()),
-                "&7Click para alternar."
+        inventory.setItem(14, buildItem(Material.IRON_BOOTS, text("editor.crates.detail.lock-movement.name"), List.of(
+                text("editor.common.current", Map.of("value", String.valueOf(crate != null && crate.cutsceneSettings().lockMovement()))),
+                text("editor.common.click-toggle")
         )));
-        inventory.setItem(15, buildItem(Material.PAPER, "&eLock HUD", List.of(
-                "&7Actual: &f" + (crate != null && crate.cutsceneSettings().hideHud()),
-                "&7Click para alternar."
+        inventory.setItem(15, buildItem(Material.PAPER, text("editor.crates.detail.lock-hud.name"), List.of(
+                text("editor.common.current", Map.of("value", String.valueOf(crate != null && crate.cutsceneSettings().hideHud()))),
+                text("editor.common.click-toggle")
         )));
         String musicSound = "";
         if (crate != null && crate.cutsceneSettings().musicSettings() != null) {
             musicSound = crate.cutsceneSettings().musicSettings().sound();
         }
-        inventory.setItem(16, buildItem(Material.MUSIC_DISC_11, "&eMúsica", List.of(
-                "&7Actual: &f" + (musicSound == null || musicSound.isEmpty() ? "ninguna" : musicSound),
-                "&7Click para editar."
+        inventory.setItem(16, buildItem(Material.MUSIC_DISC_11, text("editor.crates.detail.music.name"), List.of(
+                text("editor.common.current", Map.of("value", (musicSound == null || musicSound.isEmpty())
+                        ? text("editor.common.none")
+                        : musicSound)),
+                text("editor.common.click-edit")
         )));
         fillDetailNavigation(inventory);
-        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar crate", List.of("&7Eliminar crate actual.")));
-        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
-        inventory.setItem(SLOT_DETAIL_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar datos.")));
+        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE,
+                text("editor.crates.detail.delete.name"),
+                List.of(text("editor.crates.detail.delete.lore"))));
+        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
+                text("editor.crates.detail.back.name"),
+                List.of(text("editor.crates.detail.back.lore"))));
         player.openInventory(inventory);
     }
 
@@ -155,7 +160,7 @@ public class CrateEditorMenu implements Listener {
             handlePathSelection(player, crateId, event.getSlot());
             return;
         }
-        if (crateId != null && viewTitle.equals(TextUtil.color("&8Crate: " + crateId))) {
+        if (crateId != null && viewTitle.equals(detailTitle(crateId))) {
             event.setCancelled(true);
             handleDetailClick(player, crateId, event.getSlot());
         }
@@ -168,10 +173,6 @@ public class CrateEditorMenu implements Listener {
         }
         if (slot == SLOT_LIST_BACK) {
             parent.open(player);
-            return;
-        }
-        if (slot == SLOT_LIST_REFRESH) {
-            open(player);
             return;
         }
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
@@ -215,16 +216,19 @@ public class CrateEditorMenu implements Listener {
             case 16 -> promptField(player, crateId, "cutscene.music.sound", "editor.crate.prompt.music-sound");
             case SLOT_DETAIL_DELETE -> confirmDelete(player, crateId);
             case SLOT_DETAIL_BACK -> open(player);
-            case SLOT_DETAIL_REFRESH -> openDetail(player, crateId);
             default -> {
             }
         }
     }
 
     private void confirmDelete(Player player, String crateId) {
-        confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar crate " + crateId, () -> {
+        confirmationMenu.open(
+                player,
+                languageManager.getRaw("editor.confirmation.title.delete", java.util.Collections.emptyMap()),
+                languageManager.getRaw("editor.crate.confirm.delete", Map.of("id", crateId)),
+                () -> {
             deleteCrate(crateId);
-            player.sendMessage(Component.text("Crate eliminada y guardada en YAML."));
+            player.sendMessage(languageManager.getMessage("editor.crate.success.deleted"));
             open(player);
         }, () -> openDetail(player, crateId));
     }
@@ -375,13 +379,13 @@ public class CrateEditorMenu implements Listener {
                 break;
             }
             inventory.setItem(slot++, buildItem(Material.EMERALD, "&a" + pool.id(), List.of(
-                    "&7Click para seleccionar."
+                    text("editor.common.click-select")
             )));
         }
         fillListNavigation(inventory);
-        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of()));
-        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al detalle.")));
-        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
+                text("editor.crates.paths.back.name"),
+                List.of(text("editor.crates.paths.back.lore"))));
         player.openInventory(inventory);
     }
 
@@ -395,23 +399,19 @@ public class CrateEditorMenu implements Listener {
                 break;
             }
             inventory.setItem(slot++, buildItem(Material.ENDER_EYE, "&b" + path.getId(), List.of(
-                    "&7Click para seleccionar."
+                    text("editor.common.click-select")
             )));
         }
         fillListNavigation(inventory);
-        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of()));
-        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al detalle.")));
-        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
+                text("editor.crates.paths.back.name"),
+                List.of(text("editor.crates.paths.back.lore"))));
         player.openInventory(inventory);
     }
 
     private void handleRewardsPoolSelection(Player player, String crateId, int slot) {
         if (slot == SLOT_LIST_BACK) {
             openDetail(player, crateId);
-            return;
-        }
-        if (slot == SLOT_LIST_REFRESH) {
-            openRewardsPoolSelector(player, crateId);
             return;
         }
         List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
@@ -428,10 +428,6 @@ public class CrateEditorMenu implements Listener {
     private void handlePathSelection(Player player, String crateId, int slot) {
         if (slot == SLOT_LIST_BACK) {
             openDetail(player, crateId);
-            return;
-        }
-        if (slot == SLOT_LIST_REFRESH) {
-            openPathSelector(player, crateId);
             return;
         }
         List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
@@ -492,7 +488,6 @@ public class CrateEditorMenu implements Listener {
 
     private void fillListNavigation(Inventory inventory) {
         ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
-        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar crate", List.of("&7Usa el detalle para borrar.")));
         for (int slot : LIST_NAV_FILLER_SLOTS) {
             inventory.setItem(slot, filler);
         }
@@ -519,11 +514,15 @@ public class CrateEditorMenu implements Listener {
     }
 
     private Component rewardsPoolTitle(String crateId) {
-        return TextUtil.color("&8Rewards pool: " + crateId);
+        return TextUtil.color(text("editor.crates.pools.title", Map.of("crate", crateId)));
     }
 
     private Component pathSelectorTitle(String crateId) {
-        return TextUtil.color("&8Cutscene path: " + crateId);
+        return TextUtil.color(text("editor.crates.paths.title", Map.of("crate", crateId)));
+    }
+
+    private Component detailTitle(String crateId) {
+        return TextUtil.color(text("editor.crates.detail.title", Map.of("crate", crateId)));
     }
 
     private String text(String key) {

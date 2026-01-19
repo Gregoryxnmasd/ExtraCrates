@@ -55,12 +55,22 @@ public class EditorMenu implements Listener {
 
     public void open(Player player) {
         Inventory inventory = Bukkit.createInventory(player, 27, title);
-        inventory.setItem(SLOT_ACTION_CRATES, buildItem(Material.CHEST, "&eCrates", List.of("&7Crear, editar y borrar crates.")));
-        inventory.setItem(SLOT_ACTION_REWARDS, buildItem(Material.EMERALD, "&aRewards", List.of("&7Editar pools y recompensas.")));
-        inventory.setItem(SLOT_ACTION_PATHS, buildItem(Material.ENDER_EYE, "&bPaths", List.of("&7Gestionar rutas cinemáticas.")));
-        inventory.setItem(SLOT_ACTION_KEYS, buildItem(Material.TRIPWIRE_HOOK, "&dLlaves", List.of("&7Buscar jugador y gestionar llaves.")));
+        inventory.setItem(SLOT_ACTION_CRATES, buildItem(Material.CHEST,
+                languageManager.getRaw("editor.menu.action.crates.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("editor.menu.action.crates.lore", java.util.Collections.emptyMap()))));
+        inventory.setItem(SLOT_ACTION_REWARDS, buildItem(Material.EMERALD,
+                languageManager.getRaw("editor.menu.action.rewards.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("editor.menu.action.rewards.lore", java.util.Collections.emptyMap()))));
+        inventory.setItem(SLOT_ACTION_PATHS, buildItem(Material.ENDER_EYE,
+                languageManager.getRaw("editor.menu.action.paths.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("editor.menu.action.paths.lore", java.util.Collections.emptyMap()))));
+        inventory.setItem(SLOT_ACTION_KEYS, buildItem(Material.TRIPWIRE_HOOK,
+                languageManager.getRaw("editor.menu.action.keys.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("editor.menu.action.keys.lore", java.util.Collections.emptyMap()))));
         fillNavigation(inventory);
-        inventory.setItem(SLOT_NAV_CLOSE, buildItem(Material.BARRIER, "&cCerrar", List.of("&7Salir del editor.")));
+        inventory.setItem(SLOT_NAV_CLOSE, buildItem(Material.BARRIER,
+                languageManager.getRaw("editor.menu.nav.close.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("editor.menu.nav.close.lore", java.util.Collections.emptyMap()))));
         player.openInventory(inventory);
     }
 

@@ -38,12 +38,10 @@ public class RewardEditorMenu implements Listener {
     private static final int SLOT_LIST_CREATE = 45;
     private static final int SLOT_LIST_DELETE = 47;
     private static final int SLOT_LIST_BACK = 49;
-    private static final int SLOT_LIST_REFRESH = 53;
     private static final int SLOT_DETAIL_DELETE = 18;
     private static final int SLOT_DETAIL_BACK = 22;
-    private static final int SLOT_DETAIL_REFRESH = 26;
-    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 48, 50, 51, 52};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
+    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52, 53};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25, 26};
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -68,7 +66,7 @@ public class RewardEditorMenu implements Listener {
         this.inputManager = inputManager;
         this.confirmationMenu = confirmationMenu;
         this.parent = parent;
-        this.poolTitle = TextUtil.color("&8Editor de Rewards");
+        this.poolTitle = TextUtil.color(text("editor.rewards.list.title"));
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -84,9 +82,12 @@ public class RewardEditorMenu implements Listener {
             }
         }
         fillListNavigation(inventory);
-        inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE, "&aCrear pool", List.of("&7Nuevo pool de rewards.")));
-        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
-        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE,
+                text("editor.rewards.list.create.name"),
+                List.of(text("editor.rewards.list.create.lore"))));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
+                text("editor.rewards.list.back.name"),
+                List.of(text("editor.rewards.list.back.lore"))));
         player.openInventory(inventory);
     }
 
@@ -107,10 +108,15 @@ public class RewardEditorMenu implements Listener {
             inventory.setItem(slot++, buildRewardItem(reward));
         }
         fillListNavigation(inventory);
-        inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE, "&aCrear reward", List.of("&7Agregar nueva reward.")));
-        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar pool", List.of("&7Eliminar pool actual.")));
-        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar a pools.")));
-        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE,
+                text("editor.rewards.pool.create-reward.name"),
+                List.of(text("editor.rewards.pool.create-reward.lore"))));
+        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE,
+                text("editor.rewards.pool.delete.name"),
+                List.of(text("editor.rewards.pool.delete.lore"))));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
+                text("editor.rewards.pool.back.name"),
+                List.of(text("editor.rewards.pool.back.lore"))));
         player.openInventory(inventory);
     }
 
@@ -127,47 +133,50 @@ public class RewardEditorMenu implements Listener {
                 }
             }
         }
-        Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color("&8Reward: " + rewardId));
-        inventory.setItem(9, buildItem(Material.NAME_TAG, "&eDisplay Name", List.of(
-                "&7Actual: &f" + (reward != null ? reward.displayName() : rewardId),
-                "&7Click para editar."
+        Inventory inventory = Bukkit.createInventory(player, 27, rewardTitle(rewardId));
+        inventory.setItem(9, buildItem(Material.NAME_TAG, text("editor.rewards.reward.detail.display-name.name"), List.of(
+                text("editor.common.current", Map.of("value", reward != null ? reward.displayName() : rewardId)),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(10, buildItem(Material.GOLD_NUGGET, "&eChance", List.of(
-                "&7Actual: &f" + (reward != null ? reward.chance() : 0),
-                "&7Click para editar."
+        inventory.setItem(10, buildItem(Material.GOLD_NUGGET, text("editor.rewards.reward.detail.chance.name"), List.of(
+                text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.chance() : 0))),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(11, buildItem(Material.CHEST, "&eItem", List.of(
-                "&7Actual: &f" + (reward != null ? reward.item() : "STONE"),
-                "&7Click para editar."
+        inventory.setItem(11, buildItem(Material.CHEST, text("editor.rewards.reward.detail.item.name"), List.of(
+                text("editor.common.current", Map.of("value", reward != null ? reward.item() : "STONE")),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(12, buildItem(Material.PAPER, "&eAmount", List.of(
-                "&7Actual: &f" + (reward != null ? reward.amount() : 1),
-                "&7Click para editar."
+        inventory.setItem(12, buildItem(Material.PAPER, text("editor.rewards.reward.detail.amount.name"), List.of(
+                text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.amount() : 1))),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(13, buildItem(Material.COMMAND_BLOCK, "&eCommands", List.of(
-                "&7Actual: &f" + (reward != null ? reward.commands().size() : 0),
-                "&7Click para editar."
+        inventory.setItem(13, buildItem(Material.COMMAND_BLOCK, text("editor.rewards.reward.detail.commands.name"), List.of(
+                text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.commands().size() : 0))),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(14, buildItem(Material.ENCHANTED_BOOK, "&eEnchantments", List.of(
-                "&7Actual: &f" + (reward != null ? reward.enchantments().size() : 0),
-                "&7Click para editar."
+        inventory.setItem(14, buildItem(Material.ENCHANTED_BOOK, text("editor.rewards.reward.detail.enchantments.name"), List.of(
+                text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.enchantments().size() : 0))),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(15, buildItem(Material.GLOWSTONE_DUST, "&eGlow", List.of(
-                "&7Actual: &f" + (reward != null && reward.glow()),
-                "&7Click para editar."
+        inventory.setItem(15, buildItem(Material.GLOWSTONE_DUST, text("editor.rewards.reward.detail.glow.name"), List.of(
+                text("editor.common.current", Map.of("value", String.valueOf(reward != null && reward.glow()))),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(16, buildItem(Material.SLIME_BALL, "&eCustom Model", List.of(
-                "&7Actual: &f" + (reward != null ? emptyFallback(reward.customModel()) : ""),
-                "&7Click para editar."
+        inventory.setItem(16, buildItem(Material.SLIME_BALL, text("editor.rewards.reward.detail.custom-model.name"), List.of(
+                text("editor.common.current", Map.of("value", reward != null ? emptyFallback(reward.customModel()) : "")),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(17, buildItem(Material.FILLED_MAP, "&eMap Image", List.of(
-                "&7Actual: &f" + (reward != null ? emptyFallback(reward.mapImage()) : ""),
-                "&7Click para editar."
+        inventory.setItem(17, buildItem(Material.FILLED_MAP, text("editor.rewards.reward.detail.map-image.name"), List.of(
+                text("editor.common.current", Map.of("value", reward != null ? emptyFallback(reward.mapImage()) : "")),
+                text("editor.common.click-edit")
         )));
         fillDetailNavigation(inventory);
-        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar reward", List.of("&7Eliminar reward actual.")));
-        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al pool.")));
-        inventory.setItem(SLOT_DETAIL_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar datos.")));
+        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE,
+                text("editor.rewards.reward.delete.name"),
+                List.of(text("editor.rewards.reward.delete.lore"))));
+        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
+                text("editor.rewards.reward.back.name"),
+                List.of(text("editor.rewards.reward.back.lore"))));
         player.openInventory(inventory);
     }
 
@@ -202,10 +211,6 @@ public class RewardEditorMenu implements Listener {
         }
         if (slot == SLOT_LIST_BACK) {
             parent.open(player);
-            return;
-        }
-        if (slot == SLOT_LIST_REFRESH) {
-            openPools(player);
             return;
         }
         List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
@@ -250,10 +255,6 @@ public class RewardEditorMenu implements Listener {
         }
         if (slot == SLOT_LIST_BACK) {
             openPools(player);
-            return;
-        }
-        if (slot == SLOT_LIST_REFRESH) {
-            openPoolDetail(player, poolId);
             return;
         }
         RewardPool pool = configLoader.getRewardPools().get(poolId);
@@ -304,17 +305,25 @@ public class RewardEditorMenu implements Listener {
     }
 
     private void confirmDeletePool(Player player, String poolId) {
-        confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar pool " + poolId, () -> {
+        confirmationMenu.open(
+                player,
+                languageManager.getRaw("editor.confirmation.title.delete", java.util.Collections.emptyMap()),
+                languageManager.getRaw("editor.reward.confirm.delete-pool", Map.of("id", poolId)),
+                () -> {
             deletePool(poolId);
-            player.sendMessage(Component.text("Pool eliminada y guardada en YAML."));
+            player.sendMessage(languageManager.getMessage("editor.reward.success.pool-deleted"));
             openPools(player);
         }, () -> openPoolDetail(player, poolId));
     }
 
     private void confirmDeleteReward(Player player, String poolId, String rewardId) {
-        confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar reward " + rewardId, () -> {
+        confirmationMenu.open(
+                player,
+                languageManager.getRaw("editor.confirmation.title.delete", java.util.Collections.emptyMap()),
+                languageManager.getRaw("editor.reward.confirm.delete-reward", Map.of("id", rewardId)),
+                () -> {
             deleteReward(poolId, rewardId);
-            player.sendMessage(Component.text("Reward eliminada y guardada en YAML."));
+            player.sendMessage(languageManager.getMessage("editor.reward.success.reward-deleted"));
             openPoolDetail(player, poolId);
         }, () -> openRewardDetail(player, poolId, rewardId));
     }
@@ -577,7 +586,6 @@ public class RewardEditorMenu implements Listener {
 
     private void fillListNavigation(Inventory inventory) {
         ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
-        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar", List.of("&7Usa el detalle para borrar.")));
         for (int slot : LIST_NAV_FILLER_SLOTS) {
             inventory.setItem(slot, filler);
         }
