@@ -92,9 +92,17 @@ public class CrateEditorMenu implements Listener {
                 text("editor.crates.detail.current", Map.of("value", crate != null ? crate.displayName() : crateId)),
                 text("editor.crates.detail.click-edit")
         )));
-        inventory.setItem(12, buildItem(Material.CHEST_MINECART, text("editor.crates.detail.rewards-pool"), List.of(
-                text("editor.crates.detail.current", Map.of("value", crate != null ? String.valueOf(crate.rewardsPool()) : "")),
-                text("editor.crates.detail.click-edit")
+        inventory.setItem(12, buildItem(Material.CHEST_MINECART, "&eRewards Pool", List.of(
+                "&7Actual: &f" + (crate != null ? crate.rewardsPool() : ""),
+                "&7Click para seleccionar."
+        )));
+        String currentPath = "";
+        if (crate != null && crate.animation() != null) {
+            currentPath = crate.animation().path();
+        }
+        inventory.setItem(13, buildItem(Material.ENDER_EYE, "&eCutscene Path", List.of(
+                "&7Actual: &f" + (currentPath == null || currentPath.isEmpty() ? "ninguno" : currentPath),
+                "&7Click para seleccionar."
         )));
         inventory.setItem(14, buildItem(Material.COMPARATOR, text("editor.crates.detail.type"), List.of(
                 text("editor.crates.detail.current", Map.of("value", crate != null ? crate.type().name() : "NORMAL")),
@@ -147,7 +155,17 @@ public class CrateEditorMenu implements Listener {
             return;
         }
         String crateId = activeCrate.get(player.getUniqueId());
-        if (crateId != null && viewTitle.equals(detailTitle(crateId))) {
+        if (crateId != null && viewTitle.equals(rewardsPoolTitle(crateId))) {
+            event.setCancelled(true);
+            handleRewardsPoolSelection(player, crateId, event.getSlot());
+            return;
+        }
+        if (crateId != null && viewTitle.equals(pathSelectorTitle(crateId))) {
+            event.setCancelled(true);
+            handlePathSelection(player, crateId, event.getSlot());
+            return;
+        }
+        if (crateId != null && viewTitle.equals(TextUtil.color("&8Crate: " + crateId))) {
             event.setCancelled(true);
             handleDetailClick(player, crateId, event.getSlot());
         }
@@ -193,8 +211,9 @@ public class CrateEditorMenu implements Listener {
 
     private void handleDetailClick(Player player, String crateId, int slot) {
         switch (slot) {
-            case 10 -> promptField(player, crateId, "display-name", "editor.crates.prompts.display-name");
-            case 12 -> promptField(player, crateId, "rewards-pool", "editor.crates.prompts.rewards-pool");
+            case 10 -> promptField(player, crateId, "display-name", "Display name nuevo");
+            case 12 -> openRewardsPoolSelector(player, crateId);
+            case 13 -> openPathSelector(player, crateId);
             case 14 -> toggleType(player, crateId);
             case 16 -> promptField(player, crateId, "open-mode", "editor.crates.prompts.open-mode");
             case 19 -> promptField(player, crateId, "cutscene.overlay-model", "editor.crates.prompts.cutscene-overlay");
@@ -205,6 +224,113 @@ public class CrateEditorMenu implements Listener {
             default -> {
             }
         }
+    }
+
+    private void openRewardsPoolSelector(Player player, String crateId) {
+        Inventory inventory = Bukkit.createInventory(player, 54, rewardsPoolTitle(crateId));
+        List<String> poolIds = new ArrayList<>(configLoader.getRewardPools().keySet());
+        poolIds.sort(String.CASE_INSENSITIVE_ORDER);
+        int slot = 0;
+        for (String poolId : poolIds) {
+            inventory.setItem(slot++, buildItem(Material.EMERALD, "&a" + poolId, List.of("&7Click para seleccionar.")));
+            if (slot >= 45) {
+                break;
+            }
+        }
+        CrateDefinition crate = configLoader.getCrates().get(crateId);
+        String currentPool = crate != null ? crate.rewardsPool() : "";
+        inventory.setItem(45, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar a la crate.")));
+        inventory.setItem(47, buildItem(Material.PAPER, "&bSelecciona un pool", List.of("&7Click en uno de la lista.")));
+        inventory.setItem(49, buildItem(Material.BARRIER, "&cSin pool", List.of(
+                "&7Actual: &f" + (currentPool == null || currentPool.isEmpty() ? "ninguno" : currentPool),
+                "&7Click para limpiar."
+        )));
+        inventory.setItem(53, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        player.openInventory(inventory);
+    }
+
+    private void openPathSelector(Player player, String crateId) {
+        Inventory inventory = Bukkit.createInventory(player, 54, pathSelectorTitle(crateId));
+        List<String> pathIds = new ArrayList<>(configLoader.getPaths().keySet());
+        pathIds.sort(String.CASE_INSENSITIVE_ORDER);
+        int slot = 0;
+        for (String pathId : pathIds) {
+            inventory.setItem(slot++, buildItem(Material.ENDER_EYE, "&b" + pathId, List.of("&7Click para seleccionar.")));
+            if (slot >= 45) {
+                break;
+            }
+        }
+        CrateDefinition crate = configLoader.getCrates().get(crateId);
+        String currentPath = "";
+        if (crate != null && crate.animation() != null) {
+            currentPath = crate.animation().path();
+        }
+        inventory.setItem(45, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar a la crate.")));
+        inventory.setItem(47, buildItem(Material.PAPER, "&bSelecciona un path", List.of("&7Click en una ruta.")));
+        inventory.setItem(49, buildItem(Material.BARRIER, "&cSin path", List.of(
+                "&7Actual: &f" + (currentPath == null || currentPath.isEmpty() ? "ninguno" : currentPath),
+                "&7Click para limpiar."
+        )));
+        inventory.setItem(53, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        player.openInventory(inventory);
+    }
+
+    private void handleRewardsPoolSelection(Player player, String crateId, int slot) {
+        if (slot == 45) {
+            openDetail(player, crateId);
+            return;
+        }
+        if (slot == 49) {
+            confirmSelection(player, crateId, "rewards-pool", "limpiar rewards pool", "");
+            return;
+        }
+        if (slot == 53) {
+            openRewardsPoolSelector(player, crateId);
+            return;
+        }
+        List<String> poolIds = new ArrayList<>(configLoader.getRewardPools().keySet());
+        poolIds.sort(String.CASE_INSENSITIVE_ORDER);
+        if (slot < 0 || slot >= poolIds.size() || slot >= 45) {
+            return;
+        }
+        String poolId = poolIds.get(slot);
+        confirmSelection(player, crateId, "rewards-pool", "cambiar rewards pool a " + poolId, poolId);
+    }
+
+    private void handlePathSelection(Player player, String crateId, int slot) {
+        if (slot == 45) {
+            openDetail(player, crateId);
+            return;
+        }
+        if (slot == 49) {
+            confirmSelection(player, crateId, "animation.path", "limpiar cutscene path", "");
+            return;
+        }
+        if (slot == 53) {
+            openPathSelector(player, crateId);
+            return;
+        }
+        List<String> pathIds = new ArrayList<>(configLoader.getPaths().keySet());
+        pathIds.sort(String.CASE_INSENSITIVE_ORDER);
+        if (slot < 0 || slot >= pathIds.size() || slot >= 45) {
+            return;
+        }
+        String pathId = pathIds.get(slot);
+        confirmSelection(player, crateId, "animation.path", "cambiar cutscene path a " + pathId, pathId);
+    }
+
+    private void confirmSelection(Player player, String crateId, String field, String label, Object value) {
+        confirmationMenu.open(
+                player,
+                "&8Confirmar cambio",
+                "Actualizar " + label + " de " + crateId,
+                () -> {
+                    updateCrateField(crateId, field, value);
+                    player.sendMessage(Component.text("Crate actualizada y guardada en YAML."));
+                    openDetail(player, crateId);
+                },
+                () -> openDetail(player, crateId)
+        );
     }
 
     private void promptCreate(Player player) {
@@ -400,5 +526,13 @@ public class CrateEditorMenu implements Listener {
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    private Component rewardsPoolTitle(String crateId) {
+        return TextUtil.color("&8Rewards pool: " + crateId);
+    }
+
+    private Component pathSelectorTitle(String crateId) {
+        return TextUtil.color("&8Cutscene path: " + crateId);
     }
 }
