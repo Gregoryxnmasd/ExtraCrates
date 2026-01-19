@@ -1,6 +1,7 @@
 package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
+import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.util.TextUtil;
 import org.bukkit.Bukkit;
@@ -22,10 +23,12 @@ import java.util.UUID;
 public class ConfirmationMenu implements Listener {
     private final ExtraCratesPlugin plugin;
     private final LanguageManager languageManager;
+    private final ConfigLoader configLoader;
     private final Map<UUID, ConfirmationRequest> confirmations = new HashMap<>();
 
     public ConfirmationMenu(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
         this.plugin = plugin;
+        this.configLoader = configLoader;
         this.languageManager = plugin.getLanguageManager();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -36,8 +39,12 @@ public class ConfirmationMenu implements Listener {
             return;
         }
         Inventory inventory = Bukkit.createInventory(player, 9, TextUtil.color(title));
-        inventory.setItem(3, buildItem(Material.LIME_WOOL, languageManager.getRaw("editor.confirmation.confirm-button"), description));
-        inventory.setItem(5, buildItem(Material.RED_WOOL, languageManager.getRaw("editor.confirmation.cancel-button"), languageManager.getRaw("editor.confirmation.cancel-description")));
+        inventory.setItem(3, buildItem(Material.LIME_WOOL,
+                languageManager.getRaw("editor.confirmation.confirm-button", java.util.Collections.emptyMap()),
+                description));
+        inventory.setItem(5, buildItem(Material.RED_WOOL,
+                languageManager.getRaw("editor.confirmation.cancel-button", java.util.Collections.emptyMap()),
+                languageManager.getRaw("editor.confirmation.cancel-description", java.util.Collections.emptyMap())));
         confirmations.put(player.getUniqueId(), new ConfirmationRequest(title, onConfirm, onCancel));
         player.openInventory(inventory);
     }

@@ -27,11 +27,25 @@ public class EditorInputManager implements Listener {
     }
 
     public void requestInput(Player player, String promptKey, Consumer<String> onInput) {
-        requestInput(player, promptKey, Collections.emptyMap(), onInput);
+        requestInput(player, promptKey, Collections.emptyMap(), onInput, null);
+    }
+
+    public void requestInput(Player player, String promptKey, Consumer<String> onInput, Runnable reopenAction) {
+        requestInput(player, promptKey, Collections.emptyMap(), onInput, reopenAction);
     }
 
     public void requestInput(Player player, String promptKey, Map<String, String> placeholders, Consumer<String> onInput) {
-        pendingInputs.put(player.getUniqueId(), new InputRequest(onInput));
+        requestInput(player, promptKey, placeholders, onInput, null);
+    }
+
+    public void requestInput(
+            Player player,
+            String promptKey,
+            Map<String, String> placeholders,
+            Consumer<String> onInput,
+            Runnable reopenAction
+    ) {
+        pendingInputs.put(player.getUniqueId(), new InputRequest(onInput, reopenAction));
         String prompt = languageManager.getRaw(promptKey, placeholders);
         player.sendMessage(languageManager.getMessage("editor.input.prompt", Map.of("prompt", prompt)));
     }
@@ -50,11 +64,11 @@ public class EditorInputManager implements Listener {
         String message = PlainTextComponentSerializer.plainText().serialize(event.message()).trim();
         pendingInputs.remove(event.getPlayer().getUniqueId());
         plugin.getServer().getScheduler().runTask(plugin, () -> {
-            if (request.reopenAction() != null) {
-                request.reopenAction().run();
-            }
             if (message.equalsIgnoreCase("cancel")) {
                 event.getPlayer().sendMessage(languageManager.getMessage("editor.input.cancelled"));
+                if (request.reopenAction() != null) {
+                    request.reopenAction().run();
+                }
                 return;
             }
             request.onInput().accept(message);
@@ -66,9 +80,6 @@ public class EditorInputManager implements Listener {
         pendingInputs.remove(event.getPlayer().getUniqueId());
     }
 
-    private record InputRequest(Consumer<String> onInput, Runnable reopenAction, MenuContext previousMenu) {
-    }
-
-    private record MenuContext(Component title, String state) {
+    private record InputRequest(Consumer<String> onInput, Runnable reopenAction) {
     }
 }

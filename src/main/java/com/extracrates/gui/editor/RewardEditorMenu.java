@@ -51,7 +51,6 @@ public class RewardEditorMenu implements Listener {
     private final EditorInputManager inputManager;
     private final ConfirmationMenu confirmationMenu;
     private final EditorMenu parent;
-    private final LanguageManager languageManager;
     private final Component poolTitle;
     private final Map<UUID, String> activePool = new HashMap<>();
     private final Map<UUID, String> activeReward = new HashMap<>();
@@ -69,7 +68,6 @@ public class RewardEditorMenu implements Listener {
         this.inputManager = inputManager;
         this.confirmationMenu = confirmationMenu;
         this.parent = parent;
-        this.languageManager = plugin.getLanguageManager();
         this.poolTitle = TextUtil.color("&8Editor de Rewards");
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
@@ -219,7 +217,7 @@ public class RewardEditorMenu implements Listener {
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.delete"),
+                    languageManager.getRaw("editor.confirmation.title.delete", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.reward.confirm.delete-pool", Map.of("id", pool.id())),
                     () -> {
                         deletePool(pool.id());
@@ -270,7 +268,7 @@ public class RewardEditorMenu implements Listener {
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.delete"),
+                    languageManager.getRaw("editor.confirmation.title.delete", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.reward.confirm.delete-reward", Map.of("id", reward.id())),
                     () -> {
                         deleteReward(poolId, reward.id());
@@ -337,7 +335,7 @@ public class RewardEditorMenu implements Listener {
             }
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.create"),
+                    languageManager.getRaw("editor.confirmation.title.create", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.reward.confirm.create-pool", Map.of("id", input)),
                     () -> {
                         createPool(input);
@@ -365,7 +363,7 @@ public class RewardEditorMenu implements Listener {
             }
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.clone"),
+                    languageManager.getRaw("editor.confirmation.title.clone", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.reward.confirm.clone-pool", Map.of("source", sourceId, "target", input)),
                     () -> {
                         clonePool(sourceId, input);
@@ -384,7 +382,7 @@ public class RewardEditorMenu implements Listener {
         }
         inputManager.requestInput(player, "editor.reward.prompt.roll-count", input -> confirmationMenu.open(
                 player,
-                languageManager.getRaw("editor.confirmation.title.change"),
+                languageManager.getRaw("editor.confirmation.title.change", java.util.Collections.emptyMap()),
                 languageManager.getRaw("editor.reward.confirm.update-roll-count", Map.of("id", poolId)),
                 () -> {
                     updatePoolField(poolId, "roll-count", parseInt(input));
@@ -411,7 +409,7 @@ public class RewardEditorMenu implements Listener {
             }
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.create"),
+                    languageManager.getRaw("editor.confirmation.title.create", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.reward.confirm.create-reward", Map.of("id", input)),
                     () -> {
                         createReward(poolId, input);
@@ -439,7 +437,7 @@ public class RewardEditorMenu implements Listener {
             }
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.clone"),
+                    languageManager.getRaw("editor.confirmation.title.clone", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.reward.confirm.clone-reward", Map.of("source", rewardId, "target", input)),
                     () -> {
                         cloneReward(poolId, rewardId, input);
@@ -464,7 +462,7 @@ public class RewardEditorMenu implements Listener {
             }
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.change"),
+                    languageManager.getRaw("editor.confirmation.title.change", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.reward.confirm.update-field", Map.of("field", field, "id", rewardId)),
                     () -> {
                         updateRewardField(poolId, rewardId, field, validation.value());
