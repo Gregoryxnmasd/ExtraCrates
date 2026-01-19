@@ -46,7 +46,7 @@ public class RouteEditorManager {
                 pathId,
                 particle,
                 particleName,
-                RouteCaptureMode.BLOCK_CLICK,
+                RouteCaptureMode.FREE_POSITION,
                 RouteCaptureSource.PLAYER
         );
         sessions.put(player.getUniqueId(), session);

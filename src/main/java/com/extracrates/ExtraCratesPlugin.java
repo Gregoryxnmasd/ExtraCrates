@@ -79,7 +79,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         ConfirmationMenu confirmationMenu = new ConfirmationMenu(this, configLoader);
         editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu, sessionManager);
 
-        PluginCommand crateCommand = getCommand("crate");
+        PluginCommand crateCommand = getCommand("crates");
         if (crateCommand != null) {
             CrateCommand executor = new CrateCommand(
                     this,

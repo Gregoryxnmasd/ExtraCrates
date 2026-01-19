@@ -5,13 +5,10 @@ import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.runtime.core.SessionManager;
-import com.extracrates.storage.CrateStorage;
-import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -30,12 +27,12 @@ import java.util.UUID;
 public class KeyManagerMenu implements Listener {
     private static final int LIST_SIZE = 54;
     // Layout: acciones principales al centro, navegación en fila inferior.
-    private static final int SLOT_LIST_DELETE = 47;
+    private static final int SLOT_LIST_DELETE = 53;
     private static final int SLOT_LIST_BACK = 49;
-    private static final int SLOT_DETAIL_DELETE = 18;
-    private static final int SLOT_DETAIL_BACK = 22;
-    private static final int[] LIST_NAV_FILLER_SLOTS = {45, 46, 48, 50, 51, 52, 53};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25, 26};
+    private static final int SLOT_DETAIL_BACK = 18;
+    private static final int SLOT_DETAIL_DELETE = 26;
+    private static final int[] LIST_NAV_FILLER_SLOTS = {45, 46, 48, 50, 51, 52};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -60,7 +57,7 @@ public class KeyManagerMenu implements Listener {
         this.sessionManager = sessionManager;
         this.inputManager = inputManager;
         this.parent = parent;
-        this.searchTitle = TextUtil.color(text("editor.keys.title.search"));
+        this.searchTitle = TextUtil.colorNoItalic(text("editor.keys.title.search"));
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -252,47 +249,26 @@ public class KeyManagerMenu implements Listener {
             String value = input.trim();
             if (value.isEmpty()) {
                 player.sendMessage(languageManager.getMessage("editor.key.error.invalid-player"));
-                openSearch(player);
-                return;
-            }
-            if (sessionManager.isStorageEnabled()) {
-                OfflinePlayer offline = Bukkit.getOfflinePlayer(value);
-                if (!offline.isOnline() && !offline.hasPlayedBefore()) {
-                    player.sendMessage(languageManager.getMessage("editor.key.error.player-not-found"));
-                    openSearch(player);
-                    return;
-                }
-                String displayName = offline.getName() != null ? offline.getName() : value;
-                activeTargets.put(player.getUniqueId(), new TargetSelection(offline.getUniqueId(), displayName));
-                openCrateList(player, activeTargets.get(player.getUniqueId()));
                 return;
             }
             Player target = Bukkit.getPlayerExact(value);
             if (target == null) {
                 player.sendMessage(languageManager.getMessage("editor.key.error.player-online-required"));
-                openSearch(player);
                 return;
             }
             activeTargets.put(player.getUniqueId(), new TargetSelection(target.getUniqueId(), target.getName()));
-            openCrateList(player, activeTargets.get(player.getUniqueId()));
-        }, () -> openSearch(player));
+        }, () -> {
+            TargetSelection target = activeTargets.get(player.getUniqueId());
+            if (target != null) {
+                openCrateList(player, target);
+            } else {
+                openSearch(player);
+            }
+        });
     }
 
     private void adjustKeys(Player editor, TargetSelection target, CrateDefinition crate, int delta) {
         if (delta == 0) {
-            return;
-        }
-        if (sessionManager.isStorageEnabled()) {
-            CrateStorage storage = sessionManager.getStorage();
-            if (delta > 0) {
-                storage.addKey(target.id(), crate.id(), delta);
-            } else {
-                boolean removed = storage.consumeKey(target.id(), crate.id());
-                if (!removed) {
-                    editor.sendMessage(languageManager.getMessage("editor.key.error.no-keys"));
-                }
-            }
-            openCrateDetail(editor, target, crate.id());
             return;
         }
         Player onlineTarget = Bukkit.getPlayer(target.id());
@@ -310,9 +286,6 @@ public class KeyManagerMenu implements Listener {
     }
 
     private int getKeyCount(TargetSelection target, CrateDefinition crate) {
-        if (sessionManager.isStorageEnabled()) {
-            return sessionManager.getStorage().getKeyCount(target.id(), crate.id());
-        }
         Player onlineTarget = Bukkit.getPlayer(target.id());
         if (onlineTarget == null) {
             return 0;
@@ -329,57 +302,29 @@ public class KeyManagerMenu implements Listener {
     }
 
     private int countInventoryKeys(Player player, CrateDefinition crate) {
-        int modelData = resolveKeyModelData(crate);
         int count = 0;
         for (ItemStack item : player.getInventory().getContents()) {
-            if (item == null || item.getType() != crate.keyMaterial()) {
-                continue;
+            if (sessionManager.isKeyItem(item, crate)) {
+                count += item.getAmount();
             }
-            if (modelData >= 0) {
-                if (item.getItemMeta() == null || !item.getItemMeta().hasCustomModelData()) {
-                    continue;
-                }
-                if (item.getItemMeta().getCustomModelData() != modelData) {
-                    continue;
-                }
-            }
-            count += item.getAmount();
         }
         return count;
     }
 
     private void giveInventoryKey(Player editor, Player target, CrateDefinition crate) {
-        ItemStack item = new ItemStack(crate.keyMaterial());
-        ItemMeta meta = item.getItemMeta();
-        int modelData = resolveKeyModelData(crate);
-        if (meta != null) {
-            meta.displayName(TextUtil.color(text("editor.keys.item.key-name", Map.of("crate", crate.displayName()))));
-            if (modelData >= 0) {
-                meta.setCustomModelData(modelData);
-            }
-            item.setItemMeta(meta);
-        }
-        Map<Integer, ItemStack> leftover = target.getInventory().addItem(item);
-        if (!leftover.isEmpty()) {
+        int before = target.getInventory().firstEmpty();
+        sessionManager.grantKey(target, crate, 1);
+        if (before == -1) {
             editor.sendMessage(languageManager.getMessage("editor.key.error.inventory-full"));
         }
     }
 
     private void removeInventoryKey(Player editor, Player target, CrateDefinition crate) {
-        int modelData = resolveKeyModelData(crate);
         ItemStack[] contents = target.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {
             ItemStack item = contents[i];
-            if (item == null || item.getType() != crate.keyMaterial()) {
+            if (!sessionManager.isKeyItem(item, crate)) {
                 continue;
-            }
-            if (modelData >= 0) {
-                if (item.getItemMeta() == null || !item.getItemMeta().hasCustomModelData()) {
-                    continue;
-                }
-                if (item.getItemMeta().getCustomModelData() != modelData) {
-                    continue;
-                }
             }
             int amount = item.getAmount();
             if (amount <= 1) {
@@ -393,19 +338,12 @@ public class KeyManagerMenu implements Listener {
         editor.sendMessage(languageManager.getMessage("editor.key.error.no-keys"));
     }
 
-    private int resolveKeyModelData(CrateDefinition crate) {
-        if (crate.keyModel() == null || crate.keyModel().isEmpty()) {
-            return -1;
-        }
-        return ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.keyModel());
-    }
-
     private Component listTitle(TargetSelection target) {
-        return TextUtil.color(text("editor.keys.title.list", Map.of("player", target.name())));
+        return TextUtil.colorNoItalic(text("editor.keys.title.list", Map.of("player", target.name())));
     }
 
     private Component detailTitle(TargetSelection target, String crateId) {
-        return TextUtil.color(text("editor.keys.title.detail", Map.of("crate", crateId, "player", target.name())));
+        return TextUtil.colorNoItalic(text("editor.keys.title.detail", Map.of("crate", crateId, "player", target.name())));
     }
 
     private void fillListNavigation(Inventory inventory) {
@@ -426,9 +364,9 @@ public class KeyManagerMenu implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(TextUtil.color(name));
+            meta.displayName(TextUtil.colorNoItalic(name));
             if (loreLines != null && !loreLines.isEmpty()) {
-                meta.lore(loreLines.stream().map(TextUtil::color).toList());
+                meta.lore(loreLines.stream().map(TextUtil::colorNoItalic).toList());
             }
             item.setItemMeta(meta);
         }

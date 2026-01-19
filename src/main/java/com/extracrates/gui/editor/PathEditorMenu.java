@@ -35,10 +35,10 @@ public class PathEditorMenu implements Listener {
     // Layout: acciones principales al centro, navegación en fila inferior.
     private static final int SLOT_LIST_CREATE = 45;
     private static final int SLOT_LIST_BACK = 49;
-    private static final int SLOT_DETAIL_DELETE = 18;
-    private static final int SLOT_DETAIL_BACK = 22;
-    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52, 53};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25, 26};
+    private static final int SLOT_DETAIL_BACK = 18;
+    private static final int SLOT_DETAIL_DELETE = 26;
+    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -63,7 +63,7 @@ public class PathEditorMenu implements Listener {
         this.inputManager = inputManager;
         this.confirmationMenu = confirmationMenu;
         this.parent = parent;
-        this.title = TextUtil.color(text("editor.paths.list.title"));
+        this.title = TextUtil.colorNoItalic(text("editor.paths.list.title"));
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -71,7 +71,8 @@ public class PathEditorMenu implements Listener {
         Inventory inventory = Bukkit.createInventory(player, 54, title);
         refreshPathCache();
         List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
-        paths.sort(Comparator.comparing(CutscenePath::getId));
+        paths.sort(Comparator.comparing((CutscenePath path) -> resolveCreatedAt(path.getId()))
+                .thenComparing(CutscenePath::getId, String.CASE_INSENSITIVE_ORDER));
         int slot = 0;
         for (CutscenePath path : paths) {
             inventory.setItem(slot++, buildPathItem(path));
@@ -96,25 +97,28 @@ public class PathEditorMenu implements Listener {
         Inventory inventory = Bukkit.createInventory(player, 27, detailTitle(pathId));
         inventory.setItem(9, buildItem(Material.MAP, text("editor.paths.detail.edit-points.name"), List.of(
                 text("editor.common.click-start-editor"),
-                text("editor.paths.detail.edit-points.block-mode"),
                 text("editor.paths.detail.edit-points.free-mode"),
                 text("editor.paths.detail.edit-points.source"),
                 text("editor.paths.detail.edit-points.save")
         )));
         inventory.setItem(10, buildItem(Material.CLOCK, text("editor.paths.detail.duration.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(path != null ? path.getDurationSeconds() : 4.0))),
+                text("editor.paths.detail.duration.desc"),
                 text("editor.common.click-edit")
         )));
         inventory.setItem(11, buildItem(Material.PAPER, text("editor.paths.detail.smoothing.name"), List.of(
                 text("editor.common.current", Map.of("value", path != null ? path.getSmoothing() : "linear")),
+                text("editor.paths.detail.smoothing.desc"),
                 text("editor.common.click-edit")
         )));
         inventory.setItem(12, buildItem(Material.FIREWORK_STAR, text("editor.paths.detail.particles.name"), List.of(
                 text("editor.common.current", Map.of("value", path != null ? path.getParticlePreview() : "")),
+                text("editor.paths.detail.particles.desc"),
                 text("editor.common.click-edit")
         )));
         inventory.setItem(13, buildItem(Material.REPEATER, text("editor.paths.detail.constant-speed.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(path != null && path.isConstantSpeed()))),
+                text("editor.paths.detail.constant-speed.desc"),
                 text("editor.common.click-toggle")
         )));
         inventory.setItem(14, buildItem(Material.ENDER_EYE, text("editor.paths.detail.preview.name"), List.of(
@@ -123,6 +127,7 @@ public class PathEditorMenu implements Listener {
         )));
         inventory.setItem(15, buildItem(Material.COMPARATOR, text("editor.paths.detail.step-resolution.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(path != null ? path.getStepResolution() : 0.15))),
+                text("editor.paths.detail.step-resolution.desc"),
                 text("editor.common.click-edit")
         )));
         fillDetailNavigation(inventory);
@@ -163,7 +168,8 @@ public class PathEditorMenu implements Listener {
             return;
         }
         List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
-        paths.sort(Comparator.comparing(CutscenePath::getId));
+        paths.sort(Comparator.comparing((CutscenePath path) -> resolveCreatedAt(path.getId()))
+                .thenComparing(CutscenePath::getId, String.CASE_INSENSITIVE_ORDER));
         if (slot < 0 || slot >= paths.size() || slot >= 45) {
             return;
         }
@@ -231,18 +237,9 @@ public class PathEditorMenu implements Listener {
                 player.sendMessage(languageManager.getMessage("editor.path.error.already-exists"));
                 return;
             }
-            confirmationMenu.open(
-                    player,
-                    languageManager.getRaw("editor.confirmation.title.create", java.util.Collections.emptyMap()),
-                    languageManager.getRaw("editor.path.confirm.create", Map.of("id", input)),
-                    () -> {
-                        createPath(input);
-                        player.sendMessage(languageManager.getMessage("editor.path.success.created"));
-                        open(player);
-                    },
-                    () -> open(player)
-            );
-        });
+            createPath(input);
+            player.sendMessage(languageManager.getMessage("editor.path.success.created"));
+        }, () -> open(player));
     }
 
     private void promptClone(Player player, String sourceId) {
@@ -259,18 +256,9 @@ public class PathEditorMenu implements Listener {
                 player.sendMessage(languageManager.getMessage("editor.path.error.already-exists"));
                 return;
             }
-            confirmationMenu.open(
-                    player,
-                    languageManager.getRaw("editor.confirmation.title.clone", java.util.Collections.emptyMap()),
-                    languageManager.getRaw("editor.path.confirm.clone", Map.of("source", sourceId, "target", input)),
-                    () -> {
-                        clonePath(sourceId, input);
-                        player.sendMessage(languageManager.getMessage("editor.path.success.cloned"));
-                        open(player);
-                    },
-                    () -> open(player)
-            );
-        });
+            clonePath(sourceId, input);
+            player.sendMessage(languageManager.getMessage("editor.path.success.cloned"));
+        }, () -> open(player));
     }
 
     private void promptField(Player player, String pathId, String field, String promptKey) {
@@ -278,37 +266,22 @@ public class PathEditorMenu implements Listener {
             player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, promptKey, input -> confirmationMenu.open(
-                player,
-                languageManager.getRaw("editor.confirmation.title.change", java.util.Collections.emptyMap()),
-                languageManager.getRaw("editor.path.confirm.update-field", Map.of("field", field, "id", pathId)),
-                () -> {
-                    Object value = input;
-                    if (field.equals("duration-seconds") || field.equals("step-resolution")) {
-                        value = parseDouble(input);
-                    }
-                    updatePathField(pathId, field, value);
-                    player.sendMessage(languageManager.getMessage("editor.path.success.updated"));
-                    openDetail(player, pathId);
-                },
-                () -> openDetail(player, pathId)
-        ), () -> openDetail(player, pathId));
+        inputManager.requestInput(player, promptKey, input -> {
+            Object value = input;
+            if (field.equals("duration-seconds") || field.equals("step-resolution")) {
+                value = parseDouble(input);
+            }
+            updatePathField(pathId, field, value);
+            player.sendMessage(languageManager.getMessage("editor.path.success.updated"));
+        }, () -> openDetail(player, pathId));
     }
 
     private void toggleConstantSpeed(Player player, String pathId) {
         CutscenePath path = configLoader.getPaths().get(pathId);
         boolean next = path == null || !path.isConstantSpeed();
-        confirmationMenu.open(
-                player,
-                languageManager.getRaw("editor.confirmation.title.change", java.util.Collections.emptyMap()),
-                languageManager.getRaw("editor.path.confirm.change-constant-speed", Map.of("value", Boolean.toString(next))),
-                () -> {
-                    updatePathField(pathId, "constant-speed", next);
-                    player.sendMessage(languageManager.getMessage("editor.path.success.constant-speed-updated"));
-                    openDetail(player, pathId);
-                },
-                () -> openDetail(player, pathId)
-        );
+        updatePathField(pathId, "constant-speed", next);
+        player.sendMessage(languageManager.getMessage("editor.path.success.constant-speed-updated"));
+        openDetail(player, pathId);
     }
 
     private void startPointEditing(Player player, String pathId) {
@@ -368,6 +341,7 @@ public class PathEditorMenu implements Listener {
         config.set(path + ".smoothing", "linear");
         config.set(path + ".particle-preview", "");
         config.set(path + ".points", new ArrayList<>());
+        config.set(path + ".created-at", System.currentTimeMillis());
         saveConfig(config);
     }
 
@@ -377,6 +351,7 @@ public class PathEditorMenu implements Listener {
         String targetPath = "paths." + targetId;
         Object data = config.get(sourcePath);
         config.set(targetPath, data);
+        config.set(targetPath + ".created-at", System.currentTimeMillis());
         saveConfig(config);
     }
 
@@ -416,7 +391,9 @@ public class PathEditorMenu implements Listener {
         lore.add(text("editor.paths.list.item.lore.id", Map.of("id", path.getId())));
         lore.add(text("editor.paths.list.item.lore.duration", Map.of("duration", String.valueOf(path.getDurationSeconds()))));
         lore.add(text("editor.paths.list.item.lore.points", Map.of("points", String.valueOf(path.getPoints().size()))));
-        lore.add(text("editor.paths.list.item.lore.hint"));
+        lore.add(text("editor.common.action.left-edit"));
+        lore.add(text("editor.common.action.right-clone"));
+        lore.add(text("editor.common.action.shift-right-delete"));
         return buildItem(Material.ENDER_EYE, "&b" + path.getId(), lore);
     }
 
@@ -438,9 +415,9 @@ public class PathEditorMenu implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(TextUtil.color(name));
+            meta.displayName(TextUtil.colorNoItalic(name));
             if (loreLines != null && !loreLines.isEmpty()) {
-                meta.lore(loreLines.stream().map(TextUtil::color).toList());
+                meta.lore(loreLines.stream().map(TextUtil::colorNoItalic).toList());
             }
             item.setItemMeta(meta);
         }
@@ -456,7 +433,7 @@ public class PathEditorMenu implements Listener {
     }
 
     private Component detailTitle(String pathId) {
-        return TextUtil.color(text("editor.paths.detail.title", Map.of("path", pathId)));
+        return TextUtil.colorNoItalic(text("editor.paths.detail.title", Map.of("path", pathId)));
     }
 
     private String text(String key) {
@@ -465,5 +442,10 @@ public class PathEditorMenu implements Listener {
 
     private String text(String key, Map<String, String> placeholders) {
         return languageManager.getRaw(key, placeholders);
+    }
+
+    private long resolveCreatedAt(String pathId) {
+        FileConfiguration config = loadConfig();
+        return config.getLong("paths." + pathId + ".created-at", 0L);
     }
 }

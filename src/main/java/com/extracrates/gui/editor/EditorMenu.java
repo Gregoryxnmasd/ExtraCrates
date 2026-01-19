@@ -45,7 +45,7 @@ public class EditorMenu implements Listener {
     ) {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
-        this.title = TextUtil.color(languageManager.getRaw("editor.menu.title", java.util.Collections.emptyMap()));
+        this.title = TextUtil.colorNoItalic(languageManager.getRaw("editor.menu.title", java.util.Collections.emptyMap()));
         this.crateEditorMenu = new CrateEditorMenu(plugin, configLoader, inputManager, confirmationMenu, this);
         this.rewardEditorMenu = new RewardEditorMenu(plugin, configLoader, inputManager, confirmationMenu, this);
         this.pathEditorMenu = new PathEditorMenu(plugin, configLoader, inputManager, confirmationMenu, this);
@@ -105,9 +105,9 @@ public class EditorMenu implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(TextUtil.color(name));
+            meta.displayName(TextUtil.colorNoItalic(name));
             if (loreLines != null && !loreLines.isEmpty()) {
-                meta.lore(loreLines.stream().map(TextUtil::color).toList());
+                meta.lore(loreLines.stream().map(TextUtil::colorNoItalic).toList());
             }
             item.setItemMeta(meta);
         }

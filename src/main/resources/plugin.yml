@@ -6,9 +6,10 @@ author: Savaduki
 api-version: '1.21'
 softdepend: [ProtocolLib]
 commands:
-  crate:
+  crates:
     description: Manage crates and their main options.
     usage: /<command> <gui|open|preview|cutscene|reload|givekey|route|sync|migrate>
+    aliases: [crate, extracrates]
 permissions:
   extracrates.gui:
     description: Allows opening the crates GUI.

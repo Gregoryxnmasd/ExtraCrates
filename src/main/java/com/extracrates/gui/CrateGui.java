@@ -19,6 +19,10 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+
+import java.io.File;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -61,10 +65,12 @@ public class CrateGui implements Listener {
     public void open(@NotNull Player player, int pageIndex) {
         String title = configLoader.getMainConfig().getString("gui.title", "&8ExtraCrates");
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
+        crates.sort(Comparator.comparing((CrateDefinition crate) -> resolveCreatedAt(crate.id()))
+                .thenComparing(CrateDefinition::id, String.CASE_INSENSITIVE_ORDER));
         int totalPages = Math.max(1, (int) Math.ceil(crates.size() / (double) PAGE_SIZE));
         int safePageIndex = Math.max(0, Math.min(pageIndex, totalPages - 1));
         CrateGuiHolder holder = new CrateGuiHolder(safePageIndex);
-        Inventory inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, TextUtil.color(title));
+        Inventory inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, TextUtil.colorNoItalic(title));
         holder.setInventory(inventory);
         int startIndex = safePageIndex * PAGE_SIZE;
         int endIndex = Math.min(startIndex + PAGE_SIZE, crates.size());
@@ -74,17 +80,17 @@ public class CrateGui implements Listener {
             ItemStack item = new ItemStack(Material.CHEST);
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
-                meta.displayName(TextUtil.color(crate.displayName()));
+                meta.displayName(TextUtil.colorNoItalic(crate.displayName()));
                 List<Component> lore = new ArrayList<>();
-                lore.add(TextUtil.color(languageManager.getRaw(
+                lore.add(TextUtil.colorNoItalic(languageManager.getRaw(
                         "gui.crate.list.item-lore.id",
                         java.util.Map.of("id", crate.id())
                 )));
-                lore.add(TextUtil.color(languageManager.getRaw(
+                lore.add(TextUtil.colorNoItalic(languageManager.getRaw(
                         "gui.crate.list.item-lore.type",
                         java.util.Map.of("type", crate.type().name())
                 )));
-                lore.add(TextUtil.color(languageManager.getRaw(
+                lore.add(TextUtil.colorNoItalic(languageManager.getRaw(
                         "gui.crate.list.item-lore.preview-hint",
                         java.util.Collections.emptyMap()
                 )));
@@ -206,7 +212,7 @@ public class CrateGui implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(TextUtil.color(name));
+            meta.displayName(TextUtil.colorNoItalic(name));
             item.setItemMeta(meta);
         }
         return item;
@@ -216,8 +222,8 @@ public class CrateGui implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(TextUtil.color(name));
-            meta.lore(loreLines.stream().map(TextUtil::color).toList());
+            meta.displayName(TextUtil.colorNoItalic(name));
+            meta.lore(loreLines.stream().map(TextUtil::colorNoItalic).toList());
             item.setItemMeta(meta);
         }
         return item;
@@ -225,7 +231,7 @@ public class CrateGui implements Listener {
 
     private void openActionMenu(@NotNull Player player, @NotNull CrateDefinition crate, int pageIndex) {
         CrateActionHolder holder = new CrateActionHolder(pageIndex, crate.id());
-        Inventory inventory = Bukkit.createInventory(holder, ACTION_MENU_SIZE, TextUtil.color(languageManager.getRaw(
+        Inventory inventory = Bukkit.createInventory(holder, ACTION_MENU_SIZE, TextUtil.colorNoItalic(languageManager.getRaw(
                 "gui.crate.action.title",
                 java.util.Map.of("crate", crate.displayName())
         )));
@@ -262,7 +268,7 @@ public class CrateGui implements Listener {
         int totalPages = Math.max(1, (int) Math.ceil(filtered.size() / (double) REWARD_PAGE_SIZE));
         int safeRewardPage = Math.max(0, Math.min(rewardPageIndex, totalPages - 1));
         RewardPreviewHolder holder = new RewardPreviewHolder(pageIndex, crate.id(), safeRewardPage, filter);
-        Inventory inventory = Bukkit.createInventory(holder, REWARD_INVENTORY_SIZE, TextUtil.color(languageManager.getRaw(
+        Inventory inventory = Bukkit.createInventory(holder, REWARD_INVENTORY_SIZE, TextUtil.colorNoItalic(languageManager.getRaw(
                 "gui.crate.rewards.title",
                 java.util.Map.of("crate", crate.displayName())
         )));
@@ -301,7 +307,7 @@ public class CrateGui implements Listener {
         ItemStack item = new ItemStack(material, amount);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(TextUtil.color("&e" + reward.displayName()));
+            meta.displayName(TextUtil.colorNoItalic("&e" + reward.displayName()));
             List<String> lore = new ArrayList<>();
             lore.add(languageManager.getRaw("gui.crate.rewards.reward-lore.id", java.util.Map.of("id", reward.id())));
             lore.add(languageManager.getRaw("gui.crate.rewards.reward-lore.chance", java.util.Map.of("chance", String.valueOf(reward.chance()))));
@@ -309,7 +315,7 @@ public class CrateGui implements Listener {
                     "rarity",
                     describeRarity(reward, allRewards)
             )));
-            meta.lore(lore.stream().map(TextUtil::color).toList());
+            meta.lore(lore.stream().map(TextUtil::colorNoItalic).toList());
             item.setItemMeta(meta);
         }
         return item;
@@ -341,6 +347,12 @@ public class CrateGui implements Listener {
         }
         filtered.sort(Comparator.comparingDouble(Reward::chance).reversed());
         return filtered;
+    }
+
+    private long resolveCreatedAt(String crateId) {
+        File file = new File(plugin.getDataFolder(), "crates.yml");
+        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+        return config.getLong("crates." + crateId + ".created-at", 0L);
     }
 
     private @NotNull String describeRarity(@NotNull Reward reward, @NotNull List<Reward> rewards) {

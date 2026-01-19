@@ -79,7 +79,7 @@ public class OpenHistoryGui implements Listener {
 
         String title = configLoader.getMainConfig().getString("gui.history-title", "&8Historial de Crates");
         HistoryGuiHolder holder = new HistoryGuiHolder(player.getUniqueId());
-        Inventory inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, TextUtil.color(title));
+        Inventory inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, TextUtil.colorNoItalic(title));
         holder.setInventory(inventory);
         int slot = 0;
         if (entries.isEmpty()) {
@@ -172,12 +172,12 @@ public class OpenHistoryGui implements Listener {
         ItemStack item = new ItemStack(Material.PAPER);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(TextUtil.color("&e" + rewardName));
+            meta.displayName(TextUtil.colorNoItalic("&e" + rewardName));
             List<Component> lore = new ArrayList<>();
-            lore.add(TextUtil.color("&7Crate: &f" + crateName));
-            lore.add(TextUtil.color("&7Reward ID: &f" + entry.rewardId()));
-            lore.add(TextUtil.color("&7Fecha: &f" + DATE_FORMAT.format(entry.openedAt())));
-            lore.add(TextUtil.color("&7Servidor: &f" + entry.serverId()));
+            lore.add(TextUtil.colorNoItalic("&7Crate: &f" + crateName));
+            lore.add(TextUtil.colorNoItalic("&7Reward ID: &f" + entry.rewardId()));
+            lore.add(TextUtil.colorNoItalic("&7Fecha: &f" + DATE_FORMAT.format(entry.openedAt())));
+            lore.add(TextUtil.colorNoItalic("&7Servidor: &f" + entry.serverId()));
             meta.lore(lore);
             item.setItemMeta(meta);
         }
@@ -214,7 +214,7 @@ public class OpenHistoryGui implements Listener {
                 "&6Filtro crate",
                 List.of(
                         "&7Actual: &f" + current,
-                        "&7Click para cambiar."
+                        "&fClick para cambiar."
                 )
         );
     }
@@ -225,7 +225,7 @@ public class OpenHistoryGui implements Listener {
                 "&6Filtro fecha",
                 List.of(
                         "&7Actual: &f" + filter.label(),
-                        "&7Click para cambiar."
+                        "&fClick para cambiar."
                 )
         );
     }
@@ -234,10 +234,10 @@ public class OpenHistoryGui implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(TextUtil.color(name));
+            meta.displayName(TextUtil.colorNoItalic(name));
             List<Component> lore = new ArrayList<>();
             for (String line : loreLines) {
-                lore.add(TextUtil.color(line));
+                lore.add(TextUtil.colorNoItalic(line));
             }
             if (!lore.isEmpty()) {
                 meta.lore(lore);
