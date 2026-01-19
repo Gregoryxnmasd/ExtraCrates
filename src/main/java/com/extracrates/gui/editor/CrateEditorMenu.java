@@ -28,6 +28,17 @@ import java.util.Map;
 import java.util.UUID;
 
 public class CrateEditorMenu implements Listener {
+    // Layout: acciones principales al centro, navegación en fila inferior.
+    private static final int SLOT_LIST_CREATE = 45;
+    private static final int SLOT_LIST_DELETE = 47;
+    private static final int SLOT_LIST_BACK = 49;
+    private static final int SLOT_LIST_REFRESH = 53;
+    private static final int SLOT_DETAIL_DELETE = 18;
+    private static final int SLOT_DETAIL_BACK = 22;
+    private static final int SLOT_DETAIL_REFRESH = 26;
+    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 48, 50, 51, 52};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
+
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final EditorInputManager inputManager;
@@ -63,9 +74,10 @@ public class CrateEditorMenu implements Listener {
                 break;
             }
         }
-        inventory.setItem(45, buildItem(Material.LIME_CONCRETE, "&aCrear crate", List.of("&7Nuevo crate desde cero.")));
-        inventory.setItem(49, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
-        inventory.setItem(53, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        fillListNavigation(inventory);
+        inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE, "&aCrear crate", List.of("&7Nuevo crate desde cero.")));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
+        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
         player.openInventory(inventory);
     }
 
@@ -73,31 +85,31 @@ public class CrateEditorMenu implements Listener {
         activeCrate.put(player.getUniqueId(), crateId);
         Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color("&8Crate: " + crateId));
         CrateDefinition crate = configLoader.getCrates().get(crateId);
-        inventory.setItem(10, buildItem(Material.NAME_TAG, "&eDisplay Name", List.of(
+        inventory.setItem(9, buildItem(Material.NAME_TAG, "&eDisplay Name", List.of(
                 "&7Actual: &f" + (crate != null ? crate.displayName() : crateId),
                 "&7Click para editar."
         )));
-        inventory.setItem(12, buildItem(Material.CHEST_MINECART, "&eRewards Pool", List.of(
+        inventory.setItem(10, buildItem(Material.CHEST_MINECART, "&eRewards Pool", List.of(
                 "&7Actual: &f" + (crate != null ? crate.rewardsPool() : ""),
                 "&7Click para editar."
         )));
-        inventory.setItem(14, buildItem(Material.COMPARATOR, "&eTipo", List.of(
+        inventory.setItem(11, buildItem(Material.COMPARATOR, "&eTipo", List.of(
                 "&7Actual: &f" + (crate != null ? crate.type().name() : "NORMAL"),
                 "&7Click para alternar."
         )));
-        inventory.setItem(16, buildItem(Material.PAPER, "&eOpen Mode", List.of(
+        inventory.setItem(12, buildItem(Material.PAPER, "&eOpen Mode", List.of(
                 "&7Actual: &f" + (crate != null ? crate.openMode() : "reward-only"),
                 "&7Click para editar."
         )));
-        inventory.setItem(19, buildItem(Material.CARVED_PUMPKIN, "&eCutscene overlay", List.of(
+        inventory.setItem(13, buildItem(Material.CARVED_PUMPKIN, "&eCutscene overlay", List.of(
                 "&7Actual: &f" + (crate != null ? crate.cutsceneSettings().overlayModel() : ""),
                 "&7Click para editar."
         )));
-        inventory.setItem(20, buildItem(Material.IRON_BOOTS, "&eLock movimiento", List.of(
+        inventory.setItem(14, buildItem(Material.IRON_BOOTS, "&eLock movimiento", List.of(
                 "&7Actual: &f" + (crate != null && crate.cutsceneSettings().lockMovement()),
                 "&7Click para alternar."
         )));
-        inventory.setItem(21, buildItem(Material.PAPER, "&eLock HUD", List.of(
+        inventory.setItem(15, buildItem(Material.PAPER, "&eLock HUD", List.of(
                 "&7Actual: &f" + (crate != null && crate.cutsceneSettings().hideHud()),
                 "&7Click para alternar."
         )));
@@ -105,11 +117,14 @@ public class CrateEditorMenu implements Listener {
         if (crate != null && crate.cutsceneSettings().musicSettings() != null) {
             musicSound = crate.cutsceneSettings().musicSettings().sound();
         }
-        inventory.setItem(23, buildItem(Material.MUSIC_DISC_11, "&eMúsica", List.of(
+        inventory.setItem(16, buildItem(Material.MUSIC_DISC_11, "&eMúsica", List.of(
                 "&7Actual: &f" + (musicSound == null || musicSound.isEmpty() ? "ninguna" : musicSound),
                 "&7Click para editar."
         )));
-        inventory.setItem(22, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
+        fillDetailNavigation(inventory);
+        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar crate", List.of("&7Eliminar crate actual.")));
+        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
+        inventory.setItem(SLOT_DETAIL_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar datos.")));
         player.openInventory(inventory);
     }
 
@@ -132,15 +147,15 @@ public class CrateEditorMenu implements Listener {
     }
 
     private void handleListClick(Player player, int slot, boolean rightClick, boolean shiftClick) {
-        if (slot == 45) {
+        if (slot == SLOT_LIST_CREATE) {
             promptCreate(player);
             return;
         }
-        if (slot == 49) {
+        if (slot == SLOT_LIST_BACK) {
             parent.open(player);
             return;
         }
-        if (slot == 53) {
+        if (slot == SLOT_LIST_REFRESH) {
             open(player);
             return;
         }
@@ -167,18 +182,28 @@ public class CrateEditorMenu implements Listener {
 
     private void handleDetailClick(Player player, String crateId, int slot) {
         switch (slot) {
-            case 10 -> promptField(player, crateId, "display-name", "Display name nuevo");
-            case 12 -> promptField(player, crateId, "rewards-pool", "ID del rewards pool");
-            case 14 -> toggleType(player, crateId);
-            case 16 -> promptField(player, crateId, "open-mode", "Open mode (reward-only, cinematic, etc)");
-            case 19 -> promptField(player, crateId, "cutscene.overlay-model", "Overlay model de la cutscene");
-            case 20 -> toggleCutsceneLock(player, crateId, "movement", "movimiento");
-            case 21 -> toggleCutsceneLock(player, crateId, "hud", "HUD");
-            case 23 -> promptField(player, crateId, "cutscene.music.sound", "Música (ID de sonido)");
-            case 22 -> open(player);
+            case 9 -> promptField(player, crateId, "display-name", "Display name nuevo");
+            case 10 -> promptField(player, crateId, "rewards-pool", "ID del rewards pool");
+            case 11 -> toggleType(player, crateId);
+            case 12 -> promptField(player, crateId, "open-mode", "Open mode (reward-only, cinematic, etc)");
+            case 13 -> promptField(player, crateId, "cutscene.overlay-model", "Overlay model de la cutscene");
+            case 14 -> toggleCutsceneLock(player, crateId, "movement", "movimiento");
+            case 15 -> toggleCutsceneLock(player, crateId, "hud", "HUD");
+            case 16 -> promptField(player, crateId, "cutscene.music.sound", "Música (ID de sonido)");
+            case SLOT_DETAIL_DELETE -> confirmDelete(player, crateId);
+            case SLOT_DETAIL_BACK -> open(player);
+            case SLOT_DETAIL_REFRESH -> openDetail(player, crateId);
             default -> {
             }
         }
+    }
+
+    private void confirmDelete(Player player, String crateId) {
+        confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar crate " + crateId, () -> {
+            deleteCrate(crateId);
+            player.sendMessage(Component.text("Crate eliminada y guardada en YAML."));
+            open(player);
+        }, () -> openDetail(player, crateId));
     }
 
     private void promptCreate(Player player) {
@@ -333,6 +358,21 @@ public class CrateEditorMenu implements Listener {
         lore.add("&7Rewards: &f" + crate.rewardsPool());
         lore.add("&8Click: editar | Click der: clonar | Shift+der: borrar");
         return buildItem(Material.CHEST, crate.displayName(), lore);
+    }
+
+    private void fillListNavigation(Inventory inventory) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar crate", List.of("&7Usa el detalle para borrar.")));
+        for (int slot : LIST_NAV_FILLER_SLOTS) {
+            inventory.setItem(slot, filler);
+        }
+    }
+
+    private void fillDetailNavigation(Inventory inventory) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        for (int slot : DETAIL_NAV_FILLER_SLOTS) {
+            inventory.setItem(slot, filler);
+        }
     }
 
     private ItemStack buildItem(Material material, String name, List<String> loreLines) {

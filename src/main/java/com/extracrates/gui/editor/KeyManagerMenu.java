@@ -28,6 +28,16 @@ import java.util.UUID;
 
 public class KeyManagerMenu implements Listener {
     private static final int LIST_SIZE = 54;
+    // Layout: acciones principales al centro, navegación en fila inferior.
+    private static final int SLOT_LIST_DELETE = 47;
+    private static final int SLOT_LIST_BACK = 49;
+    private static final int SLOT_LIST_REFRESH = 53;
+    private static final int SLOT_DETAIL_DELETE = 18;
+    private static final int SLOT_DETAIL_BACK = 22;
+    private static final int SLOT_DETAIL_REFRESH = 26;
+    private static final int[] LIST_NAV_FILLER_SLOTS = {45, 46, 48, 50, 51, 52};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
+
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final SessionManager sessionManager;
@@ -68,7 +78,10 @@ public class KeyManagerMenu implements Listener {
             inventory.setItem(13, buildItem(Material.BARRIER, "&7Sin jugador", List.of("&7Busca un jugador primero.")));
             inventory.setItem(15, buildItem(Material.GRAY_STAINED_GLASS_PANE, "&7Gestionar", List.of("&7Selecciona un jugador.")));
         }
-        inventory.setItem(22, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
+        fillDetailNavigation(inventory);
+        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar selección", List.of("&7Limpiar jugador seleccionado.")));
+        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
+        inventory.setItem(SLOT_DETAIL_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar vista.")));
         player.openInventory(inventory);
     }
 
@@ -83,8 +96,10 @@ public class KeyManagerMenu implements Listener {
             }
             inventory.setItem(slot++, buildCrateItem(target, crate));
         }
-        inventory.setItem(49, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar a búsqueda.")));
-        inventory.setItem(53, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        fillListNavigation(inventory);
+        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar selección", List.of("&7Limpiar jugador seleccionado.")));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar a búsqueda.")));
+        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
         player.openInventory(inventory);
     }
 
@@ -99,7 +114,10 @@ public class KeyManagerMenu implements Listener {
                 "&7Cantidad: &f" + count
         )));
         inventory.setItem(15, buildItem(Material.RED_CONCRETE, "&cQuitar", List.of("&7Remover 1 llave.")));
-        inventory.setItem(22, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
+        fillDetailNavigation(inventory);
+        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar selección", List.of("&7Limpiar jugador seleccionado.")));
+        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
+        inventory.setItem(SLOT_DETAIL_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar datos.")));
         player.openInventory(inventory);
     }
 
@@ -142,17 +160,29 @@ public class KeyManagerMenu implements Listener {
             }
             return;
         }
-        if (slot == 22) {
+        if (slot == SLOT_DETAIL_DELETE) {
+            clearTarget(player);
+            return;
+        }
+        if (slot == SLOT_DETAIL_BACK) {
             parent.open(player);
+            return;
+        }
+        if (slot == SLOT_DETAIL_REFRESH) {
+            openSearch(player);
         }
     }
 
     private void handleListClick(Player player, TargetSelection target, int slot) {
-        if (slot == 49) {
+        if (slot == SLOT_LIST_DELETE) {
+            clearTarget(player);
+            return;
+        }
+        if (slot == SLOT_LIST_BACK) {
             openSearch(player);
             return;
         }
-        if (slot == 53) {
+        if (slot == SLOT_LIST_REFRESH) {
             openCrateList(player, target);
             return;
         }
@@ -173,10 +203,18 @@ public class KeyManagerMenu implements Listener {
         switch (slot) {
             case 11 -> adjustKeys(player, target, crate, 1);
             case 15 -> adjustKeys(player, target, crate, -1);
-            case 22 -> openCrateList(player, target);
+            case SLOT_DETAIL_DELETE -> clearTarget(player);
+            case SLOT_DETAIL_BACK -> openCrateList(player, target);
+            case SLOT_DETAIL_REFRESH -> openCrateDetail(player, target, crateId);
             default -> {
             }
         }
+    }
+
+    private void clearTarget(Player player) {
+        activeTargets.remove(player.getUniqueId());
+        activeCrates.remove(player.getUniqueId());
+        openSearch(player);
     }
 
     private void promptTarget(Player player) {
@@ -342,6 +380,20 @@ public class KeyManagerMenu implements Listener {
 
     private Component detailTitle(TargetSelection target, String crateId) {
         return TextUtil.color("&8" + crateId + " -> " + target.name());
+    }
+
+    private void fillListNavigation(Inventory inventory) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        for (int slot : LIST_NAV_FILLER_SLOTS) {
+            inventory.setItem(slot, filler);
+        }
+    }
+
+    private void fillDetailNavigation(Inventory inventory) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        for (int slot : DETAIL_NAV_FILLER_SLOTS) {
+            inventory.setItem(slot, filler);
+        }
     }
 
     private ItemStack buildItem(Material material, String name, List<String> loreLines) {
