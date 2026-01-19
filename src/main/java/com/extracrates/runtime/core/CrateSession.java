@@ -91,6 +91,7 @@ public class CrateSession {
     private ItemStack[] previousInventoryContents;
     private ItemStack[] previousArmorContents;
     private ItemStack previousOffHand;
+    private Location previousLocation;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -881,10 +882,10 @@ public class CrateSession {
             }
         }
         visibleEntities.clear();
-        if (previousGameMode != null) {
-            player.setGameMode(previousGameMode);
+        if (previousLocation != null) {
+            player.teleport(previousLocation);
         }
-        player.setSpectatorTarget(null);
+        restorePlayerState();
         if (speedModifierKey != null) {
             sessionManager.removeSpectatorModifier(player, speedModifierKey);
         }
@@ -957,6 +958,7 @@ public class CrateSession {
         previousSpectatorTarget = player.getSpectatorTarget();
         previousWalkSpeed = player.getWalkSpeed();
         previousFlySpeed = player.getFlySpeed();
+        previousLocation = player.getLocation().clone();
         previousHelmet = cloneItemStack(player.getInventory().getHelmet());
         previousInventoryContents = cloneItemStackArray(player.getInventory().getContents());
         previousArmorContents = cloneItemStackArray(player.getInventory().getArmorContents());
@@ -966,10 +968,12 @@ public class CrateSession {
     private void restorePlayerState() {
         GameMode restoreMode = previousGameMode != null ? previousGameMode : GameMode.SURVIVAL;
         if (restoreMode == GameMode.SPECTATOR) {
-            restoreMode = GameMode.SURVIVAL;
+            player.setGameMode(GameMode.SPECTATOR);
+            player.setSpectatorTarget(previousSpectatorTarget);
+        } else {
+            player.setSpectatorTarget(null);
+            player.setGameMode(restoreMode);
         }
-        player.setGameMode(restoreMode);
-        player.setSpectatorTarget(previousSpectatorTarget);
     }
 
     private void restoreInventory() {
