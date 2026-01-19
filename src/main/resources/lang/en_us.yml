@@ -73,3 +73,8 @@ session:
   reroll.blocked: "&cWait for the animation to finish."
   reroll.advance: "&eSelected reward: &f%reward%"
   reroll.confirmed: "&aReward confirmed: &f%reward%"
+route:
+  editor:
+    point-added: "&aPoint %count% added at &f(%x%, %y%, %z%) &7Yaw: %yaw% Pitch: %pitch%"
+    saved: "&aRoute &f%path% &asaved with &f%count% &apoints."
+    save-failed: "&cFailed to save the route. Check the server logs."
