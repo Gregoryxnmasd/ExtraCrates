@@ -16,6 +16,7 @@ public class LocalStorage implements CrateStorage {
     private final Map<UUID, Map<String, Instant>> locks = new HashMap<>();
     private final Map<UUID, Map<String, Map<String, DeliveryRecord>>> deliveries = new HashMap<>();
     private final Map<UUID, List<CrateOpenEntry>> openHistory = new HashMap<>();
+    private final Map<UUID, List<CrateOpenStartedEntry>> openStarts = new HashMap<>();
     private final Map<UUID, Map<String, PendingReward>> pendingRewards = new HashMap<>();
 
     @Override
@@ -81,6 +82,15 @@ public class LocalStorage implements CrateStorage {
     public void logOpen(UUID playerId, String crateId, String rewardId, String serverId, Instant timestamp) {
         List<CrateOpenEntry> entries = openHistory.computeIfAbsent(playerId, key -> new ArrayList<>());
         entries.add(0, new CrateOpenEntry(playerId, crateId, rewardId, serverId, timestamp));
+        if (entries.size() > MAX_HISTORY) {
+            entries.remove(entries.size() - 1);
+        }
+    }
+
+    @Override
+    public void logOpenStarted(UUID playerId, String crateId, String serverId, Instant timestamp) {
+        List<CrateOpenStartedEntry> entries = openStarts.computeIfAbsent(playerId, key -> new ArrayList<>());
+        entries.add(0, new CrateOpenStartedEntry(playerId, crateId, serverId, timestamp));
         if (entries.size() > MAX_HISTORY) {
             entries.remove(entries.size() - 1);
         }
@@ -173,6 +183,7 @@ public class LocalStorage implements CrateStorage {
         locks.clear();
         deliveries.clear();
         openHistory.clear();
+        openStarts.clear();
         pendingRewards.clear();
     }
 
