@@ -195,11 +195,9 @@ public class CrateEditorMenu implements Listener {
                 player.sendMessage(Component.text("Ya existe una crate con ese ID."));
                 return;
             }
-            confirmationMenu.open(player, "&8Confirmar creación", "Crear crate " + input, () -> {
-                createCrate(input);
-                player.sendMessage(Component.text("Crate creada y guardada en YAML."));
-                open(player);
-            }, () -> open(player));
+            createCrate(input);
+            player.sendMessage(Component.text("Crate creada y guardada en YAML."));
+            open(player);
         });
     }
 
@@ -230,17 +228,11 @@ public class CrateEditorMenu implements Listener {
             player.sendMessage(Component.text("Ya tienes una edición pendiente."));
             return;
         }
-        inputManager.requestInput(player, prompt, input -> confirmationMenu.open(
-                player,
-                "&8Confirmar cambio",
-                "Actualizar " + field + " de " + crateId,
-                () -> {
-                    updateCrateField(crateId, field, input);
-                    player.sendMessage(Component.text("Crate actualizada y guardada en YAML."));
-                    openDetail(player, crateId);
-                },
-                () -> openDetail(player, crateId)
-        ));
+        inputManager.requestInput(player, prompt, input -> {
+            updateCrateField(crateId, field, input);
+            player.sendMessage(Component.text("Crate actualizada y guardada en YAML."));
+            openDetail(player, crateId);
+        });
     }
 
     private void toggleType(Player player, String crateId) {
@@ -248,11 +240,9 @@ public class CrateEditorMenu implements Listener {
         CrateType current = crate != null ? crate.type() : CrateType.NORMAL;
         CrateType[] values = CrateType.values();
         CrateType next = values[(current.ordinal() + 1) % values.length];
-        confirmationMenu.open(player, "&8Confirmar cambio", "Cambiar tipo a " + next.name(), () -> {
-            updateCrateField(crateId, "type", next.name().toLowerCase());
-            player.sendMessage(Component.text("Tipo actualizado y guardado en YAML."));
-            openDetail(player, crateId);
-        }, () -> openDetail(player, crateId));
+        updateCrateField(crateId, "type", next.name().toLowerCase());
+        player.sendMessage(Component.text("Tipo actualizado y guardado en YAML."));
+        openDetail(player, crateId);
     }
 
     private void toggleCutsceneLock(Player player, String crateId, String lockKey, String label) {
@@ -264,11 +254,9 @@ public class CrateEditorMenu implements Listener {
                     : crate.cutsceneSettings().hideHud();
         }
         boolean next = !current;
-        confirmationMenu.open(player, "&8Confirmar cambio", "Cambiar lock de " + label + " a " + next, () -> {
-            updateCrateField(crateId, "cutscene.locks." + lockKey, next);
-            player.sendMessage(Component.text("Lock actualizado y guardado en YAML."));
-            openDetail(player, crateId);
-        }, () -> openDetail(player, crateId));
+        updateCrateField(crateId, "cutscene.locks." + lockKey, next);
+        player.sendMessage(Component.text("Lock actualizado y guardado en YAML."));
+        openDetail(player, crateId);
     }
 
     private void createCrate(String id) {

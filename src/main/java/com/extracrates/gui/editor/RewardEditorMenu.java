@@ -281,11 +281,9 @@ public class RewardEditorMenu implements Listener {
                 player.sendMessage(Component.text("Ya existe un pool con ese ID."));
                 return;
             }
-            confirmationMenu.open(player, "&8Confirmar creación", "Crear pool " + input, () -> {
-                createPool(input);
-                player.sendMessage(Component.text("Pool creada y guardada en YAML."));
-                openPools(player);
-            }, () -> openPools(player));
+            createPool(input);
+            player.sendMessage(Component.text("Pool creada y guardada en YAML."));
+            openPools(player);
         });
     }
 
@@ -316,17 +314,11 @@ public class RewardEditorMenu implements Listener {
             player.sendMessage(Component.text("Ya tienes una edición pendiente."));
             return;
         }
-        inputManager.requestInput(player, "Nuevo roll-count", input -> confirmationMenu.open(
-                player,
-                "&8Confirmar cambio",
-                "Actualizar roll-count de " + poolId,
-                () -> {
-                    updatePoolField(poolId, "roll-count", parseInt(input));
-                    player.sendMessage(Component.text("Pool actualizada y guardada en YAML."));
-                    openPoolDetail(player, poolId);
-                },
-                () -> openPoolDetail(player, poolId)
-        ));
+        inputManager.requestInput(player, "Nuevo roll-count", input -> {
+            updatePoolField(poolId, "roll-count", parseInt(input));
+            player.sendMessage(Component.text("Pool actualizada y guardada en YAML."));
+            openPoolDetail(player, poolId);
+        });
     }
 
     private void promptCreateReward(Player player, String poolId) {
@@ -343,11 +335,9 @@ public class RewardEditorMenu implements Listener {
                 player.sendMessage(Component.text("Ya existe una reward con ese ID."));
                 return;
             }
-            confirmationMenu.open(player, "&8Confirmar creación", "Crear reward " + input, () -> {
-                createReward(poolId, input);
-                player.sendMessage(Component.text("Reward creada y guardada en YAML."));
-                openPoolDetail(player, poolId);
-            }, () -> openPoolDetail(player, poolId));
+            createReward(poolId, input);
+            player.sendMessage(Component.text("Reward creada y guardada en YAML."));
+            openPoolDetail(player, poolId);
         });
     }
 
@@ -384,17 +374,9 @@ public class RewardEditorMenu implements Listener {
                 player.sendMessage(Component.text(validation.errorMessage()));
                 return;
             }
-            confirmationMenu.open(
-                    player,
-                    "&8Confirmar cambio",
-                    "Actualizar " + field + " de " + rewardId,
-                    () -> {
-                        updateRewardField(poolId, rewardId, field, validation.value());
-                        player.sendMessage(Component.text("Reward actualizada y guardada en YAML."));
-                        openRewardDetail(player, poolId, rewardId);
-                    },
-                    () -> openRewardDetail(player, poolId, rewardId)
-            );
+            updateRewardField(poolId, rewardId, field, validation.value());
+            player.sendMessage(Component.text("Reward actualizada y guardada en YAML."));
+            openRewardDetail(player, poolId, rewardId);
         });
     }
 

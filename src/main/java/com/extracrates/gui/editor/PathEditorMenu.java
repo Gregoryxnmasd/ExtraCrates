@@ -193,11 +193,9 @@ public class PathEditorMenu implements Listener {
                 player.sendMessage(Component.text("Ya existe un path con ese ID."));
                 return;
             }
-            confirmationMenu.open(player, "&8Confirmar creación", "Crear path " + input, () -> {
-                createPath(input);
-                player.sendMessage(Component.text("Path creada y guardada en YAML."));
-                open(player);
-            }, () -> open(player));
+            createPath(input);
+            player.sendMessage(Component.text("Path creada y guardada en YAML."));
+            open(player);
         });
     }
 
@@ -228,31 +226,23 @@ public class PathEditorMenu implements Listener {
             player.sendMessage(Component.text("Ya tienes una edición pendiente."));
             return;
         }
-        inputManager.requestInput(player, prompt, input -> confirmationMenu.open(
-                player,
-                "&8Confirmar cambio",
-                "Actualizar " + field + " de " + pathId,
-                () -> {
-                    Object value = input;
-                    if (field.equals("duration-seconds") || field.equals("step-resolution")) {
-                        value = parseDouble(input);
-                    }
-                    updatePathField(pathId, field, value);
-                    player.sendMessage(Component.text("Path actualizada y guardada en YAML."));
-                    openDetail(player, pathId);
-                },
-                () -> openDetail(player, pathId)
-        ));
+        inputManager.requestInput(player, prompt, input -> {
+            Object value = input;
+            if (field.equals("duration-seconds") || field.equals("step-resolution")) {
+                value = parseDouble(input);
+            }
+            updatePathField(pathId, field, value);
+            player.sendMessage(Component.text("Path actualizada y guardada en YAML."));
+            openDetail(player, pathId);
+        });
     }
 
     private void toggleConstantSpeed(Player player, String pathId) {
         CutscenePath path = configLoader.getPaths().get(pathId);
         boolean next = path == null || !path.isConstantSpeed();
-        confirmationMenu.open(player, "&8Confirmar cambio", "Constant speed: " + next, () -> {
-            updatePathField(pathId, "constant-speed", next);
-            player.sendMessage(Component.text("Constant speed actualizado y guardado en YAML."));
-            openDetail(player, pathId);
-        }, () -> openDetail(player, pathId));
+        updatePathField(pathId, "constant-speed", next);
+        player.sendMessage(Component.text("Constant speed actualizado y guardado en YAML."));
+        openDetail(player, pathId);
     }
 
     private void startPointEditing(Player player, String pathId) {

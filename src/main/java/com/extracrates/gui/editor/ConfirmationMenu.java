@@ -1,6 +1,7 @@
 package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
+import com.extracrates.config.ConfigLoader;
 import com.extracrates.util.TextUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -20,14 +21,20 @@ import java.util.UUID;
 @SuppressWarnings("unused")
 public class ConfirmationMenu implements Listener {
     private final ExtraCratesPlugin plugin;
+    private final ConfigLoader configLoader;
     private final Map<UUID, ConfirmationRequest> confirmations = new HashMap<>();
 
-    public ConfirmationMenu(ExtraCratesPlugin plugin) {
+    public ConfirmationMenu(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
         this.plugin = plugin;
+        this.configLoader = configLoader;
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     public void open(Player player, String title, String description, Runnable onConfirm, Runnable onCancel) {
+        if (!configLoader.getMainConfig().getBoolean("gui.editor-confirmations", true)) {
+            onConfirm.run();
+            return;
+        }
         Inventory inventory = Bukkit.createInventory(player, 9, TextUtil.color(title));
         inventory.setItem(3, buildItem(Material.LIME_WOOL, "&aConfirmar", description));
         inventory.setItem(5, buildItem(Material.RED_WOOL, "&cCancelar", "Volver sin guardar"));
