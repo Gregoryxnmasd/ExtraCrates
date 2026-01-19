@@ -1,8 +1,9 @@
 package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
+import com.extracrates.config.LanguageManager;
+import com.extracrates.util.TextUtil;
 import io.papermc.paper.event.player.AsyncChatEvent;
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,10 +17,12 @@ import java.util.function.Consumer;
 
 public class EditorInputManager implements Listener {
     private final ExtraCratesPlugin plugin;
+    private final LanguageManager languageManager;
     private final Map<UUID, InputRequest> pendingInputs = new ConcurrentHashMap<>();
 
     public EditorInputManager(ExtraCratesPlugin plugin) {
         this.plugin = plugin;
+        this.languageManager = plugin.getLanguageManager();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
@@ -64,7 +67,7 @@ public class EditorInputManager implements Listener {
                 request.reopenAction().run();
             }
             if (message.equalsIgnoreCase("cancel")) {
-                event.getPlayer().sendMessage(Component.text("Edición cancelada."));
+                event.getPlayer().sendMessage(languageManager.getMessage("editor.input.canceled"));
                 return;
             }
             request.onInput().accept(message);

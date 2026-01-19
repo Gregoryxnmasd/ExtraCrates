@@ -2,6 +2,7 @@ package com.extracrates.gui;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
@@ -43,11 +44,13 @@ public class CrateGui implements Listener {
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final SessionManager sessionManager;
+    private final LanguageManager languageManager;
 
     public CrateGui(ExtraCratesPlugin plugin, ConfigLoader configLoader, SessionManager sessionManager) {
         this.plugin = plugin;
         this.configLoader = configLoader;
         this.sessionManager = sessionManager;
+        this.languageManager = plugin.getLanguageManager();
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -73,19 +76,34 @@ public class CrateGui implements Listener {
             if (meta != null) {
                 meta.displayName(TextUtil.color(crate.displayName()));
                 List<Component> lore = new ArrayList<>();
-                lore.add(Component.text("ID: ").append(Component.text(crate.id())));
-                lore.add(Component.text("Tipo: ").append(Component.text(crate.type().name())));
-                lore.add(TextUtil.color("&8Click derecho: Preview rewards"));
+                lore.add(TextUtil.color(languageManager.getRaw(
+                        "gui.crate.list.item-lore.id",
+                        java.util.Map.of("id", crate.id())
+                )));
+                lore.add(TextUtil.color(languageManager.getRaw(
+                        "gui.crate.list.item-lore.type",
+                        java.util.Map.of("type", crate.type().name())
+                )));
+                lore.add(TextUtil.color(languageManager.getRaw(
+                        "gui.crate.list.item-lore.preview-hint",
+                        java.util.Collections.emptyMap()
+                )));
                 meta.lore(lore);
                 item.setItemMeta(meta);
             }
             inventory.setItem(slot++, item);
         }
         if (safePageIndex > 0) {
-            inventory.setItem(PREVIOUS_PAGE_SLOT, buildNavItem(Material.ARROW, "&ePágina anterior"));
+            inventory.setItem(PREVIOUS_PAGE_SLOT, buildNavItem(Material.ARROW, languageManager.getRaw(
+                    "gui.crate.list.nav.previous",
+                    java.util.Collections.emptyMap()
+            )));
         }
         if (safePageIndex < totalPages - 1) {
-            inventory.setItem(NEXT_PAGE_SLOT, buildNavItem(Material.ARROW, "&ePágina siguiente"));
+            inventory.setItem(NEXT_PAGE_SLOT, buildNavItem(Material.ARROW, languageManager.getRaw(
+                    "gui.crate.list.nav.next",
+                    java.util.Collections.emptyMap()
+            )));
         }
         player.openInventory(inventory);
     }
@@ -207,14 +225,27 @@ public class CrateGui implements Listener {
 
     private void openActionMenu(@NotNull Player player, @NotNull CrateDefinition crate, int pageIndex) {
         CrateActionHolder holder = new CrateActionHolder(pageIndex, crate.id());
-        Inventory inventory = Bukkit.createInventory(holder, ACTION_MENU_SIZE, TextUtil.color("&8Crate: " + crate.displayName()));
-        holder.setInventory(inventory);
-        inventory.setItem(ACTION_OPEN_SLOT, buildItem(Material.CHEST, "&aAbrir crate", List.of("&7Abrir ahora.")));
-        inventory.setItem(ACTION_PREVIEW_SLOT, buildItem(Material.BOOK, "&bPreview rewards", List.of(
-                "&7Ver recompensas del pool.",
-                "&7Pool: &f" + crate.rewardsPool()
+        Inventory inventory = Bukkit.createInventory(holder, ACTION_MENU_SIZE, TextUtil.color(languageManager.getRaw(
+                "gui.crate.action.title",
+                java.util.Map.of("crate", crate.displayName())
         )));
-        inventory.setItem(ACTION_BACK_SLOT, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
+        holder.setInventory(inventory);
+        String poolValue = crate.rewardsPool() != null ? crate.rewardsPool() : "";
+        inventory.setItem(ACTION_OPEN_SLOT, buildItem(
+                Material.CHEST,
+                languageManager.getRaw("gui.crate.action.open.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("gui.crate.action.open.lore", java.util.Collections.emptyMap()))
+        ));
+        inventory.setItem(ACTION_PREVIEW_SLOT, buildItem(
+                Material.BOOK,
+                languageManager.getRaw("gui.crate.action.preview.name", java.util.Collections.emptyMap()),
+                languageManager.getRawList("gui.crate.action.preview.lore", java.util.Map.of("pool", poolValue))
+        ));
+        inventory.setItem(ACTION_BACK_SLOT, buildItem(
+                Material.ARROW,
+                languageManager.getRaw("gui.crate.action.back.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("gui.crate.action.back.lore", java.util.Collections.emptyMap()))
+        ));
         player.openInventory(inventory);
     }
 
@@ -231,7 +262,10 @@ public class CrateGui implements Listener {
         int totalPages = Math.max(1, (int) Math.ceil(filtered.size() / (double) REWARD_PAGE_SIZE));
         int safeRewardPage = Math.max(0, Math.min(rewardPageIndex, totalPages - 1));
         RewardPreviewHolder holder = new RewardPreviewHolder(pageIndex, crate.id(), safeRewardPage, filter);
-        Inventory inventory = Bukkit.createInventory(holder, REWARD_INVENTORY_SIZE, TextUtil.color("&8Rewards: " + crate.displayName()));
+        Inventory inventory = Bukkit.createInventory(holder, REWARD_INVENTORY_SIZE, TextUtil.color(languageManager.getRaw(
+                "gui.crate.rewards.title",
+                java.util.Map.of("crate", crate.displayName())
+        )));
         holder.setInventory(inventory);
         int startIndex = safeRewardPage * REWARD_PAGE_SIZE;
         int endIndex = Math.min(startIndex + REWARD_PAGE_SIZE, filtered.size());
@@ -240,13 +274,23 @@ public class CrateGui implements Listener {
             Reward reward = filtered.get(i);
             inventory.setItem(slot++, buildRewardItem(reward, rewards));
         }
-        inventory.setItem(REWARD_BACK_SLOT, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar a la crate.")));
+        inventory.setItem(REWARD_BACK_SLOT, buildItem(
+                Material.ARROW,
+                languageManager.getRaw("gui.crate.rewards.back.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("gui.crate.rewards.back.lore", java.util.Collections.emptyMap()))
+        ));
         inventory.setItem(REWARD_FILTER_SLOT, buildFilterItem(filter));
         if (safeRewardPage > 0) {
-            inventory.setItem(REWARD_PREVIOUS_PAGE_SLOT, buildNavItem(Material.ARROW, "&ePágina anterior"));
+            inventory.setItem(REWARD_PREVIOUS_PAGE_SLOT, buildNavItem(Material.ARROW, languageManager.getRaw(
+                    "gui.crate.rewards.nav.previous",
+                    java.util.Collections.emptyMap()
+            )));
         }
         if (safeRewardPage < totalPages - 1) {
-            inventory.setItem(REWARD_NEXT_PAGE_SLOT, buildNavItem(Material.ARROW, "&ePágina siguiente"));
+            inventory.setItem(REWARD_NEXT_PAGE_SLOT, buildNavItem(Material.ARROW, languageManager.getRaw(
+                    "gui.crate.rewards.nav.next",
+                    java.util.Collections.emptyMap()
+            )));
         }
         player.openInventory(inventory);
     }
@@ -259,9 +303,12 @@ public class CrateGui implements Listener {
         if (meta != null) {
             meta.displayName(TextUtil.color("&e" + reward.displayName()));
             List<String> lore = new ArrayList<>();
-            lore.add("&7ID: &f" + reward.id());
-            lore.add("&7Chance: &f" + reward.chance());
-            lore.add("&7Rareza: &f" + describeRarity(reward, allRewards));
+            lore.add(languageManager.getRaw("gui.crate.rewards.reward-lore.id", java.util.Map.of("id", reward.id())));
+            lore.add(languageManager.getRaw("gui.crate.rewards.reward-lore.chance", java.util.Map.of("chance", String.valueOf(reward.chance()))));
+            lore.add(languageManager.getRaw("gui.crate.rewards.reward-lore.rarity", java.util.Map.of(
+                    "rarity",
+                    describeRarity(reward, allRewards)
+            )));
             meta.lore(lore.stream().map(TextUtil::color).toList());
             item.setItemMeta(meta);
         }
@@ -270,10 +317,14 @@ public class CrateGui implements Listener {
 
     private @NotNull ItemStack buildFilterItem(@NotNull RewardFilter filter) {
         List<String> lore = new ArrayList<>();
-        lore.add("&7Actual: &f" + filter.label());
-        lore.add("&7Click para cambiar.");
-        lore.add(filter.description());
-        return buildItem(Material.COMPARATOR, "&bFiltro por rareza/chance", lore);
+        lore.add(languageManager.getRaw("gui.crate.rewards.filter.current", java.util.Map.of("filter", filter.label(languageManager))));
+        lore.add(languageManager.getRaw("gui.crate.rewards.filter.click", java.util.Collections.emptyMap()));
+        lore.add(filter.description(languageManager));
+        return buildItem(
+                Material.COMPARATOR,
+                languageManager.getRaw("gui.crate.rewards.filter.name", java.util.Collections.emptyMap()),
+                lore
+        );
     }
 
     private @NotNull List<Reward> filterRewards(@NotNull List<Reward> rewards, @NotNull RewardFilter filter) {
@@ -296,15 +347,15 @@ public class CrateGui implements Listener {
         double maxChance = rewards.stream().mapToDouble(Reward::chance).max().orElse(0);
         double ratio = maxChance > 0 ? reward.chance() / maxChance : 0;
         if (ratio >= RewardFilter.COMMON.minRatio()) {
-            return RewardFilter.COMMON.label();
+            return RewardFilter.COMMON.label(languageManager);
         }
         if (ratio >= RewardFilter.UNCOMMON.minRatio()) {
-            return RewardFilter.UNCOMMON.label();
+            return RewardFilter.UNCOMMON.label(languageManager);
         }
         if (ratio >= RewardFilter.RARE.minRatio()) {
-            return RewardFilter.RARE.label();
+            return RewardFilter.RARE.label(languageManager);
         }
-        return RewardFilter.EPIC.label();
+        return RewardFilter.EPIC.label(languageManager);
     }
 
     private @NotNull Material parseMaterial(@NotNull String item) {
@@ -403,28 +454,28 @@ public class CrateGui implements Listener {
     }
 
     private enum RewardFilter {
-        ALL("&aTodos", "&7Mostrando todas las recompensas.", 0),
-        COMMON("&fComún", "&7Chance alta (>= 60% del máximo).", 0.6),
-        UNCOMMON("&aInusual", "&7Chance media (>= 30% del máximo).", 0.3),
-        RARE("&bRaro", "&7Chance baja (>= 10% del máximo).", 0.1),
-        EPIC("&dÉpico", "&7Chance muy baja (< 10% del máximo).", 0);
+        ALL("gui.crate.rewards.filter-labels.all", "gui.crate.rewards.filter-desc.all", 0),
+        COMMON("gui.crate.rewards.filter-labels.common", "gui.crate.rewards.filter-desc.common", 0.6),
+        UNCOMMON("gui.crate.rewards.filter-labels.uncommon", "gui.crate.rewards.filter-desc.uncommon", 0.3),
+        RARE("gui.crate.rewards.filter-labels.rare", "gui.crate.rewards.filter-desc.rare", 0.1),
+        EPIC("gui.crate.rewards.filter-labels.epic", "gui.crate.rewards.filter-desc.epic", 0);
 
-        private final String label;
-        private final String description;
+        private final String labelKey;
+        private final String descriptionKey;
         private final double minRatio;
 
-        RewardFilter(String label, String description, double minRatio) {
-            this.label = label;
-            this.description = description;
+        RewardFilter(String labelKey, String descriptionKey, double minRatio) {
+            this.labelKey = labelKey;
+            this.descriptionKey = descriptionKey;
             this.minRatio = minRatio;
         }
 
-        private String label() {
-            return label;
+        private String label(LanguageManager languageManager) {
+            return languageManager.getRaw(labelKey, java.util.Collections.emptyMap());
         }
 
-        private String description() {
-            return description;
+        private String description(LanguageManager languageManager) {
+            return languageManager.getRaw(descriptionKey, java.util.Collections.emptyMap());
         }
 
         private double minRatio() {
