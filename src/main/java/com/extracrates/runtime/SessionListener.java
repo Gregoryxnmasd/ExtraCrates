@@ -12,6 +12,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
 
 @SuppressWarnings("unused")
 public class SessionListener implements Listener {
@@ -63,10 +64,20 @@ public class SessionListener implements Listener {
         if (session == null) {
             return;
         }
-        if (event.getAction() == Action.PHYSICAL) {
+        if (event.getAction() != Action.LEFT_CLICK_AIR && event.getAction() != Action.LEFT_CLICK_BLOCK) {
             return;
         }
-        session.handleRerollInput(event.getPlayer().isSneaking());
+        session.handleRerollInput(false);
+        event.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onRerollSneak(PlayerToggleSneakEvent event) {
+        CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session == null || !event.isSneaking()) {
+            return;
+        }
+        session.handleRerollInput(true);
         event.setCancelled(true);
     }
 }
