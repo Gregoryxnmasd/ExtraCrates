@@ -15,6 +15,7 @@ public record CrateDefinition(
         int cooldownSeconds,
         double cost,
         double rerollCost,
+        Integer maxRerolls,
         String permission,
         java.util.List<String> allowedWorlds,
         java.util.List<String> blockedWorlds,
@@ -56,6 +57,12 @@ public record CrateDefinition(
         int cooldown = section.getInt("cooldown-seconds", 0);
         double cost = section.getDouble("cost", 0);
         double rerollCost = section.getDouble("reroll-cost", 0);
+        Integer maxRerolls = null;
+        if (section.contains("cutscene.max-rerolls")) {
+            maxRerolls = section.getInt("cutscene.max-rerolls");
+        } else if (section.contains("rerolls.max")) {
+            maxRerolls = section.getInt("rerolls.max");
+        }
         String permission = section.getString("permission", "extracrates.open");
         java.util.List<String> allowedWorlds = section.getStringList("allowed-worlds");
         java.util.List<String> blockedWorlds = section.getStringList("blocked-worlds");
@@ -111,6 +118,7 @@ public record CrateDefinition(
                 cooldown,
                 cost,
                 rerollCost,
+                maxRerolls,
                 permission,
                 allowedWorlds,
                 blockedWorlds,
