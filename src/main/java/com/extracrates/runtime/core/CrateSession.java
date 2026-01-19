@@ -78,6 +78,7 @@ public class CrateSession {
     private boolean rerollLocked;
     private int selectedRewardIndex;
     private int maxRerolls;
+    private boolean waitingForClaim;
 
     private GameMode previousGameMode;
     private Entity previousSpectatorTarget;
@@ -130,6 +131,7 @@ public class CrateSession {
         selectedRewardIndex = -1;
         rerollLocked = false;
         elapsedTicks = 0;
+        waitingForClaim = false;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
         rerollEnabledAtTick = rewardSwitchTicks;
@@ -154,11 +156,9 @@ public class CrateSession {
             return;
         }
         this.rewards = rewards;
-        rewardIndex = 0;
-        selectedRewardIndex = -1;
-        rerollLocked = false;
-        nextRewardSwitchTick = elapsedTicks + rewardSwitchTicks;
+        resetCutsceneForReroll();
         refreshRewardDisplay();
+        startCutscene();
     }
 
     public Reward getActiveReward() {
@@ -369,7 +369,7 @@ public class CrateSession {
             public void run() {
                 if (tick >= totalTicks) {
                     cancel();
-                    finish();
+                    enterWaitingForClaim();
                     return;
                 }
                 double progress = totalTicks <= 1 ? 1.0 : tick / (double) (totalTicks - 1);
@@ -394,6 +394,30 @@ public class CrateSession {
             }
         };
         task.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    private void enterWaitingForClaim() {
+        waitingForClaim = true;
+        lastTaskTickMillis = System.currentTimeMillis();
+        updateRerollHud();
+    }
+
+    private void resetCutsceneForReroll() {
+        if (task != null) {
+            task.cancel();
+        }
+        waitingForClaim = false;
+        elapsedTicks = 0;
+        rewardIndex = 0;
+        selectedRewardIndex = -1;
+        rerollLocked = false;
+        nextRewardSwitchTick = rewardSwitchTicks;
+        Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
+        if (cameraEntity != null) {
+            cameraEntity.teleport(start);
+            player.setSpectatorTarget(cameraEntity);
+        }
+        scheduleTimeout();
     }
 
     private int resolveTotalTicks(List<Location> timeline) {
@@ -445,6 +469,9 @@ public class CrateSession {
                     }
                 }
                 if (task == null || task.isCancelled()) {
+                    if (waitingForClaim) {
+                        return;
+                    }
                     end();
                     return;
                 }
@@ -848,6 +875,7 @@ public class CrateSession {
         }
         ended = true;
         ending = true;
+        waitingForClaim = false;
         if (task != null) {
             task.cancel();
         }
@@ -906,11 +934,10 @@ public class CrateSession {
     }
 
     public void handleRerollInput(boolean confirm) {
-        if (elapsedTicks < rerollEnabledAtTick) {
-            player.sendMessage(languageManager.getMessage("reroll.blocked"));
-            return;
-        }
         if (confirm) {
+            if (!waitingForClaim) {
+                return;
+            }
             rerollLocked = true;
             selectedRewardIndex = rewardIndex;
             Reward reward = getCurrentReward();
@@ -921,15 +948,15 @@ public class CrateSession {
             end();
             return;
         }
-        if (maxRerolls > 0 && rerollsUsed >= maxRerolls) {
+        if (!waitingForClaim && elapsedTicks < rerollEnabledAtTick) {
             player.sendMessage(languageManager.getMessage("reroll.blocked"));
-            finish();
-            end();
             return;
         }
-        if (!advanceReward()) {
-            finish();
-            end();
+        if (maxRerolls > 0 && rerollsUsed >= maxRerolls) {
+            player.sendMessage(languageManager.getMessage("reroll.blocked"));
+            return;
+        }
+        if (!sessionManager.rerollSession(player)) {
             return;
         }
         rerollsUsed++;
@@ -937,19 +964,6 @@ public class CrateSession {
         if (reward != null) {
             player.sendMessage(languageManager.getMessage("reroll.advance", Map.of("reward", reward.displayName())));
         }
-    }
-
-    private boolean advanceReward() {
-        if (rewards == null || rewards.isEmpty()) {
-            return false;
-        }
-        if (rewardIndex >= rewards.size() - 1) {
-            return false;
-        }
-        rewardIndex++;
-        nextRewardSwitchTick = elapsedTicks + rewardSwitchTicks;
-        refreshRewardDisplay();
-        return true;
     }
 
     private void capturePlayerState() {
