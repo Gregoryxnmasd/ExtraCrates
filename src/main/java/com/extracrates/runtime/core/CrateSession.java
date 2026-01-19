@@ -588,6 +588,7 @@ public class CrateSession {
             }
         }
         rewardDelivered = true;
+        sessionManager.logRewardConfirmation(player, crate, reward, rerollsUsed);
         sessionManager.completeOpen(player, crate, reward, openState);
         if (rewardIndex >= rewards.size() - 1) {
             return;
