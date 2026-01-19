@@ -163,6 +163,16 @@ public class SessionManager {
         }
         CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview, openState);
         sessions.put(player.getUniqueId(), session);
+        Instant createdAt = Instant.now();
+        plugin.getLogger().info(() -> String.format(
+                "Sesion creada: jugador=%s crate=%s timestamp=%s",
+                player.getName(),
+                crate.id(),
+                createdAt
+        ));
+        if (!preview && storage != null) {
+            storage.logOpenStarted(player.getUniqueId(), crate.id(), resolveServerId(), createdAt);
+        }
         session.start();
         return true;
     }
@@ -522,6 +532,21 @@ public class SessionManager {
             }
         }
         recordRewardGranted(player, crate, reward);
+    }
+
+    public void logRewardConfirmation(Player player, CrateDefinition crate, Reward reward, int rerollsUsed) {
+        if (player == null || crate == null || reward == null) {
+            return;
+        }
+        Instant timestamp = Instant.now();
+        plugin.getLogger().info(() -> String.format(
+                "Recompensa confirmada: jugador=%s crate=%s reward=%s rerolls=%d timestamp=%s",
+                player.getName(),
+                crate.id(),
+                reward.id(),
+                rerollsUsed,
+                timestamp
+        ));
     }
 
     public void handleSessionEnd(CrateSession session) {

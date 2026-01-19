@@ -107,6 +107,14 @@ public class StorageFallback implements CrateStorage {
     }
 
     @Override
+    public void logOpenStarted(UUID playerId, String crateId, String serverId, Instant timestamp) {
+        runWithFallback(
+                () -> primary.logOpenStarted(playerId, crateId, serverId, timestamp),
+                () -> fallback.logOpenStarted(playerId, crateId, serverId, timestamp)
+        );
+    }
+
+    @Override
     public void recordDelivery(UUID playerId, String crateId, String rewardId, DeliveryStatus status, int attempt, Instant timestamp) {
         runWithFallback(
                 () -> primary.recordDelivery(playerId, crateId, rewardId, status, attempt, timestamp),

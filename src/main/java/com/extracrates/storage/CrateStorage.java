@@ -20,6 +20,8 @@ public interface CrateStorage {
 
     void logOpen(UUID playerId, String crateId, String rewardId, String serverId, Instant timestamp);
 
+    void logOpenStarted(UUID playerId, String crateId, String serverId, Instant timestamp);
+
     void recordDelivery(UUID playerId, String crateId, String rewardId, DeliveryStatus status, int attempt, Instant timestamp);
 
     boolean acquireLock(UUID playerId, String crateId);
