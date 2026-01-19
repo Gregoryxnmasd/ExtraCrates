@@ -2,6 +2,7 @@ package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
@@ -20,6 +21,7 @@ import java.util.List;
 @SuppressWarnings("unused")
 public class EditorMenu implements Listener {
     private final ExtraCratesPlugin plugin;
+    private final LanguageManager languageManager;
     private final Component title;
     private final CrateEditorMenu crateEditorMenu;
     private final RewardEditorMenu rewardEditorMenu;
@@ -34,7 +36,8 @@ public class EditorMenu implements Listener {
             SessionManager sessionManager
     ) {
         this.plugin = plugin;
-        this.title = TextUtil.color("&8Editor ExtraCrates");
+        this.languageManager = plugin.getLanguageManager();
+        this.title = TextUtil.color(languageManager.getRaw("editor.menu.title", java.util.Collections.emptyMap()));
         this.crateEditorMenu = new CrateEditorMenu(plugin, configLoader, inputManager, confirmationMenu, this);
         this.rewardEditorMenu = new RewardEditorMenu(plugin, configLoader, inputManager, confirmationMenu, this);
         this.pathEditorMenu = new PathEditorMenu(plugin, configLoader, inputManager, confirmationMenu, this);
@@ -44,11 +47,31 @@ public class EditorMenu implements Listener {
 
     public void open(Player player) {
         Inventory inventory = Bukkit.createInventory(player, 27, title);
-        inventory.setItem(11, buildItem(Material.CHEST, "&eCrates", List.of("&7Crear, editar y borrar crates.")));
-        inventory.setItem(13, buildItem(Material.EMERALD, "&aRewards", List.of("&7Editar pools y recompensas.")));
-        inventory.setItem(15, buildItem(Material.ENDER_EYE, "&bPaths", List.of("&7Gestionar rutas cinemáticas.")));
-        inventory.setItem(20, buildItem(Material.TRIPWIRE_HOOK, "&dLlaves", List.of("&7Buscar jugador y gestionar llaves.")));
-        inventory.setItem(22, buildItem(Material.BARRIER, "&cCerrar", List.of("&7Salir del editor.")));
+        inventory.setItem(11, buildItem(
+                Material.CHEST,
+                languageManager.getRaw("editor.menu.crates.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("editor.menu.crates.lore", java.util.Collections.emptyMap()))
+        ));
+        inventory.setItem(13, buildItem(
+                Material.EMERALD,
+                languageManager.getRaw("editor.menu.rewards.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("editor.menu.rewards.lore", java.util.Collections.emptyMap()))
+        ));
+        inventory.setItem(15, buildItem(
+                Material.ENDER_EYE,
+                languageManager.getRaw("editor.menu.paths.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("editor.menu.paths.lore", java.util.Collections.emptyMap()))
+        ));
+        inventory.setItem(20, buildItem(
+                Material.TRIPWIRE_HOOK,
+                languageManager.getRaw("editor.menu.keys.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("editor.menu.keys.lore", java.util.Collections.emptyMap()))
+        ));
+        inventory.setItem(22, buildItem(
+                Material.BARRIER,
+                languageManager.getRaw("editor.menu.close.name", java.util.Collections.emptyMap()),
+                List.of(languageManager.getRaw("editor.menu.close.lore", java.util.Collections.emptyMap()))
+        ));
         player.openInventory(inventory);
     }
 
