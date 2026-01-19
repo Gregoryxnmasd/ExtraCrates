@@ -2,6 +2,7 @@ package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
@@ -28,6 +29,7 @@ public class EditorMenu implements Listener {
     private static final int[] NAV_FILLER_SLOTS = {18, 19, 20, 21, 23, 24, 25, 26};
 
     private final ExtraCratesPlugin plugin;
+    private final LanguageManager languageManager;
     private final Component title;
     private final CrateEditorMenu crateEditorMenu;
     private final RewardEditorMenu rewardEditorMenu;
@@ -42,7 +44,8 @@ public class EditorMenu implements Listener {
             SessionManager sessionManager
     ) {
         this.plugin = plugin;
-        this.title = TextUtil.color("&8Editor ExtraCrates");
+        this.languageManager = plugin.getLanguageManager();
+        this.title = TextUtil.color(languageManager.getRaw("editor.menu.title", java.util.Collections.emptyMap()));
         this.crateEditorMenu = new CrateEditorMenu(plugin, configLoader, inputManager, confirmationMenu, this);
         this.rewardEditorMenu = new RewardEditorMenu(plugin, configLoader, inputManager, confirmationMenu, this);
         this.pathEditorMenu = new PathEditorMenu(plugin, configLoader, inputManager, confirmationMenu, this);

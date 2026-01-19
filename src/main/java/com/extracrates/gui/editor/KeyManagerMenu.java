@@ -2,6 +2,7 @@ package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.storage.CrateStorage;
@@ -40,6 +41,7 @@ public class KeyManagerMenu implements Listener {
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private final LanguageManager languageManager;
     private final SessionManager sessionManager;
     private final EditorInputManager inputManager;
     private final EditorMenu parent;
@@ -56,10 +58,11 @@ public class KeyManagerMenu implements Listener {
     ) {
         this.plugin = plugin;
         this.configLoader = configLoader;
+        this.languageManager = plugin.getLanguageManager();
         this.sessionManager = sessionManager;
         this.inputManager = inputManager;
         this.parent = parent;
-        this.searchTitle = TextUtil.color("&8Llaves - Buscar");
+        this.searchTitle = TextUtil.color(text("editor.keys.title.search"));
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -69,14 +72,34 @@ public class KeyManagerMenu implements Listener {
 
     private void openSearch(Player player) {
         Inventory inventory = Bukkit.createInventory(player, 27, searchTitle);
-        inventory.setItem(11, buildItem(Material.COMPASS, "&eBuscar jugador", List.of("&7Escribe el nombre en el chat.")));
+        inventory.setItem(11, buildItem(
+                Material.COMPASS,
+                text("editor.keys.search.find.name"),
+                List.of(text("editor.keys.search.find.lore"))
+        ));
         TargetSelection target = activeTargets.get(player.getUniqueId());
         if (target != null) {
-            inventory.setItem(13, buildItem(Material.NAME_TAG, "&aJugador", List.of("&7Actual: &f" + target.name())));
-            inventory.setItem(15, buildItem(Material.TRIPWIRE_HOOK, "&dGestionar llaves", List.of("&7Ver crates del jugador.")));
+            inventory.setItem(13, buildItem(
+                    Material.NAME_TAG,
+                    text("editor.keys.search.player.name"),
+                    List.of(text("editor.keys.search.player.lore", Map.of("player", target.name())))
+            ));
+            inventory.setItem(15, buildItem(
+                    Material.TRIPWIRE_HOOK,
+                    text("editor.keys.search.manage.name"),
+                    List.of(text("editor.keys.search.manage.lore"))
+            ));
         } else {
-            inventory.setItem(13, buildItem(Material.BARRIER, "&7Sin jugador", List.of("&7Busca un jugador primero.")));
-            inventory.setItem(15, buildItem(Material.GRAY_STAINED_GLASS_PANE, "&7Gestionar", List.of("&7Selecciona un jugador.")));
+            inventory.setItem(13, buildItem(
+                    Material.BARRIER,
+                    text("editor.keys.search.none.name"),
+                    List.of(text("editor.keys.search.none.lore"))
+            ));
+            inventory.setItem(15, buildItem(
+                    Material.GRAY_STAINED_GLASS_PANE,
+                    text("editor.keys.search.manage-disabled.name"),
+                    List.of(text("editor.keys.search.manage-disabled.lore"))
+            ));
         }
         fillDetailNavigation(inventory);
         inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar selección", List.of("&7Limpiar jugador seleccionado.")));
@@ -219,20 +242,20 @@ public class KeyManagerMenu implements Listener {
 
     private void promptTarget(Player player) {
         if (inputManager.hasPending(player)) {
-            player.sendMessage(Component.text("Ya tienes una edición pendiente."));
+            player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, "Nombre del jugador", input -> {
+        inputManager.requestInput(player, text("editor.keys.prompts.player"), input -> {
             String value = input.trim();
             if (value.isEmpty()) {
-                player.sendMessage(Component.text("Jugador inválido."));
+                player.sendMessage(languageManager.getMessage("editor.keys.messages.invalid-player"));
                 openSearch(player);
                 return;
             }
             if (sessionManager.isStorageEnabled()) {
                 OfflinePlayer offline = Bukkit.getOfflinePlayer(value);
                 if (!offline.isOnline() && !offline.hasPlayedBefore()) {
-                    player.sendMessage(Component.text("Jugador no encontrado."));
+                    player.sendMessage(languageManager.getMessage("editor.keys.messages.not-found"));
                     openSearch(player);
                     return;
                 }
@@ -243,7 +266,7 @@ public class KeyManagerMenu implements Listener {
             }
             Player target = Bukkit.getPlayerExact(value);
             if (target == null) {
-                player.sendMessage(Component.text("El jugador debe estar conectado."));
+                player.sendMessage(languageManager.getMessage("editor.keys.messages.must-be-online"));
                 openSearch(player);
                 return;
             }
@@ -263,7 +286,7 @@ public class KeyManagerMenu implements Listener {
             } else {
                 boolean removed = storage.consumeKey(target.id(), crate.id());
                 if (!removed) {
-                    editor.sendMessage(Component.text("El jugador no tiene llaves para esa crate."));
+                    editor.sendMessage(languageManager.getMessage("editor.keys.messages.no-keys"));
                 }
             }
             openCrateDetail(editor, target, crate.id());
@@ -271,7 +294,7 @@ public class KeyManagerMenu implements Listener {
         }
         Player onlineTarget = Bukkit.getPlayer(target.id());
         if (onlineTarget == null) {
-            editor.sendMessage(Component.text("El jugador debe estar conectado."));
+            editor.sendMessage(languageManager.getMessage("editor.keys.messages.must-be-online"));
             openSearch(editor);
             return;
         }
@@ -296,9 +319,9 @@ public class KeyManagerMenu implements Listener {
 
     private ItemStack buildCrateItem(TargetSelection target, CrateDefinition crate) {
         List<String> lore = new ArrayList<>();
-        lore.add("&7ID: &f" + crate.id());
-        lore.add("&7Llaves: &f" + getKeyCount(target, crate));
-        lore.add("&8Click: gestionar");
+        lore.add(text("editor.keys.list.item.lore.id", Map.of("id", crate.id())));
+        lore.add(text("editor.keys.list.item.lore.keys", Map.of("keys", String.valueOf(getKeyCount(target, crate)))));
+        lore.add(text("editor.keys.list.item.lore.hint"));
         return buildItem(crate.keyMaterial(), crate.displayName(), lore);
     }
 
@@ -327,7 +350,7 @@ public class KeyManagerMenu implements Listener {
         ItemMeta meta = item.getItemMeta();
         int modelData = resolveKeyModelData(crate);
         if (meta != null) {
-            meta.displayName(TextUtil.color("&eLlave " + crate.displayName()));
+            meta.displayName(TextUtil.color(text("editor.keys.item.key-name", Map.of("crate", crate.displayName()))));
             if (modelData >= 0) {
                 meta.setCustomModelData(modelData);
             }
@@ -335,7 +358,7 @@ public class KeyManagerMenu implements Listener {
         }
         Map<Integer, ItemStack> leftover = target.getInventory().addItem(item);
         if (!leftover.isEmpty()) {
-            editor.sendMessage(Component.text("El inventario del jugador está lleno."));
+            editor.sendMessage(languageManager.getMessage("editor.keys.messages.inventory-full"));
         }
     }
 
@@ -364,7 +387,7 @@ public class KeyManagerMenu implements Listener {
             target.getInventory().setContents(contents);
             return;
         }
-        editor.sendMessage(Component.text("El jugador no tiene llaves para esa crate."));
+        editor.sendMessage(languageManager.getMessage("editor.keys.messages.no-keys"));
     }
 
     private int resolveKeyModelData(CrateDefinition crate) {
@@ -375,11 +398,11 @@ public class KeyManagerMenu implements Listener {
     }
 
     private Component listTitle(TargetSelection target) {
-        return TextUtil.color("&8Llaves: " + target.name());
+        return TextUtil.color(text("editor.keys.title.list", Map.of("player", target.name())));
     }
 
     private Component detailTitle(TargetSelection target, String crateId) {
-        return TextUtil.color("&8" + crateId + " -> " + target.name());
+        return TextUtil.color(text("editor.keys.title.detail", Map.of("crate", crateId, "player", target.name())));
     }
 
     private void fillListNavigation(Inventory inventory) {
@@ -407,6 +430,14 @@ public class KeyManagerMenu implements Listener {
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    private String text(String key) {
+        return languageManager.getRaw(key, java.util.Collections.emptyMap());
+    }
+
+    private String text(String key, Map<String, String> placeholders) {
+        return languageManager.getRaw(key, placeholders);
     }
 
     private record TargetSelection(UUID id, String name) {

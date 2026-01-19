@@ -11,8 +11,10 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LanguageManager {
@@ -24,10 +26,10 @@ public class LanguageManager {
     }
 
     public void load() {
-        String language = plugin.getConfig().getString("language", "es_es");
+        String language = plugin.getConfig().getString("language", "en_us");
         File file = new File(plugin.getDataFolder(), "lang/" + language + ".yml");
         if (!file.exists()) {
-            file = new File(plugin.getDataFolder(), "lang/es_es.yml");
+            file = new File(plugin.getDataFolder(), "lang/en_us.yml");
         }
         messages = YamlConfiguration.loadConfiguration(file);
     }
@@ -86,6 +88,20 @@ public class LanguageManager {
         }
         String value = messages.getString(key, key);
         return applyPlaceholders(value, placeholders);
+    }
+
+    public List<String> getRawList(String key, Map<String, String> placeholders) {
+        if (messages == null) {
+            return List.of(key);
+        }
+        if (!messages.isList(key)) {
+            return List.of(getRaw(key, placeholders));
+        }
+        List<String> result = new ArrayList<>();
+        for (String line : messages.getStringList(key)) {
+            result.add(applyPlaceholders(line, placeholders));
+        }
+        return result;
     }
 
     public String getRaw(

@@ -2,6 +2,7 @@ package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.runtime.CutscenePreviewSession;
 import com.extracrates.util.TextUtil;
@@ -44,6 +45,7 @@ public class PathEditorMenu implements Listener {
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private final LanguageManager languageManager;
     private final EditorInputManager inputManager;
     private final ConfirmationMenu confirmationMenu;
     private final EditorMenu parent;
@@ -60,10 +62,11 @@ public class PathEditorMenu implements Listener {
     ) {
         this.plugin = plugin;
         this.configLoader = configLoader;
+        this.languageManager = plugin.getLanguageManager();
         this.inputManager = inputManager;
         this.confirmationMenu = confirmationMenu;
         this.parent = parent;
-        this.title = TextUtil.color("&8Editor de Paths");
+        this.title = TextUtil.color(text("editor.paths.title"));
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -138,7 +141,7 @@ public class PathEditorMenu implements Listener {
             return;
         }
         String pathId = activePath.get(player.getUniqueId());
-        if (pathId != null && viewTitle.equals(TextUtil.color("&8Path: " + pathId))) {
+        if (pathId != null && viewTitle.equals(detailTitle(pathId))) {
             event.setCancelled(true);
             handleDetailClick(player, pathId, event.getSlot());
         }
@@ -165,9 +168,13 @@ public class PathEditorMenu implements Listener {
         }
         CutscenePath path = paths.get(slot);
         if (rightClick && shiftClick) {
-            confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar path " + path.getId(), () -> {
+            confirmationMenu.open(
+                    player,
+                    text("editor.paths.confirm.delete-title"),
+                    text("editor.paths.confirm.delete-description", Map.of("path", path.getId())),
+                    () -> {
                 deletePath(path.getId());
-                player.sendMessage(Component.text("Path eliminada y guardada en YAML."));
+                player.sendMessage(languageManager.getMessage("editor.paths.messages.deleted"));
                 open(player);
             }, () -> open(player));
             return;
@@ -206,21 +213,25 @@ public class PathEditorMenu implements Listener {
 
     private void promptCreate(Player player) {
         if (inputManager.hasPending(player)) {
-            player.sendMessage(Component.text("Ya tienes una edición pendiente."));
+            player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, "ID del nuevo path", input -> {
+        inputManager.requestInput(player, text("editor.paths.prompts.new-id"), input -> {
             if (input.isEmpty()) {
-                player.sendMessage(Component.text("ID inválido."));
+                player.sendMessage(languageManager.getMessage("editor.paths.messages.invalid-id"));
                 return;
             }
             if (configLoader.getPaths().containsKey(input)) {
-                player.sendMessage(Component.text("Ya existe un path con ese ID."));
+                player.sendMessage(languageManager.getMessage("editor.paths.messages.exists"));
                 return;
             }
-            confirmationMenu.open(player, "&8Confirmar creación", "Crear path " + input, () -> {
+            confirmationMenu.open(
+                    player,
+                    text("editor.paths.confirm.create-title"),
+                    text("editor.paths.confirm.create-description", Map.of("path", input)),
+                    () -> {
                 createPath(input);
-                player.sendMessage(Component.text("Path creada y guardada en YAML."));
+                player.sendMessage(languageManager.getMessage("editor.paths.messages.created"));
                 open(player);
             }, () -> open(player));
         });
@@ -228,42 +239,46 @@ public class PathEditorMenu implements Listener {
 
     private void promptClone(Player player, String sourceId) {
         if (inputManager.hasPending(player)) {
-            player.sendMessage(Component.text("Ya tienes una edición pendiente."));
+            player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, "Nuevo ID para clonar " + sourceId, input -> {
+        inputManager.requestInput(player, text("editor.paths.prompts.clone-id", Map.of("source", sourceId)), input -> {
             if (input.isEmpty()) {
-                player.sendMessage(Component.text("ID inválido."));
+                player.sendMessage(languageManager.getMessage("editor.paths.messages.invalid-id"));
                 return;
             }
             if (configLoader.getPaths().containsKey(input)) {
-                player.sendMessage(Component.text("Ya existe un path con ese ID."));
+                player.sendMessage(languageManager.getMessage("editor.paths.messages.exists"));
                 return;
             }
-            confirmationMenu.open(player, "&8Confirmar clonación", "Clonar path " + sourceId + " -> " + input, () -> {
+            confirmationMenu.open(
+                    player,
+                    text("editor.paths.confirm.clone-title"),
+                    text("editor.paths.confirm.clone-description", Map.of("source", sourceId, "target", input)),
+                    () -> {
                 clonePath(sourceId, input);
-                player.sendMessage(Component.text("Path clonada y guardada en YAML."));
+                player.sendMessage(languageManager.getMessage("editor.paths.messages.cloned"));
                 open(player);
             }, () -> open(player));
         });
     }
 
-    private void promptField(Player player, String pathId, String field, String prompt) {
+    private void promptField(Player player, String pathId, String field, String promptKey) {
         if (inputManager.hasPending(player)) {
-            player.sendMessage(Component.text("Ya tienes una edición pendiente."));
+            player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, prompt, input -> confirmationMenu.open(
+        inputManager.requestInput(player, text(promptKey), input -> confirmationMenu.open(
                 player,
-                "&8Confirmar cambio",
-                "Actualizar " + field + " de " + pathId,
+                text("editor.paths.confirm.update-title"),
+                text("editor.paths.confirm.update-description", Map.of("field", field, "path", pathId)),
                 () -> {
                     Object value = input;
                     if (field.equals("duration-seconds") || field.equals("step-resolution")) {
                         value = parseDouble(input);
                     }
                     updatePathField(pathId, field, value);
-                    player.sendMessage(Component.text("Path actualizada y guardada en YAML."));
+                    player.sendMessage(languageManager.getMessage("editor.paths.messages.updated"));
                     openDetail(player, pathId);
                 },
                 () -> openDetail(player, pathId)
@@ -273,9 +288,13 @@ public class PathEditorMenu implements Listener {
     private void toggleConstantSpeed(Player player, String pathId) {
         CutscenePath path = configLoader.getPaths().get(pathId);
         boolean next = path == null || !path.isConstantSpeed();
-        confirmationMenu.open(player, "&8Confirmar cambio", "Constant speed: " + next, () -> {
+        confirmationMenu.open(
+                player,
+                text("editor.paths.confirm.update-title"),
+                text("editor.paths.confirm.constant-speed", Map.of("value", String.valueOf(next))),
+                () -> {
             updatePathField(pathId, "constant-speed", next);
-            player.sendMessage(Component.text("Constant speed actualizado y guardado en YAML."));
+            player.sendMessage(languageManager.getMessage("editor.paths.messages.constant-speed"));
             openDetail(player, pathId);
         }, () -> openDetail(player, pathId));
     }
@@ -283,34 +302,34 @@ public class PathEditorMenu implements Listener {
     private void startPointEditing(Player player, String pathId) {
         boolean started = plugin.getRouteEditorManager().startSession(player, pathId);
         if (!started) {
-            player.sendMessage(Component.text("Ya tienes una sesión de rutas activa."));
+            player.sendMessage(languageManager.getMessage("editor.paths.messages.session-active"));
             return;
         }
         player.closeInventory();
-        player.sendMessage(Component.text("Editor iniciado. Haz clic en bloques para marcar puntos."));
-        player.sendMessage(Component.text("Usa /crate route editor stop para guardar o /crate route editor cancel para salir."));
+        player.sendMessage(languageManager.getMessage("editor.paths.messages.editor-started"));
+        player.sendMessage(languageManager.getMessage("editor.paths.messages.editor-help"));
     }
 
     private void togglePreview(Player player, String pathId) {
         CutscenePreviewSession running = previewSessions.remove(player.getUniqueId());
         if (running != null) {
             running.end();
-            player.sendMessage(Component.text("Preview detenida."));
+            player.sendMessage(languageManager.getMessage("editor.paths.messages.preview-stopped"));
             return;
         }
         CutscenePath path = configLoader.getPaths().get(pathId);
         if (path == null) {
-            player.sendMessage(Component.text("No existe la ruta seleccionada."));
+            player.sendMessage(languageManager.getMessage("editor.paths.messages.preview-missing"));
             return;
         }
         Particle particle = resolvePreviewParticle(path);
         CutscenePreviewSession preview = new CutscenePreviewSession(plugin, player, path, particle, () -> {
             previewSessions.remove(player.getUniqueId());
-            player.sendMessage(Component.text("Preview finalizada."));
+            player.sendMessage(languageManager.getMessage("editor.paths.messages.preview-finished"));
         });
         previewSessions.put(player.getUniqueId(), preview);
         preview.start();
-        player.sendMessage(Component.text("Preview iniciada."));
+        player.sendMessage(languageManager.getMessage("editor.paths.messages.preview-started"));
     }
 
     private Particle resolvePreviewParticle(CutscenePath path) {
@@ -382,10 +401,10 @@ public class PathEditorMenu implements Listener {
 
     private ItemStack buildPathItem(CutscenePath path) {
         List<String> lore = new ArrayList<>();
-        lore.add("&7ID: &f" + path.getId());
-        lore.add("&7Duración: &f" + path.getDurationSeconds());
-        lore.add("&7Puntos: &f" + path.getPoints().size());
-        lore.add("&8Click: editar | Click der: clonar | Shift+der: borrar");
+        lore.add(text("editor.paths.list.item.lore.id", Map.of("id", path.getId())));
+        lore.add(text("editor.paths.list.item.lore.duration", Map.of("duration", String.valueOf(path.getDurationSeconds()))));
+        lore.add(text("editor.paths.list.item.lore.points", Map.of("points", String.valueOf(path.getPoints().size()))));
+        lore.add(text("editor.paths.list.item.lore.hint"));
         return buildItem(Material.ENDER_EYE, "&b" + path.getId(), lore);
     }
 
@@ -423,5 +442,17 @@ public class PathEditorMenu implements Listener {
         } catch (NumberFormatException ex) {
             return DEFAULT_DOUBLE_FALLBACK;
         }
+    }
+
+    private Component detailTitle(String pathId) {
+        return TextUtil.color(text("editor.paths.detail.title", Map.of("path", pathId)));
+    }
+
+    private String text(String key) {
+        return languageManager.getRaw(key, java.util.Collections.emptyMap());
+    }
+
+    private String text(String key, Map<String, String> placeholders) {
+        return languageManager.getRaw(key, placeholders);
     }
 }
