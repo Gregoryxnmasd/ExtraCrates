@@ -1,14 +1,15 @@
 package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
+import com.extracrates.config.LanguageManager;
 import io.papermc.paper.event.player.AsyncChatEvent;
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,16 +17,23 @@ import java.util.function.Consumer;
 
 public class EditorInputManager implements Listener {
     private final ExtraCratesPlugin plugin;
+    private final LanguageManager languageManager;
     private final Map<UUID, InputRequest> pendingInputs = new ConcurrentHashMap<>();
 
     public EditorInputManager(ExtraCratesPlugin plugin) {
         this.plugin = plugin;
+        this.languageManager = plugin.getLanguageManager();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    public void requestInput(Player player, String prompt, Consumer<String> onInput) {
+    public void requestInput(Player player, String promptKey, Consumer<String> onInput) {
+        requestInput(player, promptKey, Collections.emptyMap(), onInput);
+    }
+
+    public void requestInput(Player player, String promptKey, Map<String, String> placeholders, Consumer<String> onInput) {
         pendingInputs.put(player.getUniqueId(), new InputRequest(onInput));
-        player.sendMessage(Component.text(prompt + " (escribe 'cancel' para cancelar)"));
+        String prompt = languageManager.getRaw(promptKey, placeholders);
+        player.sendMessage(languageManager.getMessage("editor.input.prompt", Map.of("prompt", prompt)));
     }
 
     public boolean hasPending(Player player) {
@@ -42,11 +50,14 @@ public class EditorInputManager implements Listener {
         String message = PlainTextComponentSerializer.plainText().serialize(event.message()).trim();
         pendingInputs.remove(event.getPlayer().getUniqueId());
         plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (request.reopenAction() != null) {
+                request.reopenAction().run();
+            }
             if (message.equalsIgnoreCase("cancel")) {
-                event.getPlayer().sendMessage(Component.text("Edición cancelada."));
+                event.getPlayer().sendMessage(languageManager.getMessage("editor.input.cancelled"));
                 return;
             }
-            request.onInput.accept(message);
+            request.onInput().accept(message);
         });
     }
 
@@ -55,6 +66,9 @@ public class EditorInputManager implements Listener {
         pendingInputs.remove(event.getPlayer().getUniqueId());
     }
 
-    private record InputRequest(Consumer<String> onInput) {
+    private record InputRequest(Consumer<String> onInput, Runnable reopenAction, MenuContext previousMenu) {
+    }
+
+    private record MenuContext(Component title, String state) {
     }
 }

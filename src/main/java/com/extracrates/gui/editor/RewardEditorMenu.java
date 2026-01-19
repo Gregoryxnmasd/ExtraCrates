@@ -2,6 +2,7 @@ package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.util.TextUtil;
@@ -33,11 +34,24 @@ import java.util.UUID;
 
 public class RewardEditorMenu implements Listener {
     private static final int DEFAULT_INT_FALLBACK = 1;
+    // Layout: acciones principales al centro, navegación en fila inferior.
+    private static final int SLOT_LIST_CREATE = 45;
+    private static final int SLOT_LIST_DELETE = 47;
+    private static final int SLOT_LIST_BACK = 49;
+    private static final int SLOT_LIST_REFRESH = 53;
+    private static final int SLOT_DETAIL_DELETE = 18;
+    private static final int SLOT_DETAIL_BACK = 22;
+    private static final int SLOT_DETAIL_REFRESH = 26;
+    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 48, 50, 51, 52};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
+
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private final LanguageManager languageManager;
     private final EditorInputManager inputManager;
     private final ConfirmationMenu confirmationMenu;
     private final EditorMenu parent;
+    private final LanguageManager languageManager;
     private final Component poolTitle;
     private final Map<UUID, String> activePool = new HashMap<>();
     private final Map<UUID, String> activeReward = new HashMap<>();
@@ -51,9 +65,11 @@ public class RewardEditorMenu implements Listener {
     ) {
         this.plugin = plugin;
         this.configLoader = configLoader;
+        this.languageManager = plugin.getLanguageManager();
         this.inputManager = inputManager;
         this.confirmationMenu = confirmationMenu;
         this.parent = parent;
+        this.languageManager = plugin.getLanguageManager();
         this.poolTitle = TextUtil.color("&8Editor de Rewards");
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
@@ -69,19 +85,20 @@ public class RewardEditorMenu implements Listener {
                 break;
             }
         }
-        inventory.setItem(45, buildItem(Material.LIME_CONCRETE, "&aCrear pool", List.of("&7Nuevo pool de rewards.")));
-        inventory.setItem(49, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
-        inventory.setItem(53, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        fillListNavigation(inventory);
+        inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE, "&aCrear pool", List.of("&7Nuevo pool de rewards.")));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
+        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
         player.openInventory(inventory);
     }
 
     private void openPoolDetail(Player player, String poolId) {
         activePool.put(player.getUniqueId(), poolId);
         RewardPool pool = configLoader.getRewardPools().get(poolId);
-        Inventory inventory = Bukkit.createInventory(player, 54, TextUtil.color("&8Pool: " + poolId));
-        inventory.setItem(4, buildItem(Material.COMPARATOR, "&eRoll Count", List.of(
-                "&7Actual: &f" + (pool != null ? pool.rollCount() : 1),
-                "&7Click para editar."
+        Inventory inventory = Bukkit.createInventory(player, 54, TextUtil.color(text("editor.rewards.pool.title", Map.of("pool", poolId))));
+        inventory.setItem(4, buildItem(Material.COMPARATOR, text("editor.rewards.pool.roll-count.name"), List.of(
+                text("editor.rewards.reward.current", Map.of("value", pool != null ? String.valueOf(pool.rollCount()) : "1")),
+                text("editor.rewards.reward.click-edit")
         )));
         List<Reward> rewards = pool != null ? pool.rewards() : List.of();
         int slot = 0;
@@ -91,9 +108,11 @@ public class RewardEditorMenu implements Listener {
             }
             inventory.setItem(slot++, buildRewardItem(reward));
         }
-        inventory.setItem(45, buildItem(Material.LIME_CONCRETE, "&aCrear reward", List.of("&7Agregar nueva reward.")));
-        inventory.setItem(49, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar a pools.")));
-        inventory.setItem(53, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        fillListNavigation(inventory);
+        inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE, "&aCrear reward", List.of("&7Agregar nueva reward.")));
+        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar pool", List.of("&7Eliminar pool actual.")));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar a pools.")));
+        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
         player.openInventory(inventory);
     }
 
@@ -111,43 +130,46 @@ public class RewardEditorMenu implements Listener {
             }
         }
         Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color("&8Reward: " + rewardId));
-        inventory.setItem(10, buildItem(Material.NAME_TAG, "&eDisplay Name", List.of(
+        inventory.setItem(9, buildItem(Material.NAME_TAG, "&eDisplay Name", List.of(
                 "&7Actual: &f" + (reward != null ? reward.displayName() : rewardId),
                 "&7Click para editar."
         )));
-        inventory.setItem(11, buildItem(Material.GOLD_NUGGET, "&eChance", List.of(
+        inventory.setItem(10, buildItem(Material.GOLD_NUGGET, "&eChance", List.of(
                 "&7Actual: &f" + (reward != null ? reward.chance() : 0),
                 "&7Click para editar."
         )));
-        inventory.setItem(12, buildItem(Material.CHEST, "&eItem", List.of(
+        inventory.setItem(11, buildItem(Material.CHEST, "&eItem", List.of(
                 "&7Actual: &f" + (reward != null ? reward.item() : "STONE"),
                 "&7Click para editar."
         )));
-        inventory.setItem(13, buildItem(Material.PAPER, "&eAmount", List.of(
+        inventory.setItem(12, buildItem(Material.PAPER, "&eAmount", List.of(
                 "&7Actual: &f" + (reward != null ? reward.amount() : 1),
                 "&7Click para editar."
         )));
-        inventory.setItem(14, buildItem(Material.COMMAND_BLOCK, "&eCommands", List.of(
+        inventory.setItem(13, buildItem(Material.COMMAND_BLOCK, "&eCommands", List.of(
                 "&7Actual: &f" + (reward != null ? reward.commands().size() : 0),
                 "&7Click para editar."
         )));
-        inventory.setItem(15, buildItem(Material.ENCHANTED_BOOK, "&eEnchantments", List.of(
+        inventory.setItem(14, buildItem(Material.ENCHANTED_BOOK, "&eEnchantments", List.of(
                 "&7Actual: &f" + (reward != null ? reward.enchantments().size() : 0),
                 "&7Click para editar."
         )));
-        inventory.setItem(16, buildItem(Material.GLOWSTONE_DUST, "&eGlow", List.of(
+        inventory.setItem(15, buildItem(Material.GLOWSTONE_DUST, "&eGlow", List.of(
                 "&7Actual: &f" + (reward != null && reward.glow()),
                 "&7Click para editar."
         )));
-        inventory.setItem(19, buildItem(Material.SLIME_BALL, "&eCustom Model", List.of(
+        inventory.setItem(16, buildItem(Material.SLIME_BALL, "&eCustom Model", List.of(
                 "&7Actual: &f" + (reward != null ? emptyFallback(reward.customModel()) : ""),
                 "&7Click para editar."
         )));
-        inventory.setItem(20, buildItem(Material.FILLED_MAP, "&eMap Image", List.of(
+        inventory.setItem(17, buildItem(Material.FILLED_MAP, "&eMap Image", List.of(
                 "&7Actual: &f" + (reward != null ? emptyFallback(reward.mapImage()) : ""),
                 "&7Click para editar."
         )));
-        inventory.setItem(22, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al pool.")));
+        fillDetailNavigation(inventory);
+        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar reward", List.of("&7Eliminar reward actual.")));
+        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al pool.")));
+        inventory.setItem(SLOT_DETAIL_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar datos.")));
         player.openInventory(inventory);
     }
 
@@ -163,28 +185,28 @@ public class RewardEditorMenu implements Listener {
             return;
         }
         String poolId = activePool.get(player.getUniqueId());
-        if (poolId != null && viewTitle.equals(TextUtil.color("&8Pool: " + poolId))) {
+        if (poolId != null && viewTitle.equals(poolTitle(poolId))) {
             event.setCancelled(true);
             handlePoolDetailClick(player, poolId, event.getSlot(), event.isRightClick(), event.isShiftClick());
             return;
         }
         String rewardId = activeReward.get(player.getUniqueId());
-        if (poolId != null && rewardId != null && viewTitle.equals(TextUtil.color("&8Reward: " + rewardId))) {
+        if (poolId != null && rewardId != null && viewTitle.equals(rewardTitle(rewardId))) {
             event.setCancelled(true);
             handleRewardDetailClick(player, poolId, rewardId, event.getSlot());
         }
     }
 
     private void handlePoolListClick(Player player, int slot, boolean rightClick, boolean shiftClick) {
-        if (slot == 45) {
+        if (slot == SLOT_LIST_CREATE) {
             promptCreatePool(player);
             return;
         }
-        if (slot == 49) {
+        if (slot == SLOT_LIST_BACK) {
             parent.open(player);
             return;
         }
-        if (slot == 53) {
+        if (slot == SLOT_LIST_REFRESH) {
             openPools(player);
             return;
         }
@@ -195,11 +217,17 @@ public class RewardEditorMenu implements Listener {
         }
         RewardPool pool = pools.get(slot);
         if (rightClick && shiftClick) {
-            confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar pool " + pool.id(), () -> {
-                deletePool(pool.id());
-                player.sendMessage(Component.text("Pool eliminada y guardada en YAML."));
-                openPools(player);
-            }, () -> openPools(player));
+            confirmationMenu.open(
+                    player,
+                    languageManager.getRaw("editor.confirmation.title.delete"),
+                    languageManager.getRaw("editor.reward.confirm.delete-pool", Map.of("id", pool.id())),
+                    () -> {
+                        deletePool(pool.id());
+                        player.sendMessage(languageManager.getMessage("editor.reward.success.pool-deleted"));
+                        openPools(player);
+                    },
+                    () -> openPools(player)
+            );
             return;
         }
         if (rightClick) {
@@ -214,15 +242,19 @@ public class RewardEditorMenu implements Listener {
             promptPoolRoll(player, poolId);
             return;
         }
-        if (slot == 45) {
+        if (slot == SLOT_LIST_CREATE) {
             promptCreateReward(player, poolId);
             return;
         }
-        if (slot == 49) {
+        if (slot == SLOT_LIST_DELETE) {
+            confirmDeletePool(player, poolId);
+            return;
+        }
+        if (slot == SLOT_LIST_BACK) {
             openPools(player);
             return;
         }
-        if (slot == 53) {
+        if (slot == SLOT_LIST_REFRESH) {
             openPoolDetail(player, poolId);
             return;
         }
@@ -236,11 +268,17 @@ public class RewardEditorMenu implements Listener {
         }
         Reward reward = rewards.get(slot);
         if (rightClick && shiftClick) {
-            confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar reward " + reward.id(), () -> {
-                deleteReward(poolId, reward.id());
-                player.sendMessage(Component.text("Reward eliminada y guardada en YAML."));
-                openPoolDetail(player, poolId);
-            }, () -> openPoolDetail(player, poolId));
+            confirmationMenu.open(
+                    player,
+                    languageManager.getRaw("editor.confirmation.title.delete"),
+                    languageManager.getRaw("editor.reward.confirm.delete-reward", Map.of("id", reward.id())),
+                    () -> {
+                        deleteReward(poolId, reward.id());
+                        player.sendMessage(languageManager.getMessage("editor.reward.success.reward-deleted"));
+                        openPoolDetail(player, poolId);
+                    },
+                    () -> openPoolDetail(player, poolId)
+            );
             return;
         }
         if (rightClick) {
@@ -252,150 +290,190 @@ public class RewardEditorMenu implements Listener {
 
     private void handleRewardDetailClick(Player player, String poolId, String rewardId, int slot) {
         switch (slot) {
-            case 10 -> promptRewardField(player, poolId, rewardId, "display-name", "Display name nuevo");
-            case 11 -> promptRewardField(player, poolId, rewardId, "chance", "Chance (número)");
-            case 12 -> promptRewardField(player, poolId, rewardId, "item", "Material del item");
-            case 13 -> promptRewardField(player, poolId, rewardId, "amount", "Cantidad");
-            case 14 -> promptRewardField(player, poolId, rewardId, "commands", "Comandos (separa con ';') o 'none'");
-            case 15 -> promptRewardField(player, poolId, rewardId, "enchantments", "Encantamientos clave:nivel separados por ',' o 'none'");
-            case 16 -> promptRewardField(player, poolId, rewardId, "glow", "Glow (true/false)");
-            case 19 -> promptRewardField(player, poolId, rewardId, "custom-model", "Custom model (texto) o 'none'");
-            case 20 -> promptRewardField(player, poolId, rewardId, "map-image", "Map image (texto) o 'none'");
+            case 10 -> promptRewardField(player, poolId, rewardId, "display-name", "editor.reward.prompt.display-name");
+            case 11 -> promptRewardField(player, poolId, rewardId, "chance", "editor.reward.prompt.chance");
+            case 12 -> promptRewardField(player, poolId, rewardId, "item", "editor.reward.prompt.item");
+            case 13 -> promptRewardField(player, poolId, rewardId, "amount", "editor.reward.prompt.amount");
+            case 14 -> promptRewardField(player, poolId, rewardId, "commands", "editor.reward.prompt.commands");
+            case 15 -> promptRewardField(player, poolId, rewardId, "enchantments", "editor.reward.prompt.enchantments");
+            case 16 -> promptRewardField(player, poolId, rewardId, "glow", "editor.reward.prompt.glow");
+            case 19 -> promptRewardField(player, poolId, rewardId, "custom-model", "editor.reward.prompt.custom-model");
+            case 20 -> promptRewardField(player, poolId, rewardId, "map-image", "editor.reward.prompt.map-image");
             case 22 -> openPoolDetail(player, poolId);
             default -> {
             }
         }
     }
 
+    private void confirmDeletePool(Player player, String poolId) {
+        confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar pool " + poolId, () -> {
+            deletePool(poolId);
+            player.sendMessage(Component.text("Pool eliminada y guardada en YAML."));
+            openPools(player);
+        }, () -> openPoolDetail(player, poolId));
+    }
+
+    private void confirmDeleteReward(Player player, String poolId, String rewardId) {
+        confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar reward " + rewardId, () -> {
+            deleteReward(poolId, rewardId);
+            player.sendMessage(Component.text("Reward eliminada y guardada en YAML."));
+            openPoolDetail(player, poolId);
+        }, () -> openRewardDetail(player, poolId, rewardId));
+    }
+
     private void promptCreatePool(Player player) {
         if (inputManager.hasPending(player)) {
-            player.sendMessage(Component.text("Ya tienes una edición pendiente."));
+            player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, "ID del nuevo pool", input -> {
+        inputManager.requestInput(player, "editor.reward.prompt.new-pool-id", input -> {
             if (input.isEmpty()) {
-                player.sendMessage(Component.text("ID inválido."));
+                player.sendMessage(languageManager.getMessage("editor.input.invalid-id"));
                 return;
             }
             if (configLoader.getRewardPools().containsKey(input)) {
-                player.sendMessage(Component.text("Ya existe un pool con ese ID."));
+                player.sendMessage(languageManager.getMessage("command.pool-already-exists"));
                 return;
             }
-            confirmationMenu.open(player, "&8Confirmar creación", "Crear pool " + input, () -> {
-                createPool(input);
-                player.sendMessage(Component.text("Pool creada y guardada en YAML."));
-                openPools(player);
-            }, () -> openPools(player));
+            confirmationMenu.open(
+                    player,
+                    languageManager.getRaw("editor.confirmation.title.create"),
+                    languageManager.getRaw("editor.reward.confirm.create-pool", Map.of("id", input)),
+                    () -> {
+                        createPool(input);
+                        player.sendMessage(languageManager.getMessage("editor.reward.success.pool-created"));
+                        openPools(player);
+                    },
+                    () -> openPools(player)
+            );
         });
     }
 
     private void promptClonePool(Player player, String sourceId) {
         if (inputManager.hasPending(player)) {
-            player.sendMessage(Component.text("Ya tienes una edición pendiente."));
+            player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, "Nuevo ID para clonar " + sourceId, input -> {
+        inputManager.requestInput(player, "editor.reward.prompt.clone-pool-id", Map.of("id", sourceId), input -> {
             if (input.isEmpty()) {
-                player.sendMessage(Component.text("ID inválido."));
+                player.sendMessage(languageManager.getMessage("editor.input.invalid-id"));
                 return;
             }
             if (configLoader.getRewardPools().containsKey(input)) {
-                player.sendMessage(Component.text("Ya existe un pool con ese ID."));
+                player.sendMessage(languageManager.getMessage("command.pool-already-exists"));
                 return;
             }
-            confirmationMenu.open(player, "&8Confirmar clonación", "Clonar pool " + sourceId + " -> " + input, () -> {
-                clonePool(sourceId, input);
-                player.sendMessage(Component.text("Pool clonada y guardada en YAML."));
-                openPools(player);
-            }, () -> openPools(player));
+            confirmationMenu.open(
+                    player,
+                    languageManager.getRaw("editor.confirmation.title.clone"),
+                    languageManager.getRaw("editor.reward.confirm.clone-pool", Map.of("source", sourceId, "target", input)),
+                    () -> {
+                        clonePool(sourceId, input);
+                        player.sendMessage(languageManager.getMessage("editor.reward.success.pool-cloned"));
+                        openPools(player);
+                    },
+                    () -> openPools(player)
+            );
         });
     }
 
     private void promptPoolRoll(Player player, String poolId) {
         if (inputManager.hasPending(player)) {
-            player.sendMessage(Component.text("Ya tienes una edición pendiente."));
+            player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, "Nuevo roll-count", input -> confirmationMenu.open(
+        inputManager.requestInput(player, "editor.reward.prompt.roll-count", input -> confirmationMenu.open(
                 player,
-                "&8Confirmar cambio",
-                "Actualizar roll-count de " + poolId,
+                languageManager.getRaw("editor.confirmation.title.change"),
+                languageManager.getRaw("editor.reward.confirm.update-roll-count", Map.of("id", poolId)),
                 () -> {
                     updatePoolField(poolId, "roll-count", parseInt(input));
-                    player.sendMessage(Component.text("Pool actualizada y guardada en YAML."));
+                    player.sendMessage(languageManager.getMessage("editor.reward.success.pool-updated"));
                     openPoolDetail(player, poolId);
                 },
                 () -> openPoolDetail(player, poolId)
-        ));
+        ), () -> openPoolDetail(player, poolId));
     }
 
     private void promptCreateReward(Player player, String poolId) {
         if (inputManager.hasPending(player)) {
-            player.sendMessage(Component.text("Ya tienes una edición pendiente."));
+            player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, "ID de la nueva reward", input -> {
+        inputManager.requestInput(player, "editor.reward.prompt.new-reward-id", input -> {
             if (input.isEmpty()) {
-                player.sendMessage(Component.text("ID inválido."));
+                player.sendMessage(languageManager.getMessage("editor.input.invalid-id"));
                 return;
             }
             if (rewardExists(poolId, input)) {
-                player.sendMessage(Component.text("Ya existe una reward con ese ID."));
+                player.sendMessage(languageManager.getMessage("command.reward-already-exists"));
                 return;
             }
-            confirmationMenu.open(player, "&8Confirmar creación", "Crear reward " + input, () -> {
-                createReward(poolId, input);
-                player.sendMessage(Component.text("Reward creada y guardada en YAML."));
-                openPoolDetail(player, poolId);
-            }, () -> openPoolDetail(player, poolId));
+            confirmationMenu.open(
+                    player,
+                    languageManager.getRaw("editor.confirmation.title.create"),
+                    languageManager.getRaw("editor.reward.confirm.create-reward", Map.of("id", input)),
+                    () -> {
+                        createReward(poolId, input);
+                        player.sendMessage(languageManager.getMessage("editor.reward.success.reward-created"));
+                        openPoolDetail(player, poolId);
+                    },
+                    () -> openPoolDetail(player, poolId)
+            );
         });
     }
 
     private void promptCloneReward(Player player, String poolId, String rewardId) {
         if (inputManager.hasPending(player)) {
-            player.sendMessage(Component.text("Ya tienes una edición pendiente."));
+            player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, "Nuevo ID para clonar " + rewardId, input -> {
+        inputManager.requestInput(player, "editor.reward.prompt.clone-reward-id", Map.of("id", rewardId), input -> {
             if (input.isEmpty()) {
-                player.sendMessage(Component.text("ID inválido."));
+                player.sendMessage(languageManager.getMessage("editor.input.invalid-id"));
                 return;
             }
             if (rewardExists(poolId, input)) {
-                player.sendMessage(Component.text("Ya existe una reward con ese ID."));
-                return;
-            }
-            confirmationMenu.open(player, "&8Confirmar clonación", "Clonar reward " + rewardId + " -> " + input, () -> {
-                cloneReward(poolId, rewardId, input);
-                player.sendMessage(Component.text("Reward clonada y guardada en YAML."));
-                openPoolDetail(player, poolId);
-            }, () -> openPoolDetail(player, poolId));
-        });
-    }
-
-    private void promptRewardField(Player player, String poolId, String rewardId, String field, String prompt) {
-        if (inputManager.hasPending(player)) {
-            player.sendMessage(Component.text("Ya tienes una edición pendiente."));
-            return;
-        }
-        inputManager.requestInput(player, prompt, input -> {
-            ValidationResult validation = validateRewardField(field, input);
-            if (!validation.valid()) {
-                player.sendMessage(Component.text(validation.errorMessage()));
+                player.sendMessage(languageManager.getMessage("command.reward-already-exists"));
                 return;
             }
             confirmationMenu.open(
                     player,
-                    "&8Confirmar cambio",
-                    "Actualizar " + field + " de " + rewardId,
+                    languageManager.getRaw("editor.confirmation.title.clone"),
+                    languageManager.getRaw("editor.reward.confirm.clone-reward", Map.of("source", rewardId, "target", input)),
+                    () -> {
+                        cloneReward(poolId, rewardId, input);
+                        player.sendMessage(languageManager.getMessage("editor.reward.success.reward-cloned"));
+                        openPoolDetail(player, poolId);
+                    },
+                    () -> openPoolDetail(player, poolId)
+            );
+        });
+    }
+
+    private void promptRewardField(Player player, String poolId, String rewardId, String field, String promptKey) {
+        if (inputManager.hasPending(player)) {
+            player.sendMessage(languageManager.getMessage("editor.input.pending"));
+            return;
+        }
+        inputManager.requestInput(player, promptKey, input -> {
+            ValidationResult validation = validateRewardField(field, input);
+            if (!validation.valid()) {
+                player.sendMessage(validation.errorMessage());
+                return;
+            }
+            confirmationMenu.open(
+                    player,
+                    languageManager.getRaw("editor.confirmation.title.change"),
+                    languageManager.getRaw("editor.reward.confirm.update-field", Map.of("field", field, "id", rewardId)),
                     () -> {
                         updateRewardField(poolId, rewardId, field, validation.value());
-                        player.sendMessage(Component.text("Reward actualizada y guardada en YAML."));
+                        player.sendMessage(languageManager.getMessage("editor.reward.success.reward-updated"));
                         openRewardDetail(player, poolId, rewardId);
                     },
                     () -> openRewardDetail(player, poolId, rewardId)
             );
-        });
+        }, () -> openRewardDetail(player, poolId, rewardId));
     }
 
     private void createPool(String id) {
@@ -492,19 +570,34 @@ public class RewardEditorMenu implements Listener {
 
     private ItemStack buildPoolItem(RewardPool pool) {
         List<String> lore = new ArrayList<>();
-        lore.add("&7ID: &f" + pool.id());
-        lore.add("&7Roll Count: &f" + pool.rollCount());
-        lore.add("&7Rewards: &f" + pool.rewards().size());
-        lore.add("&8Click: editar | Click der: clonar | Shift+der: borrar");
+        lore.add(text("editor.rewards.list.item.lore.id", Map.of("id", pool.id())));
+        lore.add(text("editor.rewards.list.item.lore.roll-count", Map.of("roll_count", String.valueOf(pool.rollCount()))));
+        lore.add(text("editor.rewards.list.item.lore.rewards", Map.of("rewards", String.valueOf(pool.rewards().size()))));
+        lore.add(text("editor.rewards.list.item.lore.hint"));
         return buildItem(Material.EMERALD, "&a" + pool.id(), lore);
+    }
+
+    private void fillListNavigation(Inventory inventory) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar", List.of("&7Usa el detalle para borrar.")));
+        for (int slot : LIST_NAV_FILLER_SLOTS) {
+            inventory.setItem(slot, filler);
+        }
+    }
+
+    private void fillDetailNavigation(Inventory inventory) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        for (int slot : DETAIL_NAV_FILLER_SLOTS) {
+            inventory.setItem(slot, filler);
+        }
     }
 
     private ItemStack buildRewardItem(Reward reward) {
         List<String> lore = new ArrayList<>();
-        lore.add("&7ID: &f" + reward.id());
-        lore.add("&7Chance: &f" + reward.chance());
-        lore.add("&7Item: &f" + reward.item());
-        lore.add("&8Click: editar | Click der: clonar | Shift+der: borrar");
+        lore.add(text("editor.rewards.reward.item-lore.id", Map.of("id", reward.id())));
+        lore.add(text("editor.rewards.reward.item-lore.chance", Map.of("chance", String.valueOf(reward.chance()))));
+        lore.add(text("editor.rewards.reward.item-lore.item", Map.of("item", reward.item())));
+        lore.add(text("editor.rewards.reward.item-lore.hint"));
         return buildItem(Material.GOLD_INGOT, "&e" + reward.displayName(), lore);
     }
 
@@ -524,7 +617,7 @@ public class RewardEditorMenu implements Listener {
     private ValidationResult validateRewardField(String field, String input) {
         String trimmed = input.trim();
         if (trimmed.isEmpty()) {
-            return ValidationResult.invalid("Valor inválido.");
+            return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-value"));
         }
         return switch (field) {
             case "display-name" -> ValidationResult.valid(trimmed);
@@ -543,11 +636,11 @@ public class RewardEditorMenu implements Listener {
         try {
             double value = Double.parseDouble(input);
             if (value < 0) {
-                return ValidationResult.invalid("Chance inválida. Usa un número mayor o igual a 0.");
+                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-chance-min"));
             }
             return ValidationResult.valid(value);
         } catch (NumberFormatException ex) {
-            return ValidationResult.invalid("Chance inválida. Usa un número.");
+            return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-chance-number"));
         }
     }
 
@@ -555,18 +648,18 @@ public class RewardEditorMenu implements Listener {
         try {
             int value = Integer.parseInt(input);
             if (value <= 0) {
-                return ValidationResult.invalid("Cantidad inválida. Usa un número mayor a 0.");
+                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-amount-min"));
             }
             return ValidationResult.valid(value);
         } catch (NumberFormatException ex) {
-            return ValidationResult.invalid("Cantidad inválida. Usa un número entero.");
+            return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-amount-number"));
         }
     }
 
     private ValidationResult validateMaterial(String input) {
         Material material = Material.matchMaterial(input.toUpperCase(Locale.ROOT));
         if (material == null) {
-            return ValidationResult.invalid("Material inválido: " + input + ".");
+            return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-material", Map.of("material", input)));
         }
         return ValidationResult.valid(material.name().toLowerCase(Locale.ROOT));
     }
@@ -574,7 +667,7 @@ public class RewardEditorMenu implements Listener {
     private ValidationResult parseGlow(String input) {
         Optional<Boolean> value = parseBoolean(input);
         if (value.isEmpty()) {
-            return ValidationResult.invalid("Glow inválido. Usa true o false.");
+            return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-glow"));
         }
         return ValidationResult.valid(value.get());
     }
@@ -598,7 +691,7 @@ public class RewardEditorMenu implements Listener {
             }
         }
         if (commands.isEmpty()) {
-            return ValidationResult.invalid("Comandos inválidos. Usa ';' para separar y no dejes vacío.");
+            return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-commands"));
         }
         return ValidationResult.valid(commands);
     }
@@ -615,30 +708,30 @@ public class RewardEditorMenu implements Listener {
             }
             String[] parts = trimmed.split(":", 2);
             if (parts.length != 2) {
-                return ValidationResult.invalid("Formato inválido. Usa clave:nivel, separado por ','");
+                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-enchant-format"));
             }
             String key = parts[0].trim().toLowerCase(Locale.ROOT);
             String levelText = parts[1].trim();
             if (key.isEmpty() || levelText.isEmpty()) {
-                return ValidationResult.invalid("Formato inválido. Usa clave:nivel, separado por ','");
+                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-enchant-format"));
             }
             Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(key));
             if (enchantment == null) {
-                return ValidationResult.invalid("Encantamiento inválido: " + key + ".");
+                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-enchant-key", Map.of("key", key)));
             }
             int level;
             try {
                 level = Integer.parseInt(levelText);
             } catch (NumberFormatException ex) {
-                return ValidationResult.invalid("Nivel inválido para " + key + ".");
+                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-enchant-level", Map.of("key", key)));
             }
             if (level <= 0) {
-                return ValidationResult.invalid("Nivel inválido para " + key + ".");
+                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-enchant-level", Map.of("key", key)));
             }
             enchantments.put(key, level);
         }
         if (enchantments.isEmpty()) {
-            return ValidationResult.invalid("Encantamientos inválidos. Usa clave:nivel.");
+            return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-enchantments"));
         }
         return ValidationResult.valid(enchantments);
     }
@@ -658,15 +751,15 @@ public class RewardEditorMenu implements Listener {
     }
 
     private String emptyFallback(String value) {
-        return value == null || value.isBlank() ? "(vacío)" : value;
+        return value == null || value.isBlank() ? text("editor.common.none") : value;
     }
 
-    private record ValidationResult(boolean valid, Object value, String errorMessage) {
+    private record ValidationResult(boolean valid, Object value, Component errorMessage) {
         private static ValidationResult valid(Object value) {
-            return new ValidationResult(true, value, "");
+            return new ValidationResult(true, value, Component.empty());
         }
 
-        private static ValidationResult invalid(String message) {
+        private static ValidationResult invalid(Component message) {
             return new ValidationResult(false, null, message);
         }
     }
@@ -677,6 +770,22 @@ public class RewardEditorMenu implements Listener {
         } catch (NumberFormatException ex) {
             return DEFAULT_INT_FALLBACK;
         }
+    }
+
+    private Component poolTitle(String poolId) {
+        return TextUtil.color(text("editor.rewards.pool.title", Map.of("pool", poolId)));
+    }
+
+    private Component rewardTitle(String rewardId) {
+        return TextUtil.color(text("editor.rewards.reward.title", Map.of("reward", rewardId)));
+    }
+
+    private String text(String key) {
+        return languageManager.getRaw(key, java.util.Collections.emptyMap());
+    }
+
+    private String text(String key, Map<String, String> placeholders) {
+        return languageManager.getRaw(key, placeholders);
     }
 
 }
