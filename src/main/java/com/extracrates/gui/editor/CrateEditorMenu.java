@@ -5,6 +5,8 @@ import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.CrateType;
+import com.extracrates.model.RewardPool;
+import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -46,7 +48,6 @@ public class CrateEditorMenu implements Listener {
     private final EditorInputManager inputManager;
     private final ConfirmationMenu confirmationMenu;
     private final EditorMenu parent;
-    private final LanguageManager languageManager;
     private final Component title;
     private final Map<UUID, String> activeCrate = new HashMap<>();
 
@@ -63,7 +64,6 @@ public class CrateEditorMenu implements Listener {
         this.inputManager = inputManager;
         this.confirmationMenu = confirmationMenu;
         this.parent = parent;
-        this.languageManager = plugin.getLanguageManager();
         this.title = TextUtil.color("&8Editor de Crates");
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
@@ -183,7 +183,7 @@ public class CrateEditorMenu implements Listener {
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.delete"),
+                    languageManager.getRaw("editor.confirmation.title.delete", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.crate.confirm.delete", Map.of("id", crate.id())),
                     () -> {
                         deleteCrate(crate.id());
@@ -203,15 +203,19 @@ public class CrateEditorMenu implements Listener {
 
     private void handleDetailClick(Player player, String crateId, int slot) {
         switch (slot) {
-            case 10 -> promptField(player, crateId, "display-name", "editor.crate.prompt.display-name");
-            case 12 -> promptField(player, crateId, "rewards-pool", "editor.crate.prompt.rewards-pool");
-            case 14 -> toggleType(player, crateId);
-            case 16 -> promptField(player, crateId, "open-mode", "editor.crate.prompt.open-mode");
-            case 19 -> promptField(player, crateId, "cutscene.overlay-model", "editor.crate.prompt.overlay-model");
-            case 20 -> toggleCutsceneLock(player, crateId, "movement", languageManager.getRaw("editor.crate.label.lock-movement"));
-            case 21 -> toggleCutsceneLock(player, crateId, "hud", languageManager.getRaw("editor.crate.label.lock-hud"));
-            case 23 -> promptField(player, crateId, "cutscene.music.sound", "editor.crate.prompt.music-sound");
-            case 22 -> open(player);
+            case 9 -> promptField(player, crateId, "display-name", "editor.crate.prompt.display-name");
+            case 10 -> openRewardsPoolSelector(player, crateId);
+            case 11 -> toggleType(player, crateId);
+            case 12 -> promptField(player, crateId, "open-mode", "editor.crate.prompt.open-mode");
+            case 13 -> promptField(player, crateId, "cutscene.overlay-model", "editor.crate.prompt.overlay-model");
+            case 14 -> toggleCutsceneLock(player, crateId, "movement",
+                    languageManager.getRaw("editor.crate.label.lock-movement", java.util.Collections.emptyMap()));
+            case 15 -> toggleCutsceneLock(player, crateId, "hud",
+                    languageManager.getRaw("editor.crate.label.lock-hud", java.util.Collections.emptyMap()));
+            case 16 -> promptField(player, crateId, "cutscene.music.sound", "editor.crate.prompt.music-sound");
+            case SLOT_DETAIL_DELETE -> confirmDelete(player, crateId);
+            case SLOT_DETAIL_BACK -> open(player);
+            case SLOT_DETAIL_REFRESH -> openDetail(player, crateId);
             default -> {
             }
         }
@@ -241,7 +245,7 @@ public class CrateEditorMenu implements Listener {
             }
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.create"),
+                    languageManager.getRaw("editor.confirmation.title.create", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.crate.confirm.create", Map.of("id", input)),
                     () -> {
                         createCrate(input);
@@ -269,7 +273,7 @@ public class CrateEditorMenu implements Listener {
             }
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.clone"),
+                    languageManager.getRaw("editor.confirmation.title.clone", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.crate.confirm.clone", Map.of("source", sourceId, "target", input)),
                     () -> {
                         cloneCrate(sourceId, input);
@@ -288,7 +292,7 @@ public class CrateEditorMenu implements Listener {
         }
         inputManager.requestInput(player, promptKey, input -> confirmationMenu.open(
                 player,
-                languageManager.getRaw("editor.confirmation.title.change"),
+                languageManager.getRaw("editor.confirmation.title.change", java.util.Collections.emptyMap()),
                 languageManager.getRaw("editor.crate.confirm.update-field", Map.of("field", field, "id", crateId)),
                 () -> {
                     updateCrateField(crateId, field, input);
@@ -306,7 +310,7 @@ public class CrateEditorMenu implements Listener {
         CrateType next = values[(current.ordinal() + 1) % values.length];
         confirmationMenu.open(
                 player,
-                languageManager.getRaw("editor.confirmation.title.change"),
+                languageManager.getRaw("editor.confirmation.title.change", java.util.Collections.emptyMap()),
                 languageManager.getRaw("editor.crate.confirm.change-type", Map.of("type", next.name())),
                 () -> {
                     updateCrateField(crateId, "type", next.name().toLowerCase());
@@ -328,7 +332,7 @@ public class CrateEditorMenu implements Listener {
         boolean next = !current;
         confirmationMenu.open(
                 player,
-                languageManager.getRaw("editor.confirmation.title.change"),
+                languageManager.getRaw("editor.confirmation.title.change", java.util.Collections.emptyMap()),
                 languageManager.getRaw(
                         "editor.crate.confirm.change-lock",
                         Map.of("label", label, "value", Boolean.toString(next))
@@ -359,6 +363,86 @@ public class CrateEditorMenu implements Listener {
         config.set(path + ".cutscene.music.sound", "");
         config.set(path + ".rewards-pool", "");
         saveConfig(config);
+    }
+
+    private void openRewardsPoolSelector(Player player, String crateId) {
+        Inventory inventory = Bukkit.createInventory(player, 54, rewardsPoolTitle(crateId));
+        List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
+        pools.sort(Comparator.comparing(RewardPool::id));
+        int slot = 0;
+        for (RewardPool pool : pools) {
+            if (slot >= 45) {
+                break;
+            }
+            inventory.setItem(slot++, buildItem(Material.EMERALD, "&a" + pool.id(), List.of(
+                    "&7Click para seleccionar."
+            )));
+        }
+        fillListNavigation(inventory);
+        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of()));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al detalle.")));
+        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        player.openInventory(inventory);
+    }
+
+    private void openPathSelector(Player player, String crateId) {
+        Inventory inventory = Bukkit.createInventory(player, 54, pathSelectorTitle(crateId));
+        List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
+        paths.sort(Comparator.comparing(CutscenePath::getId));
+        int slot = 0;
+        for (CutscenePath path : paths) {
+            if (slot >= 45) {
+                break;
+            }
+            inventory.setItem(slot++, buildItem(Material.ENDER_EYE, "&b" + path.getId(), List.of(
+                    "&7Click para seleccionar."
+            )));
+        }
+        fillListNavigation(inventory);
+        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of()));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al detalle.")));
+        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        player.openInventory(inventory);
+    }
+
+    private void handleRewardsPoolSelection(Player player, String crateId, int slot) {
+        if (slot == SLOT_LIST_BACK) {
+            openDetail(player, crateId);
+            return;
+        }
+        if (slot == SLOT_LIST_REFRESH) {
+            openRewardsPoolSelector(player, crateId);
+            return;
+        }
+        List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
+        pools.sort(Comparator.comparing(RewardPool::id));
+        if (slot < 0 || slot >= pools.size() || slot >= 45) {
+            return;
+        }
+        RewardPool pool = pools.get(slot);
+        updateCrateField(crateId, "rewards-pool", pool.id());
+        player.sendMessage(languageManager.getMessage("editor.crate.success.updated"));
+        openDetail(player, crateId);
+    }
+
+    private void handlePathSelection(Player player, String crateId, int slot) {
+        if (slot == SLOT_LIST_BACK) {
+            openDetail(player, crateId);
+            return;
+        }
+        if (slot == SLOT_LIST_REFRESH) {
+            openPathSelector(player, crateId);
+            return;
+        }
+        List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
+        paths.sort(Comparator.comparing(CutscenePath::getId));
+        if (slot < 0 || slot >= paths.size() || slot >= 45) {
+            return;
+        }
+        CutscenePath path = paths.get(slot);
+        updateCrateField(crateId, "cutscene.path", path.getId());
+        player.sendMessage(languageManager.getMessage("editor.crate.success.updated"));
+        openDetail(player, crateId);
     }
 
     private void cloneCrate(String sourceId, String targetId) {
@@ -440,5 +524,13 @@ public class CrateEditorMenu implements Listener {
 
     private Component pathSelectorTitle(String crateId) {
         return TextUtil.color("&8Cutscene path: " + crateId);
+    }
+
+    private String text(String key) {
+        return languageManager.getRaw(key, java.util.Collections.emptyMap());
+    }
+
+    private String text(String key, Map<String, String> placeholders) {
+        return languageManager.getRaw(key, placeholders);
     }
 }

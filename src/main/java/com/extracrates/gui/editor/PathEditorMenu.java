@@ -49,7 +49,6 @@ public class PathEditorMenu implements Listener {
     private final EditorInputManager inputManager;
     private final ConfirmationMenu confirmationMenu;
     private final EditorMenu parent;
-    private final LanguageManager languageManager;
     private final Component title;
     private final Map<UUID, String> activePath = new HashMap<>();
     private final Map<UUID, CutscenePreviewSession> previewSessions = new HashMap<>();
@@ -67,7 +66,6 @@ public class PathEditorMenu implements Listener {
         this.inputManager = inputManager;
         this.confirmationMenu = confirmationMenu;
         this.parent = parent;
-        this.languageManager = plugin.getLanguageManager();
         this.title = TextUtil.color("&8Editor de Paths");
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
@@ -175,7 +173,7 @@ public class PathEditorMenu implements Listener {
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.delete"),
+                    languageManager.getRaw("editor.confirmation.title.delete", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.path.confirm.delete", Map.of("id", path.getId())),
                     () -> {
                         deletePath(path.getId());
@@ -232,7 +230,7 @@ public class PathEditorMenu implements Listener {
             }
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.create"),
+                    languageManager.getRaw("editor.confirmation.title.create", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.path.confirm.create", Map.of("id", input)),
                     () -> {
                         createPath(input);
@@ -260,7 +258,7 @@ public class PathEditorMenu implements Listener {
             }
             confirmationMenu.open(
                     player,
-                    languageManager.getRaw("editor.confirmation.title.clone"),
+                    languageManager.getRaw("editor.confirmation.title.clone", java.util.Collections.emptyMap()),
                     languageManager.getRaw("editor.path.confirm.clone", Map.of("source", sourceId, "target", input)),
                     () -> {
                         clonePath(sourceId, input);
@@ -279,7 +277,7 @@ public class PathEditorMenu implements Listener {
         }
         inputManager.requestInput(player, promptKey, input -> confirmationMenu.open(
                 player,
-                languageManager.getRaw("editor.confirmation.title.change"),
+                languageManager.getRaw("editor.confirmation.title.change", java.util.Collections.emptyMap()),
                 languageManager.getRaw("editor.path.confirm.update-field", Map.of("field", field, "id", pathId)),
                 () -> {
                     Object value = input;
@@ -299,7 +297,7 @@ public class PathEditorMenu implements Listener {
         boolean next = path == null || !path.isConstantSpeed();
         confirmationMenu.open(
                 player,
-                languageManager.getRaw("editor.confirmation.title.change"),
+                languageManager.getRaw("editor.confirmation.title.change", java.util.Collections.emptyMap()),
                 languageManager.getRaw("editor.path.confirm.change-constant-speed", Map.of("value", Boolean.toString(next))),
                 () -> {
                     updatePathField(pathId, "constant-speed", next);

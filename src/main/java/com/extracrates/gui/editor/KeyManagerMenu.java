@@ -45,7 +45,6 @@ public class KeyManagerMenu implements Listener {
     private final SessionManager sessionManager;
     private final EditorInputManager inputManager;
     private final EditorMenu parent;
-    private final LanguageManager languageManager;
     private final Component searchTitle;
     private final Map<UUID, TargetSelection> activeTargets = new HashMap<>();
     private final Map<UUID, String> activeCrates = new HashMap<>();
@@ -63,7 +62,6 @@ public class KeyManagerMenu implements Listener {
         this.sessionManager = sessionManager;
         this.inputManager = inputManager;
         this.parent = parent;
-        this.languageManager = plugin.getLanguageManager();
         this.searchTitle = TextUtil.color("&8Llaves - Buscar");
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
