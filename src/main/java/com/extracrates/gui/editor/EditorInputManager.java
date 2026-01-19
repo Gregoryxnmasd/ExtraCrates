@@ -2,7 +2,6 @@ package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.LanguageManager;
-import com.extracrates.util.TextUtil;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
@@ -10,6 +9,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,27 +26,14 @@ public class EditorInputManager implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    public void requestInput(Player player, String prompt, Consumer<String> onInput, Runnable reopenAction) {
-        requestInput(player, prompt, onInput, reopenAction, null);
+    public void requestInput(Player player, String promptKey, Consumer<String> onInput) {
+        requestInput(player, promptKey, Collections.emptyMap(), onInput);
     }
 
-    public void requestInput(
-            Player player,
-            String prompt,
-            Consumer<String> onInput,
-            Runnable reopenAction,
-            String previousMenuState
-    ) {
-        Component previousTitle = null;
-        if (player.getOpenInventory() != null) {
-            previousTitle = player.getOpenInventory().title();
-        }
-        pendingInputs.put(
-                player.getUniqueId(),
-                new InputRequest(onInput, reopenAction, new MenuContext(previousTitle, previousMenuState))
-        );
-        player.closeInventory();
-        player.sendMessage(Component.text(prompt + " (escribe 'cancel' para cancelar)"));
+    public void requestInput(Player player, String promptKey, Map<String, String> placeholders, Consumer<String> onInput) {
+        pendingInputs.put(player.getUniqueId(), new InputRequest(onInput));
+        String prompt = languageManager.getRaw(promptKey, placeholders);
+        player.sendMessage(languageManager.getMessage("editor.input.prompt", Map.of("prompt", prompt)));
     }
 
     public boolean hasPending(Player player) {
@@ -67,7 +54,7 @@ public class EditorInputManager implements Listener {
                 request.reopenAction().run();
             }
             if (message.equalsIgnoreCase("cancel")) {
-                event.getPlayer().sendMessage(languageManager.getMessage("editor.input.canceled"));
+                event.getPlayer().sendMessage(languageManager.getMessage("editor.input.cancelled"));
                 return;
             }
             request.onInput().accept(message);

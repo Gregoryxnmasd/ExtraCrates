@@ -1,7 +1,7 @@
 package com.extracrates.gui.editor;
 
 import com.extracrates.ExtraCratesPlugin;
-import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.util.TextUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -21,12 +21,12 @@ import java.util.UUID;
 @SuppressWarnings("unused")
 public class ConfirmationMenu implements Listener {
     private final ExtraCratesPlugin plugin;
-    private final ConfigLoader configLoader;
+    private final LanguageManager languageManager;
     private final Map<UUID, ConfirmationRequest> confirmations = new HashMap<>();
 
     public ConfirmationMenu(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
         this.plugin = plugin;
-        this.configLoader = configLoader;
+        this.languageManager = plugin.getLanguageManager();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
@@ -36,8 +36,8 @@ public class ConfirmationMenu implements Listener {
             return;
         }
         Inventory inventory = Bukkit.createInventory(player, 9, TextUtil.color(title));
-        inventory.setItem(3, buildItem(Material.LIME_WOOL, confirmName(), description));
-        inventory.setItem(5, buildItem(Material.RED_WOOL, cancelName(), cancelLore()));
+        inventory.setItem(3, buildItem(Material.LIME_WOOL, languageManager.getRaw("editor.confirmation.confirm-button"), description));
+        inventory.setItem(5, buildItem(Material.RED_WOOL, languageManager.getRaw("editor.confirmation.cancel-button"), languageManager.getRaw("editor.confirmation.cancel-description")));
         confirmations.put(player.getUniqueId(), new ConfirmationRequest(title, onConfirm, onCancel));
         player.openInventory(inventory);
     }
@@ -86,7 +86,7 @@ public class ConfirmationMenu implements Listener {
         if (meta != null) {
             meta.displayName(TextUtil.color(name));
             if (loreLine != null && !loreLine.isEmpty()) {
-                meta.lore(java.util.List.of(TextUtil.color("&7" + loreLine)));
+                meta.lore(java.util.List.of(TextUtil.color(loreLine)));
             }
             item.setItemMeta(meta);
         }

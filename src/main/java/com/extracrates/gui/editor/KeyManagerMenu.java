@@ -45,6 +45,7 @@ public class KeyManagerMenu implements Listener {
     private final SessionManager sessionManager;
     private final EditorInputManager inputManager;
     private final EditorMenu parent;
+    private final LanguageManager languageManager;
     private final Component searchTitle;
     private final Map<UUID, TargetSelection> activeTargets = new HashMap<>();
     private final Map<UUID, String> activeCrates = new HashMap<>();
@@ -62,7 +63,8 @@ public class KeyManagerMenu implements Listener {
         this.sessionManager = sessionManager;
         this.inputManager = inputManager;
         this.parent = parent;
-        this.searchTitle = TextUtil.color(text("editor.keys.title.search"));
+        this.languageManager = plugin.getLanguageManager();
+        this.searchTitle = TextUtil.color("&8Llaves - Buscar");
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -245,17 +247,17 @@ public class KeyManagerMenu implements Listener {
             player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, text("editor.keys.prompts.player"), input -> {
+        inputManager.requestInput(player, "editor.key.prompt.player-name", input -> {
             String value = input.trim();
             if (value.isEmpty()) {
-                player.sendMessage(languageManager.getMessage("editor.keys.messages.invalid-player"));
+                player.sendMessage(languageManager.getMessage("editor.key.error.invalid-player"));
                 openSearch(player);
                 return;
             }
             if (sessionManager.isStorageEnabled()) {
                 OfflinePlayer offline = Bukkit.getOfflinePlayer(value);
                 if (!offline.isOnline() && !offline.hasPlayedBefore()) {
-                    player.sendMessage(languageManager.getMessage("editor.keys.messages.not-found"));
+                    player.sendMessage(languageManager.getMessage("editor.key.error.player-not-found"));
                     openSearch(player);
                     return;
                 }
@@ -266,7 +268,7 @@ public class KeyManagerMenu implements Listener {
             }
             Player target = Bukkit.getPlayerExact(value);
             if (target == null) {
-                player.sendMessage(languageManager.getMessage("editor.keys.messages.must-be-online"));
+                player.sendMessage(languageManager.getMessage("editor.key.error.player-online-required"));
                 openSearch(player);
                 return;
             }
@@ -286,7 +288,7 @@ public class KeyManagerMenu implements Listener {
             } else {
                 boolean removed = storage.consumeKey(target.id(), crate.id());
                 if (!removed) {
-                    editor.sendMessage(languageManager.getMessage("editor.keys.messages.no-keys"));
+                    editor.sendMessage(languageManager.getMessage("editor.key.error.no-keys"));
                 }
             }
             openCrateDetail(editor, target, crate.id());
@@ -294,7 +296,7 @@ public class KeyManagerMenu implements Listener {
         }
         Player onlineTarget = Bukkit.getPlayer(target.id());
         if (onlineTarget == null) {
-            editor.sendMessage(languageManager.getMessage("editor.keys.messages.must-be-online"));
+            editor.sendMessage(languageManager.getMessage("editor.key.error.player-online-required"));
             openSearch(editor);
             return;
         }
@@ -358,7 +360,7 @@ public class KeyManagerMenu implements Listener {
         }
         Map<Integer, ItemStack> leftover = target.getInventory().addItem(item);
         if (!leftover.isEmpty()) {
-            editor.sendMessage(languageManager.getMessage("editor.keys.messages.inventory-full"));
+            editor.sendMessage(languageManager.getMessage("editor.key.error.inventory-full"));
         }
     }
 
@@ -387,7 +389,7 @@ public class KeyManagerMenu implements Listener {
             target.getInventory().setContents(contents);
             return;
         }
-        editor.sendMessage(languageManager.getMessage("editor.keys.messages.no-keys"));
+        editor.sendMessage(languageManager.getMessage("editor.key.error.no-keys"));
     }
 
     private int resolveKeyModelData(CrateDefinition crate) {

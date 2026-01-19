@@ -46,6 +46,7 @@ public class CrateEditorMenu implements Listener {
     private final EditorInputManager inputManager;
     private final ConfirmationMenu confirmationMenu;
     private final EditorMenu parent;
+    private final LanguageManager languageManager;
     private final Component title;
     private final Map<UUID, String> activeCrate = new HashMap<>();
 
@@ -62,7 +63,8 @@ public class CrateEditorMenu implements Listener {
         this.inputManager = inputManager;
         this.confirmationMenu = confirmationMenu;
         this.parent = parent;
-        this.title = TextUtil.color(text("editor.crates.title"));
+        this.languageManager = plugin.getLanguageManager();
+        this.title = TextUtil.color("&8Editor de Crates");
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -181,13 +183,15 @@ public class CrateEditorMenu implements Listener {
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
-                    text("editor.crates.confirm.delete-title"),
-                    text("editor.crates.confirm.delete-description", Map.of("crate", crate.id())),
+                    languageManager.getRaw("editor.confirmation.title.delete"),
+                    languageManager.getRaw("editor.crate.confirm.delete", Map.of("id", crate.id())),
                     () -> {
-                deleteCrate(crate.id());
-                player.sendMessage(languageManager.getMessage("editor.crates.messages.deleted"));
-                open(player);
-            }, () -> open(player));
+                        deleteCrate(crate.id());
+                        player.sendMessage(languageManager.getMessage("editor.crate.success.deleted"));
+                        open(player);
+                    },
+                    () -> open(player)
+            );
             return;
         }
         if (rightClick) {
@@ -199,17 +203,15 @@ public class CrateEditorMenu implements Listener {
 
     private void handleDetailClick(Player player, String crateId, int slot) {
         switch (slot) {
-            case 9 -> promptField(player, crateId, "display-name", "Display name nuevo");
-            case 10 -> promptField(player, crateId, "rewards-pool", "ID del rewards pool");
-            case 11 -> toggleType(player, crateId);
-            case 12 -> promptField(player, crateId, "open-mode", "Open mode (reward-only, cinematic, etc)");
-            case 13 -> promptField(player, crateId, "cutscene.overlay-model", "Overlay model de la cutscene");
-            case 14 -> toggleCutsceneLock(player, crateId, "movement", "movimiento");
-            case 15 -> toggleCutsceneLock(player, crateId, "hud", "HUD");
-            case 16 -> promptField(player, crateId, "cutscene.music.sound", "Música (ID de sonido)");
-            case SLOT_DETAIL_DELETE -> confirmDelete(player, crateId);
-            case SLOT_DETAIL_BACK -> open(player);
-            case SLOT_DETAIL_REFRESH -> openDetail(player, crateId);
+            case 10 -> promptField(player, crateId, "display-name", "editor.crate.prompt.display-name");
+            case 12 -> promptField(player, crateId, "rewards-pool", "editor.crate.prompt.rewards-pool");
+            case 14 -> toggleType(player, crateId);
+            case 16 -> promptField(player, crateId, "open-mode", "editor.crate.prompt.open-mode");
+            case 19 -> promptField(player, crateId, "cutscene.overlay-model", "editor.crate.prompt.overlay-model");
+            case 20 -> toggleCutsceneLock(player, crateId, "movement", languageManager.getRaw("editor.crate.label.lock-movement"));
+            case 21 -> toggleCutsceneLock(player, crateId, "hud", languageManager.getRaw("editor.crate.label.lock-hud"));
+            case 23 -> promptField(player, crateId, "cutscene.music.sound", "editor.crate.prompt.music-sound");
+            case 22 -> open(player);
             default -> {
             }
         }
@@ -225,82 +227,30 @@ public class CrateEditorMenu implements Listener {
 
     private void promptCreate(Player player) {
         if (inputManager.hasPending(player)) {
-            player.sendMessage(Component.text("Ya tienes una edición pendiente."));
-            return;
-        }
-        if (slot == 49) {
-            confirmSelection(player, crateId, "rewards-pool", "limpiar rewards pool", "");
-            return;
-        }
-        if (slot == 53) {
-            openRewardsPoolSelector(player, crateId);
-            return;
-        }
-        List<String> poolIds = new ArrayList<>(configLoader.getRewardPools().keySet());
-        poolIds.sort(String.CASE_INSENSITIVE_ORDER);
-        if (slot < 0 || slot >= poolIds.size() || slot >= 45) {
-            return;
-        }
-        String poolId = poolIds.get(slot);
-        confirmSelection(player, crateId, "rewards-pool", "cambiar rewards pool a " + poolId, poolId);
-    }
-
-    private void handlePathSelection(Player player, String crateId, int slot) {
-        if (slot == 45) {
-            openDetail(player, crateId);
-            return;
-        }
-        if (slot == 49) {
-            confirmSelection(player, crateId, "animation.path", "limpiar cutscene path", "");
-            return;
-        }
-        if (slot == 53) {
-            openPathSelector(player, crateId);
-            return;
-        }
-        List<String> pathIds = new ArrayList<>(configLoader.getPaths().keySet());
-        pathIds.sort(String.CASE_INSENSITIVE_ORDER);
-        if (slot < 0 || slot >= pathIds.size() || slot >= 45) {
-            return;
-        }
-        String pathId = pathIds.get(slot);
-        confirmSelection(player, crateId, "animation.path", "cambiar cutscene path a " + pathId, pathId);
-    }
-
-    private void confirmSelection(Player player, String crateId, String field, String label, Object value) {
-        confirmationMenu.open(
-                player,
-                "&8Confirmar cambio",
-                "Actualizar " + label + " de " + crateId,
-                () -> {
-                    updateCrateField(crateId, field, value);
-                    player.sendMessage(Component.text("Crate actualizada y guardada en YAML."));
-                    openDetail(player, crateId);
-                },
-                () -> openDetail(player, crateId)
-        );
-    }
-
-    private void promptCreate(Player player) {
-        if (inputManager.hasPending(player)) {
             player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, text("editor.crates.prompts.new-id"), input -> {
+        inputManager.requestInput(player, "editor.crate.prompt.new-id", input -> {
             if (input.isEmpty()) {
-                player.sendMessage(languageManager.getMessage("editor.crates.messages.invalid-id"));
+                player.sendMessage(languageManager.getMessage("editor.input.invalid-id"));
                 return;
             }
             if (configLoader.getCrates().containsKey(input)) {
-                player.sendMessage(languageManager.getMessage("editor.crates.messages.exists"));
+                player.sendMessage(languageManager.getMessage("command.crate-already-exists"));
                 return;
             }
-            confirmationMenu.open(player, "&8Confirmar creación", "Crear crate " + input, () -> {
-                createCrate(input);
-                player.sendMessage(Component.text("Crate creada y guardada en YAML."));
-                open(player);
-            }, () -> open(player));
-        }, () -> open(player));
+            confirmationMenu.open(
+                    player,
+                    languageManager.getRaw("editor.confirmation.title.create"),
+                    languageManager.getRaw("editor.crate.confirm.create", Map.of("id", input)),
+                    () -> {
+                        createCrate(input);
+                        player.sendMessage(languageManager.getMessage("editor.crate.success.created"));
+                        open(player);
+                    },
+                    () -> open(player)
+            );
+        });
     }
 
     private void promptClone(Player player, String sourceId) {
@@ -308,25 +258,27 @@ public class CrateEditorMenu implements Listener {
             player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, text("editor.crates.prompts.clone-id", Map.of("source", sourceId)), input -> {
+        inputManager.requestInput(player, "editor.crate.prompt.clone-id", Map.of("id", sourceId), input -> {
             if (input.isEmpty()) {
-                player.sendMessage(languageManager.getMessage("editor.crates.messages.invalid-id"));
+                player.sendMessage(languageManager.getMessage("editor.input.invalid-id"));
                 return;
             }
             if (configLoader.getCrates().containsKey(input)) {
-                player.sendMessage(languageManager.getMessage("editor.crates.messages.exists"));
+                player.sendMessage(languageManager.getMessage("command.crate-already-exists"));
                 return;
             }
             confirmationMenu.open(
                     player,
-                    text("editor.crates.confirm.clone-title"),
-                    text("editor.crates.confirm.clone-description", Map.of("source", sourceId, "target", input)),
+                    languageManager.getRaw("editor.confirmation.title.clone"),
+                    languageManager.getRaw("editor.crate.confirm.clone", Map.of("source", sourceId, "target", input)),
                     () -> {
-                cloneCrate(sourceId, input);
-                player.sendMessage(languageManager.getMessage("editor.crates.messages.cloned"));
-                open(player);
-            }, () -> open(player));
-        }, () -> open(player));
+                        cloneCrate(sourceId, input);
+                        player.sendMessage(languageManager.getMessage("editor.crate.success.cloned"));
+                        open(player);
+                    },
+                    () -> open(player)
+            );
+        });
     }
 
     private void promptField(Player player, String crateId, String field, String promptKey) {
@@ -334,13 +286,13 @@ public class CrateEditorMenu implements Listener {
             player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, prompt, input -> confirmationMenu.open(
+        inputManager.requestInput(player, promptKey, input -> confirmationMenu.open(
                 player,
-                "&8Confirmar cambio",
-                "Actualizar " + field + " de " + crateId,
+                languageManager.getRaw("editor.confirmation.title.change"),
+                languageManager.getRaw("editor.crate.confirm.update-field", Map.of("field", field, "id", crateId)),
                 () -> {
                     updateCrateField(crateId, field, input);
-                    player.sendMessage(Component.text("Crate actualizada y guardada en YAML."));
+                    player.sendMessage(languageManager.getMessage("editor.crate.success.updated"));
                     openDetail(player, crateId);
                 },
                 () -> openDetail(player, crateId)
@@ -352,9 +304,17 @@ public class CrateEditorMenu implements Listener {
         CrateType current = crate != null ? crate.type() : CrateType.NORMAL;
         CrateType[] values = CrateType.values();
         CrateType next = values[(current.ordinal() + 1) % values.length];
-        updateCrateField(crateId, "type", next.name().toLowerCase());
-        player.sendMessage(Component.text("Tipo actualizado y guardado en YAML."));
-        openDetail(player, crateId);
+        confirmationMenu.open(
+                player,
+                languageManager.getRaw("editor.confirmation.title.change"),
+                languageManager.getRaw("editor.crate.confirm.change-type", Map.of("type", next.name())),
+                () -> {
+                    updateCrateField(crateId, "type", next.name().toLowerCase());
+                    player.sendMessage(languageManager.getMessage("editor.crate.success.type-updated"));
+                    openDetail(player, crateId);
+                },
+                () -> openDetail(player, crateId)
+        );
     }
 
     private void toggleCutsceneLock(Player player, String crateId, String lockKey, String label) {
@@ -366,9 +326,20 @@ public class CrateEditorMenu implements Listener {
                     : crate.cutsceneSettings().hideHud();
         }
         boolean next = !current;
-        updateCrateField(crateId, "cutscene.locks." + lockKey, next);
-        player.sendMessage(Component.text("Lock actualizado y guardado en YAML."));
-        openDetail(player, crateId);
+        confirmationMenu.open(
+                player,
+                languageManager.getRaw("editor.confirmation.title.change"),
+                languageManager.getRaw(
+                        "editor.crate.confirm.change-lock",
+                        Map.of("label", label, "value", Boolean.toString(next))
+                ),
+                () -> {
+                    updateCrateField(crateId, "cutscene.locks." + lockKey, next);
+                    player.sendMessage(languageManager.getMessage("editor.crate.success.lock-updated"));
+                    openDetail(player, crateId);
+                },
+                () -> openDetail(player, crateId)
+        );
     }
 
     private void createCrate(String id) {

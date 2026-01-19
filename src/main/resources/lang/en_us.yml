@@ -74,8 +74,131 @@ session:
   reroll.blocked: "&cWait for the animation to finish."
   reroll.advance: "&eSelected reward: &f%reward%"
   reroll.confirmed: "&aReward confirmed: &f%reward%"
-route:
-  editor:
-    point-added: "&aPoint %count% added at &f(%x%, %y%, %z%) &7Yaw: %yaw% Pitch: %pitch%"
-    saved: "&aRoute &f%path% &asaved with &f%count% &apoints."
-    save-failed: "&cFailed to save the route. Check the server logs."
+editor:
+  input:
+    prompt: "&e%prompt% &7(type '&ccancel&7' to cancel)"
+    cancelled: "&cEditing cancelled."
+    pending: "&eYou already have a pending edit."
+    invalid-id: "&cInvalid ID."
+  confirmation:
+    title:
+      delete: "&8Confirm delete"
+      create: "&8Confirm creation"
+      clone: "&8Confirm clone"
+      change: "&8Confirm change"
+    confirm-button: "&aConfirm"
+    cancel-button: "&cCancel"
+    cancel-description: "&cGo back without saving"
+  crate:
+    label:
+      lock-movement: "movement"
+      lock-hud: "HUD"
+    prompt:
+      new-id: "New crate ID"
+      clone-id: "New ID to clone %id%"
+      display-name: "New display name"
+      rewards-pool: "Rewards pool ID"
+      open-mode: "Open mode (reward-only, cinematic, etc)"
+      overlay-model: "Cutscene overlay model"
+      music-sound: "Music (sound ID)"
+    confirm:
+      delete: "&cDelete crate %id%"
+      create: "&eCreate crate %id%"
+      clone: "&eClone crate %source% -> %target%"
+      update-field: "&eUpdate %field% for %id%"
+      change-type: "&eChange type to %type%"
+      change-lock: "&eChange lock %label% to %value%"
+    success:
+      deleted: "&aCrate deleted and saved to YAML."
+      created: "&aCrate created and saved to YAML."
+      cloned: "&aCrate cloned and saved to YAML."
+      updated: "&aCrate updated and saved to YAML."
+      type-updated: "&aType updated and saved to YAML."
+      lock-updated: "&aLock updated and saved to YAML."
+  reward:
+    prompt:
+      new-pool-id: "New pool ID"
+      clone-pool-id: "New ID to clone %id%"
+      roll-count: "New roll-count"
+      new-reward-id: "New reward ID"
+      clone-reward-id: "New ID to clone %id%"
+      display-name: "New display name"
+      chance: "Chance (number)"
+      item: "Item material"
+      amount: "Amount"
+      commands: "Commands (separate with ';') or 'none'"
+      enchantments: "Enchantments key:level separated by ',' or 'none'"
+      glow: "Glow (true/false)"
+      custom-model: "Custom model (text) or 'none'"
+      map-image: "Map image (text) or 'none'"
+    confirm:
+      delete-pool: "&cDelete pool %id%"
+      delete-reward: "&cDelete reward %id%"
+      create-pool: "&eCreate pool %id%"
+      clone-pool: "&eClone pool %source% -> %target%"
+      update-roll-count: "&eUpdate roll-count for %id%"
+      create-reward: "&eCreate reward %id%"
+      clone-reward: "&eClone reward %source% -> %target%"
+      update-field: "&eUpdate %field% for %id%"
+    success:
+      pool-deleted: "&aPool deleted and saved to YAML."
+      pool-created: "&aPool created and saved to YAML."
+      pool-cloned: "&aPool cloned and saved to YAML."
+      pool-updated: "&aPool updated and saved to YAML."
+      reward-deleted: "&aReward deleted and saved to YAML."
+      reward-created: "&aReward created and saved to YAML."
+      reward-cloned: "&aReward cloned and saved to YAML."
+      reward-updated: "&aReward updated and saved to YAML."
+    error:
+      invalid-value: "&cInvalid value."
+      invalid-chance-min: "&cInvalid chance. Use a number greater than or equal to 0."
+      invalid-chance-number: "&cInvalid chance. Use a number."
+      invalid-amount-min: "&cInvalid amount. Use a number greater than 0."
+      invalid-amount-number: "&cInvalid amount. Use an integer."
+      invalid-material: "&cInvalid material: %material%."
+      invalid-glow: "&cInvalid glow. Use true or false."
+      invalid-commands: "&cInvalid commands. Use ';' to separate and don't leave it empty."
+      invalid-enchant-format: "&cInvalid format. Use key:level, separated by ','."
+      invalid-enchant-key: "&cInvalid enchantment: %key%."
+      invalid-enchant-level: "&cInvalid level for %key%."
+      invalid-enchantments: "&cInvalid enchantments. Use key:level."
+  path:
+    prompt:
+      new-id: "New path ID"
+      clone-id: "New ID to clone %id%"
+      duration: "Duration in seconds"
+      smoothing: "Smoothing (linear, catmull-rom, etc)"
+      particle-preview: "Particle preview"
+      step-resolution: "Step resolution"
+    confirm:
+      delete: "&cDelete path %id%"
+      create: "&eCreate path %id%"
+      clone: "&eClone path %source% -> %target%"
+      update-field: "&eUpdate %field% for %id%"
+      change-constant-speed: "&eConstant speed: %value%"
+    success:
+      deleted: "&aPath deleted and saved to YAML."
+      created: "&aPath created and saved to YAML."
+      cloned: "&aPath cloned and saved to YAML."
+      updated: "&aPath updated and saved to YAML."
+      constant-speed-updated: "&aConstant speed updated and saved to YAML."
+      editor-started: "&aEditor started. Click blocks to mark points."
+      preview-started: "&aPreview started."
+      preview-finished: "&aPreview finished."
+    warning:
+      active-session: "&eYou already have an active route session."
+    info:
+      editor-commands: "&eUse /crate route editor stop to save or /crate route editor &ccancel&e to exit."
+      preview-stopped: "&ePreview stopped."
+    error:
+      already-exists: "&cA path with that ID already exists."
+      missing-path: "&cSelected path does not exist."
+  key:
+    prompt:
+      player-name: "Player name"
+    error:
+      invalid-player: "&cInvalid player."
+      player-not-found: "&cPlayer not found."
+      player-online-required: "&cPlayer must be online."
+      no-keys: "&cThe player has no keys for that crate."
+      inventory-full: "&cThe player's inventory is full."
