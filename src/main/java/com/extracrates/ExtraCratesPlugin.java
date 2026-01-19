@@ -48,7 +48,6 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         saveResource("crates.yml", false);
         saveResource("rewards.yml", false);
         saveResource("paths.yml", false);
-        saveResource("lang/es_es.yml", false);
         saveResource("lang/en_us.yml", false);
 
         configLoader = new ConfigLoader(this);
@@ -77,7 +76,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         protocolEntityHider = ProtocolEntityHider.createIfPresent(this);
         pendingRewardStore = new PendingRewardStore(this);
         EditorInputManager inputManager = new EditorInputManager(this);
-        ConfirmationMenu confirmationMenu = new ConfirmationMenu(this);
+        ConfirmationMenu confirmationMenu = new ConfirmationMenu(this, configLoader);
         editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu, sessionManager);
 
         PluginCommand crateCommand = getCommand("crate");

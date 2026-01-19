@@ -1,32 +1,33 @@
 # Opciones globales
-language: es_es
+language: en_us
 accessibility-mode: true
 particles-default: "crit"
 hologram-font: "resourcepack:cutscene_font"
 ui-mode: "bossbar"
 gui:
   title: "&8ExtraCrates"
-  editor-title: "&0Editor de Crates"
-  history-title: "&8Historial de Crates"
+  editor-title: "&0Crate Editor"
+  history-title: "&8Crate History"
   preview-enabled: true
   click-sounds: true
+  editor-confirmations: true
   crates:
     legendary:
       slot: 10
       material: "CHEST"
       icon: 12001
       lore:
-        - "&7Nombre: &f%crate_name%"
+        - "&7Name: &f%crate_name%"
         - "&7Cooldown: &f%cooldown%"
-        - "&7Permiso: &f%permission%"
+        - "&7Permission: &f%permission%"
     seasonal:
       slot: 12
       material: "ENDER_CHEST"
       icon: 12002
       lore:
-        - "&7Nombre: &f%crate_name%"
+        - "&7Name: &f%crate_name%"
         - "&7Cooldown: &f%cooldown%"
-        - "&7Permiso: &f%permission%"
+        - "&7Permission: &f%permission%"
 sounds:
   reroll:
     sound: "ui.button.click"
@@ -67,9 +68,9 @@ cutscene:
   camera-entity: "armor_stand"
   speed-modifier-uuid: "c0c0a1f2-7a89-4a2c-88a7-9f53b0d6f8b1"
   on-start:
-    - "say %player% inició la cutscene de %crate_id%"
+    - "say %player% started the %crate_id% cutscene"
   on-end:
-    - "say %player% terminó la cutscene de %crate_id% y obtuvo %reward_name%"
+    - "say %player% finished the %crate_id% cutscene and got %reward_name%"
   locks:
     movement: true
     hud: true
