@@ -198,7 +198,7 @@ public class PathEditorMenu implements Listener {
                 player.sendMessage(Component.text("Path creada y guardada en YAML."));
                 open(player);
             }, () -> open(player));
-        });
+        }, () -> open(player));
     }
 
     private void promptClone(Player player, String sourceId) {
@@ -220,7 +220,7 @@ public class PathEditorMenu implements Listener {
                 player.sendMessage(Component.text("Path clonada y guardada en YAML."));
                 open(player);
             }, () -> open(player));
-        });
+        }, () -> open(player));
     }
 
     private void promptField(Player player, String pathId, String field, String prompt) {
@@ -242,7 +242,7 @@ public class PathEditorMenu implements Listener {
                     openDetail(player, pathId);
                 },
                 () -> openDetail(player, pathId)
-        ));
+        ), () -> openDetail(player, pathId));
     }
 
     private void toggleConstantSpeed(Player player, String pathId) {

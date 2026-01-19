@@ -23,8 +23,26 @@ public class EditorInputManager implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    public void requestInput(Player player, String prompt, Consumer<String> onInput) {
-        pendingInputs.put(player.getUniqueId(), new InputRequest(onInput));
+    public void requestInput(Player player, String prompt, Consumer<String> onInput, Runnable reopenAction) {
+        requestInput(player, prompt, onInput, reopenAction, null);
+    }
+
+    public void requestInput(
+            Player player,
+            String prompt,
+            Consumer<String> onInput,
+            Runnable reopenAction,
+            String previousMenuState
+    ) {
+        Component previousTitle = null;
+        if (player.getOpenInventory() != null) {
+            previousTitle = player.getOpenInventory().title();
+        }
+        pendingInputs.put(
+                player.getUniqueId(),
+                new InputRequest(onInput, reopenAction, new MenuContext(previousTitle, previousMenuState))
+        );
+        player.closeInventory();
         player.sendMessage(Component.text(prompt + " (escribe 'cancel' para cancelar)"));
     }
 
@@ -42,11 +60,14 @@ public class EditorInputManager implements Listener {
         String message = PlainTextComponentSerializer.plainText().serialize(event.message()).trim();
         pendingInputs.remove(event.getPlayer().getUniqueId());
         plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (request.reopenAction() != null) {
+                request.reopenAction().run();
+            }
             if (message.equalsIgnoreCase("cancel")) {
                 event.getPlayer().sendMessage(Component.text("Edición cancelada."));
                 return;
             }
-            request.onInput.accept(message);
+            request.onInput().accept(message);
         });
     }
 
@@ -55,6 +76,9 @@ public class EditorInputManager implements Listener {
         pendingInputs.remove(event.getPlayer().getUniqueId());
     }
 
-    private record InputRequest(Consumer<String> onInput) {
+    private record InputRequest(Consumer<String> onInput, Runnable reopenAction, MenuContext previousMenu) {
+    }
+
+    private record MenuContext(Component title, String state) {
     }
 }

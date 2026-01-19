@@ -286,7 +286,7 @@ public class RewardEditorMenu implements Listener {
                 player.sendMessage(Component.text("Pool creada y guardada en YAML."));
                 openPools(player);
             }, () -> openPools(player));
-        });
+        }, () -> openPools(player));
     }
 
     private void promptClonePool(Player player, String sourceId) {
@@ -308,7 +308,7 @@ public class RewardEditorMenu implements Listener {
                 player.sendMessage(Component.text("Pool clonada y guardada en YAML."));
                 openPools(player);
             }, () -> openPools(player));
-        });
+        }, () -> openPools(player));
     }
 
     private void promptPoolRoll(Player player, String poolId) {
@@ -326,7 +326,7 @@ public class RewardEditorMenu implements Listener {
                     openPoolDetail(player, poolId);
                 },
                 () -> openPoolDetail(player, poolId)
-        ));
+        ), () -> openPoolDetail(player, poolId));
     }
 
     private void promptCreateReward(Player player, String poolId) {
@@ -348,7 +348,7 @@ public class RewardEditorMenu implements Listener {
                 player.sendMessage(Component.text("Reward creada y guardada en YAML."));
                 openPoolDetail(player, poolId);
             }, () -> openPoolDetail(player, poolId));
-        });
+        }, () -> openPoolDetail(player, poolId));
     }
 
     private void promptCloneReward(Player player, String poolId, String rewardId) {
@@ -370,7 +370,7 @@ public class RewardEditorMenu implements Listener {
                 player.sendMessage(Component.text("Reward clonada y guardada en YAML."));
                 openPoolDetail(player, poolId);
             }, () -> openPoolDetail(player, poolId));
-        });
+        }, () -> openPoolDetail(player, poolId));
     }
 
     private void promptRewardField(Player player, String poolId, String rewardId, String field, String prompt) {
@@ -395,7 +395,7 @@ public class RewardEditorMenu implements Listener {
                     },
                     () -> openRewardDetail(player, poolId, rewardId)
             );
-        });
+        }, () -> openRewardDetail(player, poolId, rewardId));
     }
 
     private void createPool(String id) {

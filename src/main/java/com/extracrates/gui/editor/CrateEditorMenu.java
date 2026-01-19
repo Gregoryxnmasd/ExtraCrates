@@ -200,7 +200,7 @@ public class CrateEditorMenu implements Listener {
                 player.sendMessage(Component.text("Crate creada y guardada en YAML."));
                 open(player);
             }, () -> open(player));
-        });
+        }, () -> open(player));
     }
 
     private void promptClone(Player player, String sourceId) {
@@ -222,7 +222,7 @@ public class CrateEditorMenu implements Listener {
                 player.sendMessage(Component.text("Crate clonada y guardada en YAML."));
                 open(player);
             }, () -> open(player));
-        });
+        }, () -> open(player));
     }
 
     private void promptField(Player player, String crateId, String field, String prompt) {
@@ -240,7 +240,7 @@ public class CrateEditorMenu implements Listener {
                     openDetail(player, crateId);
                 },
                 () -> openDetail(player, crateId)
-        ));
+        ), () -> openDetail(player, crateId));
     }
 
     private void toggleType(Player player, String crateId) {
