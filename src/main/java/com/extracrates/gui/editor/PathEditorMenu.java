@@ -69,6 +69,10 @@ public class PathEditorMenu implements Listener {
             }
         }
         inventory.setItem(45, buildItem(Material.LIME_CONCRETE, "&aCrear path", List.of("&7Nueva ruta de cámara.")));
+        inventory.setItem(47, buildItem(Material.PAPER, "&bSelecciona un path", List.of(
+                "&7Click para editar.",
+                "&7Click der: clonar | Shift+der: borrar."
+        )));
         inventory.setItem(49, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
         inventory.setItem(53, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
         player.openInventory(inventory);
