@@ -32,12 +32,10 @@ public class KeyManagerMenu implements Listener {
     // Layout: acciones principales al centro, navegación en fila inferior.
     private static final int SLOT_LIST_DELETE = 47;
     private static final int SLOT_LIST_BACK = 49;
-    private static final int SLOT_LIST_REFRESH = 53;
     private static final int SLOT_DETAIL_DELETE = 18;
     private static final int SLOT_DETAIL_BACK = 22;
-    private static final int SLOT_DETAIL_REFRESH = 26;
-    private static final int[] LIST_NAV_FILLER_SLOTS = {45, 46, 48, 50, 51, 52};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
+    private static final int[] LIST_NAV_FILLER_SLOTS = {45, 46, 48, 50, 51, 52, 53};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25, 26};
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -62,7 +60,7 @@ public class KeyManagerMenu implements Listener {
         this.sessionManager = sessionManager;
         this.inputManager = inputManager;
         this.parent = parent;
-        this.searchTitle = TextUtil.color("&8Llaves - Buscar");
+        this.searchTitle = TextUtil.color(text("editor.keys.title.search"));
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -102,9 +100,12 @@ public class KeyManagerMenu implements Listener {
             ));
         }
         fillDetailNavigation(inventory);
-        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar selección", List.of("&7Limpiar jugador seleccionado.")));
-        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
-        inventory.setItem(SLOT_DETAIL_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar vista.")));
+        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE,
+                text("editor.keys.nav.clear.name"),
+                List.of(text("editor.keys.nav.clear.lore"))));
+        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
+                text("editor.keys.nav.back-main.name"),
+                List.of(text("editor.keys.nav.back-main.lore"))));
         player.openInventory(inventory);
     }
 
@@ -120,9 +121,12 @@ public class KeyManagerMenu implements Listener {
             inventory.setItem(slot++, buildCrateItem(target, crate));
         }
         fillListNavigation(inventory);
-        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar selección", List.of("&7Limpiar jugador seleccionado.")));
-        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar a búsqueda.")));
-        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE,
+                text("editor.keys.nav.clear.name"),
+                List.of(text("editor.keys.nav.clear.lore"))));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
+                text("editor.keys.nav.back-search.name"),
+                List.of(text("editor.keys.nav.back-search.lore"))));
         player.openInventory(inventory);
     }
 
@@ -131,16 +135,23 @@ public class KeyManagerMenu implements Listener {
         Inventory inventory = Bukkit.createInventory(player, 27, detailTitle(target, crateId));
         CrateDefinition crate = configLoader.getCrates().get(crateId);
         int count = crate != null ? getKeyCount(target, crate) : 0;
-        inventory.setItem(11, buildItem(Material.LIME_CONCRETE, "&aSumar", List.of("&7Agregar 1 llave.")));
-        inventory.setItem(13, buildItem(Material.TRIPWIRE_HOOK, "&eLlaves", List.of(
-                "&7Crate: &f" + crateId,
-                "&7Cantidad: &f" + count
+        inventory.setItem(11, buildItem(Material.LIME_CONCRETE,
+                text("editor.keys.detail.add.name"),
+                List.of(text("editor.keys.detail.add.lore"))));
+        inventory.setItem(13, buildItem(Material.TRIPWIRE_HOOK, text("editor.keys.detail.status.name"), List.of(
+                text("editor.keys.detail.status.crate", Map.of("crate", crateId)),
+                text("editor.keys.detail.status.count", Map.of("count", String.valueOf(count)))
         )));
-        inventory.setItem(15, buildItem(Material.RED_CONCRETE, "&cQuitar", List.of("&7Remover 1 llave.")));
+        inventory.setItem(15, buildItem(Material.RED_CONCRETE,
+                text("editor.keys.detail.remove.name"),
+                List.of(text("editor.keys.detail.remove.lore"))));
         fillDetailNavigation(inventory);
-        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar selección", List.of("&7Limpiar jugador seleccionado.")));
-        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
-        inventory.setItem(SLOT_DETAIL_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar datos.")));
+        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE,
+                text("editor.keys.nav.clear.name"),
+                List.of(text("editor.keys.nav.clear.lore"))));
+        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
+                text("editor.keys.nav.back-list.name"),
+                List.of(text("editor.keys.nav.back-list.lore"))));
         player.openInventory(inventory);
     }
 
@@ -191,9 +202,6 @@ public class KeyManagerMenu implements Listener {
             parent.open(player);
             return;
         }
-        if (slot == SLOT_DETAIL_REFRESH) {
-            openSearch(player);
-        }
     }
 
     private void handleListClick(Player player, TargetSelection target, int slot) {
@@ -203,10 +211,6 @@ public class KeyManagerMenu implements Listener {
         }
         if (slot == SLOT_LIST_BACK) {
             openSearch(player);
-            return;
-        }
-        if (slot == SLOT_LIST_REFRESH) {
-            openCrateList(player, target);
             return;
         }
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
@@ -228,7 +232,6 @@ public class KeyManagerMenu implements Listener {
             case 15 -> adjustKeys(player, target, crate, -1);
             case SLOT_DETAIL_DELETE -> clearTarget(player);
             case SLOT_DETAIL_BACK -> openCrateList(player, target);
-            case SLOT_DETAIL_REFRESH -> openCrateDetail(player, target, crateId);
             default -> {
             }
         }

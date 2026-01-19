@@ -34,14 +34,11 @@ public class PathEditorMenu implements Listener {
     private static final double DEFAULT_DOUBLE_FALLBACK = 0;
     // Layout: acciones principales al centro, navegación en fila inferior.
     private static final int SLOT_LIST_CREATE = 45;
-    private static final int SLOT_LIST_DELETE = 47;
     private static final int SLOT_LIST_BACK = 49;
-    private static final int SLOT_LIST_REFRESH = 53;
     private static final int SLOT_DETAIL_DELETE = 18;
     private static final int SLOT_DETAIL_BACK = 22;
-    private static final int SLOT_DETAIL_REFRESH = 26;
-    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 48, 50, 51, 52};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
+    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52, 53};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25, 26};
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -66,7 +63,7 @@ public class PathEditorMenu implements Listener {
         this.inputManager = inputManager;
         this.confirmationMenu = confirmationMenu;
         this.parent = parent;
-        this.title = TextUtil.color("&8Editor de Paths");
+        this.title = TextUtil.color(text("editor.paths.list.title"));
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -83,9 +80,12 @@ public class PathEditorMenu implements Listener {
             }
         }
         fillListNavigation(inventory);
-        inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE, "&aCrear path", List.of("&7Nueva ruta de cámara.")));
-        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
-        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE,
+                text("editor.paths.list.create.name"),
+                List.of(text("editor.paths.list.create.lore"))));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
+                text("editor.paths.list.back.name"),
+                List.of(text("editor.paths.list.back.lore"))));
         player.openInventory(inventory);
     }
 
@@ -93,42 +93,45 @@ public class PathEditorMenu implements Listener {
         activePath.put(player.getUniqueId(), pathId);
         refreshPathCache();
         CutscenePath path = configLoader.getPaths().get(pathId);
-        Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color("&8Path: " + pathId));
-        inventory.setItem(9, buildItem(Material.MAP, "&eEditar puntos", List.of(
-                "&7Click para iniciar el editor.",
-                "&7Block mode: clic en bloques.",
-                "&7Free mode: &f/crate route editor add&7.",
-                "&7Fuente: &f/crate route editor source <player|marker>&7.",
-                "&7Guarda con &f/crate route editor stop&7."
+        Inventory inventory = Bukkit.createInventory(player, 27, detailTitle(pathId));
+        inventory.setItem(9, buildItem(Material.MAP, text("editor.paths.detail.edit-points.name"), List.of(
+                text("editor.common.click-start-editor"),
+                text("editor.paths.detail.edit-points.block-mode"),
+                text("editor.paths.detail.edit-points.free-mode"),
+                text("editor.paths.detail.edit-points.source"),
+                text("editor.paths.detail.edit-points.save")
         )));
-        inventory.setItem(10, buildItem(Material.CLOCK, "&eDuración", List.of(
-                "&7Actual: &f" + (path != null ? path.getDurationSeconds() : 4.0),
-                "&7Click para editar."
+        inventory.setItem(10, buildItem(Material.CLOCK, text("editor.paths.detail.duration.name"), List.of(
+                text("editor.common.current", Map.of("value", String.valueOf(path != null ? path.getDurationSeconds() : 4.0))),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(11, buildItem(Material.PAPER, "&eSmoothing", List.of(
-                "&7Actual: &f" + (path != null ? path.getSmoothing() : "linear"),
-                "&7Click para editar."
+        inventory.setItem(11, buildItem(Material.PAPER, text("editor.paths.detail.smoothing.name"), List.of(
+                text("editor.common.current", Map.of("value", path != null ? path.getSmoothing() : "linear")),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(12, buildItem(Material.FIREWORK_STAR, "&ePartículas", List.of(
-                "&7Actual: &f" + (path != null ? path.getParticlePreview() : ""),
-                "&7Click para editar."
+        inventory.setItem(12, buildItem(Material.FIREWORK_STAR, text("editor.paths.detail.particles.name"), List.of(
+                text("editor.common.current", Map.of("value", path != null ? path.getParticlePreview() : "")),
+                text("editor.common.click-edit")
         )));
-        inventory.setItem(13, buildItem(Material.REPEATER, "&eConstant Speed", List.of(
-                "&7Actual: &f" + (path != null && path.isConstantSpeed()),
-                "&7Click para alternar."
+        inventory.setItem(13, buildItem(Material.REPEATER, text("editor.paths.detail.constant-speed.name"), List.of(
+                text("editor.common.current", Map.of("value", String.valueOf(path != null && path.isConstantSpeed()))),
+                text("editor.common.click-toggle")
         )));
-        inventory.setItem(14, buildItem(Material.ENDER_EYE, "&ePreview", List.of(
-                "&7Click para previsualizar.",
-                "&7Muestra partículas sobre la ruta."
+        inventory.setItem(14, buildItem(Material.ENDER_EYE, text("editor.paths.detail.preview.name"), List.of(
+                text("editor.common.click-preview"),
+                text("editor.paths.detail.preview.lore")
         )));
-        inventory.setItem(15, buildItem(Material.COMPARATOR, "&eStep Resolution", List.of(
-                "&7Actual: &f" + (path != null ? path.getStepResolution() : 0.15),
-                "&7Click para editar."
+        inventory.setItem(15, buildItem(Material.COMPARATOR, text("editor.paths.detail.step-resolution.name"), List.of(
+                text("editor.common.current", Map.of("value", String.valueOf(path != null ? path.getStepResolution() : 0.15))),
+                text("editor.common.click-edit")
         )));
         fillDetailNavigation(inventory);
-        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar path", List.of("&7Eliminar path actual.")));
-        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
-        inventory.setItem(SLOT_DETAIL_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar datos.")));
+        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE,
+                text("editor.paths.detail.delete.name"),
+                List.of(text("editor.paths.detail.delete.lore"))));
+        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
+                text("editor.paths.detail.back.name"),
+                List.of(text("editor.paths.detail.back.lore"))));
         player.openInventory(inventory);
     }
 
@@ -157,11 +160,6 @@ public class PathEditorMenu implements Listener {
         }
         if (slot == SLOT_LIST_BACK) {
             parent.open(player);
-            return;
-        }
-        if (slot == SLOT_LIST_REFRESH) {
-            refreshPathCache();
-            open(player);
             return;
         }
         List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
@@ -193,23 +191,28 @@ public class PathEditorMenu implements Listener {
 
     private void handleDetailClick(Player player, String pathId, int slot) {
         switch (slot) {
-            case 10 -> startPointEditing(player, pathId);
-            case 12 -> promptField(player, pathId, "duration-seconds", "editor.path.prompt.duration");
-            case 14 -> promptField(player, pathId, "smoothing", "editor.path.prompt.smoothing");
-            case 16 -> promptField(player, pathId, "particle-preview", "editor.path.prompt.particle-preview");
-            case 20 -> toggleConstantSpeed(player, pathId);
-            case 22 -> togglePreview(player, pathId);
-            case 24 -> promptField(player, pathId, "step-resolution", "editor.path.prompt.step-resolution");
-            case 26 -> open(player);
+            case 9 -> startPointEditing(player, pathId);
+            case 10 -> promptField(player, pathId, "duration-seconds", "editor.path.prompt.duration");
+            case 11 -> promptField(player, pathId, "smoothing", "editor.path.prompt.smoothing");
+            case 12 -> promptField(player, pathId, "particle-preview", "editor.path.prompt.particle-preview");
+            case 13 -> toggleConstantSpeed(player, pathId);
+            case 14 -> togglePreview(player, pathId);
+            case 15 -> promptField(player, pathId, "step-resolution", "editor.path.prompt.step-resolution");
+            case SLOT_DETAIL_DELETE -> confirmDelete(player, pathId);
+            case SLOT_DETAIL_BACK -> open(player);
             default -> {
             }
         }
     }
 
     private void confirmDelete(Player player, String pathId) {
-        confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar path " + pathId, () -> {
+        confirmationMenu.open(
+                player,
+                languageManager.getRaw("editor.confirmation.title.delete", java.util.Collections.emptyMap()),
+                languageManager.getRaw("editor.path.confirm.delete", Map.of("id", pathId)),
+                () -> {
             deletePath(pathId);
-            player.sendMessage(Component.text("Path eliminada y guardada en YAML."));
+            player.sendMessage(languageManager.getMessage("editor.path.success.deleted"));
             open(player);
         }, () -> openDetail(player, pathId));
     }
@@ -419,7 +422,6 @@ public class PathEditorMenu implements Listener {
 
     private void fillListNavigation(Inventory inventory) {
         ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
-        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar path", List.of("&7Usa el detalle para borrar.")));
         for (int slot : LIST_NAV_FILLER_SLOTS) {
             inventory.setItem(slot, filler);
         }

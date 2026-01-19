@@ -89,3 +89,362 @@ route:
     mode-changed: "&eCapture mode: &f%mode%."
     source-changed: "&eCapture source: &f%source%."
     marker-moved: "&aMarker moved to your current position."
+
+editor:
+  common:
+    none: "&7None"
+    current: "&7Current: &f%value%"
+    click-edit: "&7Click to edit."
+    click-select: "&7Click to select."
+    click-toggle: "&7Click to toggle."
+    click-preview: "&7Click to preview."
+    click-start-editor: "&7Click to start the editor."
+  input:
+    prompt: "&eType in chat: &f%prompt%&e. &7Type &fcancel&7 to abort."
+    pending: "&cYou already have a pending input. Type &fcancel&c to abort."
+    cancelled: "&eInput cancelled."
+    invalid-id: "&cPlease provide a valid ID."
+  confirmation:
+    title:
+      create: "&8Confirm creation"
+      clone: "&8Confirm clone"
+      delete: "&8Confirm delete"
+      change: "&8Confirm change"
+    confirm-button: "&aConfirm"
+    cancel-button: "&cCancel"
+    cancel-description: "&7Return to the previous menu."
+    confirm-name: "&aConfirm"
+    cancel-name: "&cCancel"
+    cancel-lore: "&7Cancel this action."
+  menu:
+    title: "&8Editor"
+    action:
+      crates:
+        name: "&eCrates"
+        lore: "&7Create, edit, and delete crates."
+      rewards:
+        name: "&aRewards"
+        lore: "&7Manage reward pools and rewards."
+      paths:
+        name: "&bPaths"
+        lore: "&7Manage cinematic routes."
+      keys:
+        name: "&dKeys"
+        lore: "&7Find players and manage keys."
+    nav:
+      close:
+        name: "&cClose"
+        lore: "&7Exit the editor."
+  crates:
+    list:
+      title: "&8Crate Editor"
+      create:
+        name: "&aCreate crate"
+        lore: "&7Start a new crate from scratch."
+      back:
+        name: "&eBack"
+        lore: "&7Return to the main menu."
+      item:
+        lore:
+          id: "&7ID: &f%id%"
+          type: "&7Type: &f%type%"
+          rewards: "&7Rewards pool: &f%pool%"
+          hint: "&7Left click to edit. Right click to clone. Shift+right click to delete."
+    detail:
+      title: "&8Crate: %crate%"
+      display-name:
+        name: "&eDisplay name"
+      rewards-pool:
+        name: "&eRewards pool"
+      type:
+        name: "&eType"
+      open-mode:
+        name: "&eOpen mode"
+      overlay:
+        name: "&eCutscene overlay"
+      lock-movement:
+        name: "&eLock movement"
+      lock-hud:
+        name: "&eLock HUD"
+      music:
+        name: "&eMusic"
+      delete:
+        name: "&cDelete crate"
+        lore: "&7Delete this crate."
+      back:
+        name: "&eBack"
+        lore: "&7Return to the crate list."
+    pools:
+      title: "&8Rewards pool: %crate%"
+    paths:
+      title: "&8Cutscene path: %crate%"
+      back:
+        name: "&eBack"
+        lore: "&7Return to the crate details."
+  crate:
+    prompt:
+      new-id: "Enter a new crate ID"
+      clone-id: "Enter a new crate ID to clone %id%"
+      display-name: "Enter the display name"
+      open-mode: "Enter the open mode (reward-only, preview-only, cinematic)"
+      overlay-model: "Enter the overlay model id"
+      music-sound: "Enter the music sound id"
+    confirm:
+      create: "Create crate %id%?"
+      clone: "Clone crate %source% to %target%?"
+      delete: "Delete crate %id%?"
+      update-field: "Update %field% for crate %id%?"
+      change-type: "Change crate type to %type%?"
+      change-lock: "Toggle %label% lock?"
+    label:
+      lock-movement: "movement"
+      lock-hud: "HUD"
+    success:
+      created: "&aCrate created."
+      cloned: "&aCrate cloned."
+      deleted: "&aCrate deleted."
+      updated: "&aCrate updated."
+      type-updated: "&aCrate type updated."
+      lock-updated: "&aCrate lock updated."
+  paths:
+    list:
+      title: "&8Path Editor"
+      create:
+        name: "&aCreate path"
+        lore: "&7Create a new camera path."
+      back:
+        name: "&eBack"
+        lore: "&7Return to the main menu."
+      item:
+        lore:
+          id: "&7ID: &f%id%"
+          duration: "&7Duration: &f%duration%s"
+          points: "&7Points: &f%points%"
+          hint: "&7Left click to edit. Right click to clone. Shift+right click to delete."
+    detail:
+      title: "&8Path: %path%"
+      edit-points:
+        name: "&eEdit points"
+        block-mode: "&7Block mode: click blocks."
+        free-mode: "&7Free mode: &f/crate route editor add&7."
+        source: "&7Source: &f/crate route editor source <player|marker>&7."
+        save: "&7Save with &f/crate route editor stop&7."
+      duration:
+        name: "&eDuration"
+      smoothing:
+        name: "&eSmoothing"
+      particles:
+        name: "&eParticles"
+      constant-speed:
+        name: "&eConstant speed"
+      preview:
+        name: "&ePreview"
+        lore: "&7Shows particles along the route."
+      step-resolution:
+        name: "&eStep resolution"
+      delete:
+        name: "&cDelete path"
+        lore: "&7Delete this path."
+      back:
+        name: "&eBack"
+        lore: "&7Return to the path list."
+  path:
+    prompt:
+      new-id: "Enter a new path ID"
+      clone-id: "Enter a new path ID to clone %id%"
+      duration: "Enter duration in seconds"
+      smoothing: "Enter smoothing mode"
+      particle-preview: "Enter preview particle id"
+      step-resolution: "Enter step resolution"
+    confirm:
+      create: "Create path %id%?"
+      clone: "Clone path %source% to %target%?"
+      delete: "Delete path %id%?"
+      update-field: "Update %field% for path %id%?"
+      change-constant-speed: "Set constant speed to %value%?"
+    error:
+      already-exists: "&cA path with that ID already exists."
+      missing-path: "&cPath not found."
+    warning:
+      active-session: "&cYou already have an active route editor session."
+    info:
+      preview-stopped: "&ePreview stopped."
+    success:
+      created: "&aPath created."
+      cloned: "&aPath cloned."
+      deleted: "&aPath deleted."
+      updated: "&aPath updated."
+      constant-speed-updated: "&aConstant speed updated."
+      preview-started: "&aPreview started."
+      preview-finished: "&aPreview finished."
+  rewards:
+    list:
+      title: "&8Reward Pools"
+      create:
+        name: "&aCreate pool"
+        lore: "&7Create a new reward pool."
+      back:
+        name: "&eBack"
+        lore: "&7Return to the main menu."
+      item:
+        lore:
+          id: "&7ID: &f%id%"
+          roll-count: "&7Rolls: &f%roll_count%"
+          rewards: "&7Rewards: &f%rewards%"
+          hint: "&7Left click to edit. Right click to clone. Shift+right click to delete."
+    pool:
+      title: "&8Pool: %pool%"
+      roll-count:
+        name: "&eRoll count"
+      create-reward:
+        name: "&aCreate reward"
+        lore: "&7Add a new reward."
+      delete:
+        name: "&cDelete pool"
+        lore: "&7Delete this pool."
+      back:
+        name: "&eBack"
+        lore: "&7Return to pools."
+    reward:
+      title: "&8Reward: %reward%"
+      current: "&7Current: &f%value%"
+      click-edit: "&7Click to edit."
+      delete:
+        name: "&cDelete reward"
+        lore: "&7Delete this reward."
+      back:
+        name: "&eBack"
+        lore: "&7Return to pool."
+      detail:
+        display-name:
+          name: "&eDisplay name"
+        chance:
+          name: "&eChance"
+        item:
+          name: "&eItem"
+        amount:
+          name: "&eAmount"
+        commands:
+          name: "&eCommands"
+        enchantments:
+          name: "&eEnchantments"
+        glow:
+          name: "&eGlow"
+        custom-model:
+          name: "&eCustom model"
+        map-image:
+          name: "&eMap image"
+      item-lore:
+        id: "&7ID: &f%id%"
+        chance: "&7Chance: &f%chance%"
+        item: "&7Item: &f%item%"
+        hint: "&7Left click to edit. Right click to clone. Shift+right click to delete."
+  reward:
+    prompt:
+      new-pool-id: "Enter a new pool ID"
+      clone-pool-id: "Enter a new pool ID to clone %id%"
+      roll-count: "Enter the number of rolls"
+      new-reward-id: "Enter a new reward ID"
+      clone-reward-id: "Enter a new reward ID to clone %id%"
+      display-name: "Enter the reward display name"
+      chance: "Enter the reward chance"
+      item: "Enter the item material"
+      amount: "Enter the reward amount"
+      commands: "Enter commands (separate with ;)"
+      enchantments: "Enter enchantments (key:level, comma-separated)"
+      glow: "Enter true/false"
+      custom-model: "Enter custom model id or 'none'"
+      map-image: "Enter map image id or 'none'"
+    confirm:
+      create-pool: "Create pool %id%?"
+      clone-pool: "Clone pool %source% to %target%?"
+      delete-pool: "Delete pool %id%?"
+      update-roll-count: "Update roll count for %id%?"
+      create-reward: "Create reward %id%?"
+      clone-reward: "Clone reward %source% to %target%?"
+      delete-reward: "Delete reward %id%?"
+      update-field: "Update %field% for reward %id%?"
+    success:
+      pool-created: "&aPool created."
+      pool-cloned: "&aPool cloned."
+      pool-deleted: "&aPool deleted."
+      pool-updated: "&aPool updated."
+      reward-created: "&aReward created."
+      reward-cloned: "&aReward cloned."
+      reward-deleted: "&aReward deleted."
+      reward-updated: "&aReward updated."
+    error:
+      invalid-value: "&cPlease provide a valid value."
+      invalid-chance-min: "&cChance must be 0 or higher."
+      invalid-chance-number: "&cChance must be a number."
+      invalid-amount-min: "&cAmount must be at least 1."
+      invalid-amount-number: "&cAmount must be a number."
+      invalid-material: "&cInvalid material: %material%"
+      invalid-glow: "&cGlow must be true/false."
+      invalid-commands: "&cEnter at least one command."
+      invalid-enchant-format: "&cEnchantments must be in key:level format."
+      invalid-enchant-key: "&cUnknown enchantment: %key%"
+      invalid-enchant-level: "&cInvalid level for %key%"
+      invalid-enchantments: "&cProvide at least one enchantment."
+  keys:
+    title:
+      search: "&8Keys - Search"
+      list: "&8Keys: %player%"
+      detail: "&8Keys: %crate% (%player%)"
+    search:
+      find:
+        name: "&eFind player"
+        lore: "&7Search for a player to manage keys."
+      player:
+        name: "&ePlayer"
+        lore: "&7Selected: &f%player%"
+      manage:
+        name: "&aManage keys"
+        lore: "&7Open key manager."
+      none:
+        name: "&cNo player"
+        lore: "&7Select a player first."
+      manage-disabled:
+        name: "&7Manage keys"
+        lore: "&7Select a player first."
+    nav:
+      clear:
+        name: "&cClear selection"
+        lore: "&7Clear the selected player."
+      back-main:
+        name: "&eBack"
+        lore: "&7Return to the main menu."
+      back-search:
+        name: "&eBack"
+        lore: "&7Return to search."
+      back-list:
+        name: "&eBack"
+        lore: "&7Return to the list."
+    detail:
+      add:
+        name: "&aAdd"
+        lore: "&7Add 1 key."
+      remove:
+        name: "&cRemove"
+        lore: "&7Remove 1 key."
+      status:
+        name: "&eKeys"
+        crate: "&7Crate: &f%crate%"
+        count: "&7Count: &f%count%"
+    list:
+      item:
+        lore:
+          id: "&7ID: &f%id%"
+          keys: "&7Keys: &f%keys%"
+          hint: "&7Click to manage keys."
+    item:
+      key-name: "%crate% &7key"
+  key:
+    prompt:
+      player-name: "Enter a player name"
+    error:
+      invalid-player: "&cPlease enter a valid player name."
+      player-not-found: "&cPlayer not found."
+      player-online-required: "&cPlayer must be online."
+      no-keys: "&cNo keys available to remove."
+      inventory-full: "&cPlayer inventory is full."
