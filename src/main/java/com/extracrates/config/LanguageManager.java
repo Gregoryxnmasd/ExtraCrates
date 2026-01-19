@@ -9,7 +9,6 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.util.Collections;
@@ -39,6 +38,27 @@ public class LanguageManager {
 
     public Component getMessage(String key, Map<String, String> placeholders) {
         return TextUtil.color(getRaw(key, placeholders));
+    }
+
+    public Component getMessage(
+            String key,
+            Player player,
+            CrateDefinition crate,
+            Reward reward,
+            Long cooldownSeconds
+    ) {
+        return getMessage(key, player, crate, reward, cooldownSeconds, Collections.emptyMap());
+    }
+
+    public Component getMessage(
+            String key,
+            Player player,
+            CrateDefinition crate,
+            Reward reward,
+            Long cooldownSeconds,
+            Map<String, String> placeholders
+    ) {
+        return TextUtil.color(getRaw(key, player, crate, reward, cooldownSeconds, placeholders));
     }
 
     public void sendActionBar(Player player, String key) {

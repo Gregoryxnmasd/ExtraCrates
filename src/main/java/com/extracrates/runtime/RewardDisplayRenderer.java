@@ -283,17 +283,7 @@ public class RewardDisplayRenderer {
     }
 
     private static CrateDefinition.RewardFloatSettings resolveFloatSettings(CrateDefinition crate, Reward reward) {
-        if (reward != null && reward.rewardFloatSettings() != null) {
-            return reward.rewardFloatSettings();
-        }
         return crate.animation().rewardFloatSettings();
-    }
-
-    private static CrateDefinition.RewardDisplaySettings resolveDisplaySettings(CrateDefinition crate, Reward reward) {
-        if (reward != null && reward.rewardDisplaySettings() != null) {
-            return reward.rewardDisplaySettings();
-        }
-        return crate.animation().rewardDisplaySettings();
     }
 
     private Set<String> parseAnimations(String animationString) {

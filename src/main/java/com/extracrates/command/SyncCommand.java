@@ -2,6 +2,7 @@ package com.extracrates.command;
 
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.config.LanguageManager;
 import com.extracrates.runtime.core.CrateSession;
 import com.extracrates.sync.SyncBridge;
 import com.extracrates.util.ItemUtil;
