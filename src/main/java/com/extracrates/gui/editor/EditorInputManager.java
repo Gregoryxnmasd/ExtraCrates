@@ -50,11 +50,14 @@ public class EditorInputManager implements Listener {
         String message = PlainTextComponentSerializer.plainText().serialize(event.message()).trim();
         pendingInputs.remove(event.getPlayer().getUniqueId());
         plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (request.reopenAction() != null) {
+                request.reopenAction().run();
+            }
             if (message.equalsIgnoreCase("cancel")) {
                 event.getPlayer().sendMessage(languageManager.getMessage("editor.input.cancelled"));
                 return;
             }
-            request.onInput.accept(message);
+            request.onInput().accept(message);
         });
     }
 
@@ -63,6 +66,9 @@ public class EditorInputManager implements Listener {
         pendingInputs.remove(event.getPlayer().getUniqueId());
     }
 
-    private record InputRequest(Consumer<String> onInput) {
+    private record InputRequest(Consumer<String> onInput, Runnable reopenAction, MenuContext previousMenu) {
+    }
+
+    private record MenuContext(Component title, String state) {
     }
 }

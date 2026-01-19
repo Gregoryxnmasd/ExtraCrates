@@ -27,6 +27,7 @@ public class SqlStorage implements CrateStorage {
         this.logger = logger;
         this.pool = new SqlConnectionPool(settings, logger);
         ensureFirstOpenTable();
+        ensureOpenStartedTable();
     }
 
     @Override
@@ -167,6 +168,21 @@ public class SqlStorage implements CrateStorage {
                 statement.setString(3, rewardId);
                 statement.setString(4, serverId);
                 statement.setLong(5, timestamp.toEpochMilli());
+                statement.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    @Override
+    public void logOpenStarted(UUID playerId, String crateId, String serverId, Instant timestamp) {
+        String sql = "INSERT INTO crate_open_starts (player_uuid, crate_id, server_id, opened_at) VALUES (?, ?, ?, ?)";
+        withConnection(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, playerId.toString());
+                statement.setString(2, crateId);
+                statement.setString(3, serverId);
+                statement.setLong(4, timestamp.toEpochMilli());
                 statement.executeUpdate();
             }
             return null;
@@ -485,6 +501,21 @@ public class SqlStorage implements CrateStorage {
     private void ensureFirstOpenTable() {
         String sql = "CREATE TABLE IF NOT EXISTS crate_first_opens ("
                 + "player_uuid VARCHAR(36) PRIMARY KEY,"
+                + "opened_at BIGINT NOT NULL"
+                + ")";
+        withConnection(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    private void ensureOpenStartedTable() {
+        String sql = "CREATE TABLE IF NOT EXISTS crate_open_starts ("
+                + "player_uuid VARCHAR(36) NOT NULL,"
+                + "crate_id VARCHAR(64) NOT NULL,"
+                + "server_id VARCHAR(64),"
                 + "opened_at BIGINT NOT NULL"
                 + ")";
         withConnection(connection -> {

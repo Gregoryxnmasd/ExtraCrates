@@ -24,13 +24,17 @@ public class ConfirmationMenu implements Listener {
     private final LanguageManager languageManager;
     private final Map<UUID, ConfirmationRequest> confirmations = new HashMap<>();
 
-    public ConfirmationMenu(ExtraCratesPlugin plugin) {
+    public ConfirmationMenu(ExtraCratesPlugin plugin, ConfigLoader configLoader) {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     public void open(Player player, String title, String description, Runnable onConfirm, Runnable onCancel) {
+        if (!configLoader.getMainConfig().getBoolean("gui.editor-confirmations", true)) {
+            onConfirm.run();
+            return;
+        }
         Inventory inventory = Bukkit.createInventory(player, 9, TextUtil.color(title));
         inventory.setItem(3, buildItem(Material.LIME_WOOL, languageManager.getRaw("editor.confirmation.confirm-button"), description));
         inventory.setItem(5, buildItem(Material.RED_WOOL, languageManager.getRaw("editor.confirmation.cancel-button"), languageManager.getRaw("editor.confirmation.cancel-description")));
@@ -87,6 +91,18 @@ public class ConfirmationMenu implements Listener {
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    private String confirmName() {
+        return languageManager.getRaw("editor.confirmation.confirm-name", java.util.Collections.emptyMap());
+    }
+
+    private String cancelName() {
+        return languageManager.getRaw("editor.confirmation.cancel-name", java.util.Collections.emptyMap());
+    }
+
+    private String cancelLore() {
+        return languageManager.getRaw("editor.confirmation.cancel-lore", java.util.Collections.emptyMap());
     }
 
     private record ConfirmationRequest(String title, Runnable onConfirm, Runnable onCancel) {

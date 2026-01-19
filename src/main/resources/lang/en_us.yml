@@ -53,6 +53,7 @@ command:
   mass-invalid-filter: "&cInvalid filter: %filter%"
   mass-no-matches: "&eNo crates match the filter."
   mass-updated: "&aUpdated %updated%/%matched% crates."
+
 session:
   already-in-progress: "&cYou already have a cutscene in progress for %crate_name%."
   no-permission: "&cYou don't have permission to open this crate."
@@ -67,9 +68,9 @@ session:
   open-mode-cinematic: "&7This crate opens with a cinematic cutscene."
   preview-reward: "&ePreview reward: %reward%"
   reward-received: "&aYou received: %reward%"
-  reroll.waiting: "&eSelecting your reward... (&fShift&7 to confirm)"
-  reroll.ready: "&eClick to change reward &7/ &fShift&7 to confirm"
-  reroll.confirmed-bar: "&eReward confirmed"
+  reroll.waiting: "&eSelecting your reward... (&fShift&7 to confirm) &7[%rerolls_used%/%rerolls_left%]"
+  reroll.ready: "&eClick to change reward &7/ &fShift&7 to confirm &7(%rerolls_left% left)"
+  reroll.confirmed-bar: "&eReward confirmed &7(%rerolls_used% used)"
   reroll.blocked: "&cWait for the animation to finish."
   reroll.advance: "&eSelected reward: &f%reward%"
   reroll.confirmed: "&aReward confirmed: &f%reward%"

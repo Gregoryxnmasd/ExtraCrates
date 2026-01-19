@@ -32,8 +32,20 @@ import java.util.UUID;
 
 public class PathEditorMenu implements Listener {
     private static final double DEFAULT_DOUBLE_FALLBACK = 0;
+    // Layout: acciones principales al centro, navegación en fila inferior.
+    private static final int SLOT_LIST_CREATE = 45;
+    private static final int SLOT_LIST_DELETE = 47;
+    private static final int SLOT_LIST_BACK = 49;
+    private static final int SLOT_LIST_REFRESH = 53;
+    private static final int SLOT_DETAIL_DELETE = 18;
+    private static final int SLOT_DETAIL_BACK = 22;
+    private static final int SLOT_DETAIL_REFRESH = 26;
+    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 48, 50, 51, 52};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
+
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
+    private final LanguageManager languageManager;
     private final EditorInputManager inputManager;
     private final ConfirmationMenu confirmationMenu;
     private final EditorMenu parent;
@@ -51,6 +63,7 @@ public class PathEditorMenu implements Listener {
     ) {
         this.plugin = plugin;
         this.configLoader = configLoader;
+        this.languageManager = plugin.getLanguageManager();
         this.inputManager = inputManager;
         this.confirmationMenu = confirmationMenu;
         this.parent = parent;
@@ -71,9 +84,10 @@ public class PathEditorMenu implements Listener {
                 break;
             }
         }
-        inventory.setItem(45, buildItem(Material.LIME_CONCRETE, "&aCrear path", List.of("&7Nueva ruta de cámara.")));
-        inventory.setItem(49, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
-        inventory.setItem(53, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
+        fillListNavigation(inventory);
+        inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE, "&aCrear path", List.of("&7Nueva ruta de cámara.")));
+        inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al menú principal.")));
+        inventory.setItem(SLOT_LIST_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar lista.")));
         player.openInventory(inventory);
     }
 
@@ -82,35 +96,38 @@ public class PathEditorMenu implements Listener {
         refreshPathCache();
         CutscenePath path = configLoader.getPaths().get(pathId);
         Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color("&8Path: " + pathId));
-        inventory.setItem(10, buildItem(Material.MAP, "&eEditar puntos", List.of(
+        inventory.setItem(9, buildItem(Material.MAP, "&eEditar puntos", List.of(
                 "&7Click para iniciar el editor.",
                 "&7Guarda con &f/crate route editor stop&7."
         )));
-        inventory.setItem(12, buildItem(Material.CLOCK, "&eDuración", List.of(
+        inventory.setItem(10, buildItem(Material.CLOCK, "&eDuración", List.of(
                 "&7Actual: &f" + (path != null ? path.getDurationSeconds() : 4.0),
                 "&7Click para editar."
         )));
-        inventory.setItem(14, buildItem(Material.PAPER, "&eSmoothing", List.of(
+        inventory.setItem(11, buildItem(Material.PAPER, "&eSmoothing", List.of(
                 "&7Actual: &f" + (path != null ? path.getSmoothing() : "linear"),
                 "&7Click para editar."
         )));
-        inventory.setItem(16, buildItem(Material.FIREWORK_STAR, "&ePartículas", List.of(
+        inventory.setItem(12, buildItem(Material.FIREWORK_STAR, "&ePartículas", List.of(
                 "&7Actual: &f" + (path != null ? path.getParticlePreview() : ""),
                 "&7Click para editar."
         )));
-        inventory.setItem(20, buildItem(Material.REPEATER, "&eConstant Speed", List.of(
+        inventory.setItem(13, buildItem(Material.REPEATER, "&eConstant Speed", List.of(
                 "&7Actual: &f" + (path != null && path.isConstantSpeed()),
                 "&7Click para alternar."
         )));
-        inventory.setItem(22, buildItem(Material.ENDER_EYE, "&ePreview", List.of(
+        inventory.setItem(14, buildItem(Material.ENDER_EYE, "&ePreview", List.of(
                 "&7Click para previsualizar.",
                 "&7Muestra partículas sobre la ruta."
         )));
-        inventory.setItem(24, buildItem(Material.COMPARATOR, "&eStep Resolution", List.of(
+        inventory.setItem(15, buildItem(Material.COMPARATOR, "&eStep Resolution", List.of(
                 "&7Actual: &f" + (path != null ? path.getStepResolution() : 0.15),
                 "&7Click para editar."
         )));
-        inventory.setItem(26, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
+        fillDetailNavigation(inventory);
+        inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar path", List.of("&7Eliminar path actual.")));
+        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW, "&eVolver", List.of("&7Regresar al listado.")));
+        inventory.setItem(SLOT_DETAIL_REFRESH, buildItem(Material.BOOK, "&bRefrescar", List.of("&7Recargar datos.")));
         player.openInventory(inventory);
     }
 
@@ -126,22 +143,22 @@ public class PathEditorMenu implements Listener {
             return;
         }
         String pathId = activePath.get(player.getUniqueId());
-        if (pathId != null && viewTitle.equals(TextUtil.color("&8Path: " + pathId))) {
+        if (pathId != null && viewTitle.equals(detailTitle(pathId))) {
             event.setCancelled(true);
             handleDetailClick(player, pathId, event.getSlot());
         }
     }
 
     private void handleListClick(Player player, int slot, boolean rightClick, boolean shiftClick) {
-        if (slot == 45) {
+        if (slot == SLOT_LIST_CREATE) {
             promptCreate(player);
             return;
         }
-        if (slot == 49) {
+        if (slot == SLOT_LIST_BACK) {
             parent.open(player);
             return;
         }
-        if (slot == 53) {
+        if (slot == SLOT_LIST_REFRESH) {
             refreshPathCache();
             open(player);
             return;
@@ -186,6 +203,14 @@ public class PathEditorMenu implements Listener {
             default -> {
             }
         }
+    }
+
+    private void confirmDelete(Player player, String pathId) {
+        confirmationMenu.open(player, "&8Confirmar borrado", "Eliminar path " + pathId, () -> {
+            deletePath(pathId);
+            player.sendMessage(Component.text("Path eliminada y guardada en YAML."));
+            open(player);
+        }, () -> openDetail(player, pathId));
     }
 
     private void promptCreate(Player player) {
@@ -263,7 +288,7 @@ public class PathEditorMenu implements Listener {
                     openDetail(player, pathId);
                 },
                 () -> openDetail(player, pathId)
-        ));
+        ), () -> openDetail(player, pathId));
     }
 
     private void toggleConstantSpeed(Player player, String pathId) {
@@ -384,11 +409,26 @@ public class PathEditorMenu implements Listener {
 
     private ItemStack buildPathItem(CutscenePath path) {
         List<String> lore = new ArrayList<>();
-        lore.add("&7ID: &f" + path.getId());
-        lore.add("&7Duración: &f" + path.getDurationSeconds());
-        lore.add("&7Puntos: &f" + path.getPoints().size());
-        lore.add("&8Click: editar | Click der: clonar | Shift+der: borrar");
+        lore.add(text("editor.paths.list.item.lore.id", Map.of("id", path.getId())));
+        lore.add(text("editor.paths.list.item.lore.duration", Map.of("duration", String.valueOf(path.getDurationSeconds()))));
+        lore.add(text("editor.paths.list.item.lore.points", Map.of("points", String.valueOf(path.getPoints().size()))));
+        lore.add(text("editor.paths.list.item.lore.hint"));
         return buildItem(Material.ENDER_EYE, "&b" + path.getId(), lore);
+    }
+
+    private void fillListNavigation(Inventory inventory) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE, "&cBorrar path", List.of("&7Usa el detalle para borrar.")));
+        for (int slot : LIST_NAV_FILLER_SLOTS) {
+            inventory.setItem(slot, filler);
+        }
+    }
+
+    private void fillDetailNavigation(Inventory inventory) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        for (int slot : DETAIL_NAV_FILLER_SLOTS) {
+            inventory.setItem(slot, filler);
+        }
     }
 
     private ItemStack buildItem(Material material, String name, List<String> loreLines) {
@@ -410,5 +450,17 @@ public class PathEditorMenu implements Listener {
         } catch (NumberFormatException ex) {
             return DEFAULT_DOUBLE_FALLBACK;
         }
+    }
+
+    private Component detailTitle(String pathId) {
+        return TextUtil.color(text("editor.paths.detail.title", Map.of("path", pathId)));
+    }
+
+    private String text(String key) {
+        return languageManager.getRaw(key, java.util.Collections.emptyMap());
+    }
+
+    private String text(String key, Map<String, String> placeholders) {
+        return languageManager.getRaw(key, placeholders);
     }
 }
