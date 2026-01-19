@@ -26,6 +26,8 @@ public interface CrateStorage {
 
     void releaseLock(UUID playerId, String crateId);
 
+    List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset);
+
     Optional<PendingReward> getPendingReward(UUID playerId);
 
     void setPendingReward(UUID playerId, String crateId, String rewardId);

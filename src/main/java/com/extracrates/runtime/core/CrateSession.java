@@ -8,6 +8,7 @@ import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.runtime.CameraEntityFactory;
 import com.extracrates.runtime.ProtocolEntityHider;
+import com.extracrates.runtime.UiMode;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
@@ -15,7 +16,6 @@ import com.extracrates.util.SoundUtil;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Display;
@@ -23,13 +23,13 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
 
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +37,10 @@ import java.util.concurrent.ConcurrentMap;
 
 public class CrateSession {
     private static final ConcurrentMap<RewardDisplayCacheKey, ItemStack> REWARD_DISPLAY_CACHE = new ConcurrentHashMap<>();
+
+    public static void clearRewardDisplayCache() {
+        REWARD_DISPLAY_CACHE.clear();
+    }
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -73,6 +77,7 @@ public class CrateSession {
     private int rerollEnabledAtTick;
     private boolean rerollLocked;
     private int selectedRewardIndex;
+    private int maxRerolls;
 
     private GameMode previousGameMode;
     private Entity previousSpectatorTarget;
@@ -81,6 +86,11 @@ public class CrateSession {
     private float previousWalkSpeed;
     private float previousFlySpeed;
     private boolean rewardDelivered;
+    private Boolean bossBarSupported;
+    private boolean hudHiddenApplied;
+    private ItemStack[] previousInventoryContents;
+    private ItemStack[] previousArmorContents;
+    private ItemStack previousOffHand;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -120,7 +130,6 @@ public class CrateSession {
         selectedRewardIndex = -1;
         rerollLocked = false;
         elapsedTicks = 0;
-        lastInputTick = -1;
         rewardSwitchTicks = Math.max(1, configLoader.getMainConfig().getInt("cutscene.reward-delay-ticks", 20));
         nextRewardSwitchTick = rewardSwitchTicks;
         rerollEnabledAtTick = rewardSwitchTicks;
@@ -128,10 +137,8 @@ public class CrateSession {
         selectedRewardIndex = -1;
         Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
         previousGameMode = player.getGameMode();
-        gamemodeSnapshotTaken = true;
         previousWalkSpeed = player.getWalkSpeed();
         previousFlySpeed = player.getFlySpeed();
-        speedSnapshotTaken = true;
         spawnCamera(start);
         applySpectatorMode();
         spawnRewardDisplay();
@@ -142,8 +149,27 @@ public class CrateSession {
         startWatchdog();
     }
 
-    public CrateDefinition getCrate() {
-        return crate;
+    public void reroll(List<Reward> rewards) {
+        if (rewards == null || rewards.isEmpty()) {
+            return;
+        }
+        this.rewards = rewards;
+        rewardIndex = 0;
+        selectedRewardIndex = -1;
+        rerollLocked = false;
+        nextRewardSwitchTick = elapsedTicks + rewardSwitchTicks;
+        refreshRewardDisplay();
+    }
+
+    public Reward getActiveReward() {
+        return getCurrentReward();
+    }
+
+    public int getRemainingTicks() {
+        if (maxDurationTicks <= 0) {
+            return -1;
+        }
+        return Math.max(0, maxDurationTicks - elapsedTicks);
     }
 
     private void spawnCamera(Location start) {
@@ -167,7 +193,6 @@ public class CrateSession {
         player.setSpectatorTarget(cameraEntity);
 
         previousHelmet = player.getInventory().getHelmet();
-        helmetSnapshotTaken = true;
         String overlayModel = crate.cutsceneSettings().overlayModel();
         if (overlayModel != null && !overlayModel.isEmpty()) {
             ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
@@ -183,7 +208,7 @@ public class CrateSession {
         }
 
         if (crate.cutsceneSettings().hideHud()) {
-            toggleHud(true);
+            hudHiddenApplied = toggleHud(true);
         }
         if (crate.cutsceneSettings().lockMovement()) {
             player.setWalkSpeed(0.0f);
@@ -201,7 +226,6 @@ public class CrateSession {
         if (reward == null) {
             return;
         }
-        rewardAnchorLocation = anchor.clone();
         CrateDefinition.RewardFloatSettings floatSettings = resolveFloatSettings(reward);
         Location displayLocation = anchor.clone().add(0, floatSettings.height(), 0);
 
@@ -215,6 +239,13 @@ public class CrateSession {
         hologramBaseLocation = hologram.getLocation().clone();
         rewardBaseTransform = rewardDisplay.getTransformation();
         logVerbose("Reward display creado: reward=%s", reward.id());
+    }
+
+    private CrateDefinition.RewardFloatSettings resolveFloatSettings(Reward reward) {
+        if (reward != null && reward.rewardDisplayOverrides() != null) {
+            return crate.animation().rewardFloatSettings();
+        }
+        return crate.animation().rewardFloatSettings();
     }
 
     private Entity spawnHologramEntity(Location location, Reward reward) {
@@ -345,10 +376,10 @@ public class CrateSession {
                 int index = lastIndex <= 0 ? 0 : (int) Math.round(progress * lastIndex);
                 Location point = timeline.get(Math.min(lastIndex, Math.max(0, index)));
                 tick++;
+                lastTaskTickMillis = System.currentTimeMillis();
                 cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
                 elapsedTicks++;
-                updateRerollDisplay();
                 if (!rerollLocked && rewards.size() > 1 && rewardSwitchTicks > 0) {
                     while (elapsedTicks >= nextRewardSwitchTick && rewardIndex < rewards.size() - 1) {
                         rewardIndex++;
@@ -373,6 +404,25 @@ public class CrateSession {
             }
         }
         return Math.max(1, timeline.size());
+    }
+
+    private void setupRerollHud() {
+        FileConfiguration config = configLoader.getMainConfig();
+        int enableTicks = config.getInt("cutscene.reroll-enable-ticks", 0);
+        if (enableTicks > 0) {
+            rerollEnabledAtTick = enableTicks;
+        }
+        maxRerolls = config.getInt("cutscene.max-rerolls", 0);
+    }
+
+    private void scheduleTimeout() {
+        maxDurationTicks = Math.max(0, configLoader.getMainConfig().getInt("sessions.max-duration-ticks", 0));
+        sessionStartMillis = System.currentTimeMillis();
+        lastTaskTickMillis = sessionStartMillis;
+    }
+
+    private void updateRerollHud() {
+        updateRerollDisplay();
     }
 
     private void startWatchdog() {
@@ -673,6 +723,10 @@ public class CrateSession {
         hideFromOthers(hologram);
     }
 
+    private void hideFromOthers(Entity entity) {
+        registerVisibleEntity(entity);
+    }
+
     private Location resolveRewardDisplayLocation() {
         if (rewardBaseLocation != null) {
             return rewardBaseLocation.clone();
@@ -758,6 +812,21 @@ public class CrateSession {
         return item;
     }
 
+    private void logTiming(RewardDisplayCacheKey cacheKey, boolean cacheHit, long start) {
+        if (!configLoader.getMainConfig().getBoolean("debug.timings", false)) {
+            return;
+        }
+        long duration = System.nanoTime() - start;
+        plugin.getLogger().info(String.format(
+                "Reward display cache=%s rewardId=%s world=%s model=%s durationMs=%.2f",
+                cacheHit ? "hit" : "miss",
+                cacheKey.rewardId(),
+                cacheKey.worldName(),
+                cacheKey.rewardModel(),
+                duration / 1_000_000.0
+        ));
+    }
+
     private String buildHologramText(Reward reward) {
         String format = reward.hologram();
         if (format == null || format.isEmpty()) {
@@ -836,17 +905,38 @@ public class CrateSession {
         logVerbose("Sesion limpiada: jugador=%s crate=%s", player.getName(), crate.id());
     }
 
-    public void handleRerollInput() {
-        if (maxRerolls > 0 && rerollsUsed >= maxRerolls) {
-            player.sendMessage(languageManager.getMessage("session.reroll-limit-reached"));
+    public void handleRerollInput(boolean confirm) {
+        if (elapsedTicks < rerollEnabledAtTick) {
+            player.sendMessage(languageManager.getMessage("reroll.blocked"));
+            return;
+        }
+        if (confirm) {
+            rerollLocked = true;
+            selectedRewardIndex = rewardIndex;
+            Reward reward = getCurrentReward();
+            if (reward != null) {
+                player.sendMessage(languageManager.getMessage("reroll.confirmed", Map.of("reward", reward.displayName())));
+            }
             finish();
+            end();
+            return;
+        }
+        if (maxRerolls > 0 && rerollsUsed >= maxRerolls) {
+            player.sendMessage(languageManager.getMessage("reroll.blocked"));
+            finish();
+            end();
             return;
         }
         if (!advanceReward()) {
             finish();
+            end();
             return;
         }
         rerollsUsed++;
+        Reward reward = getCurrentReward();
+        if (reward != null) {
+            player.sendMessage(languageManager.getMessage("reroll.advance", Map.of("reward", reward.displayName())));
+        }
     }
 
     private boolean advanceReward() {
@@ -970,6 +1060,13 @@ public class CrateSession {
         }
     }
 
+    private void logVerbose(String message, Object... args) {
+        if (!plugin.getConfig().getBoolean("debug.verbose", false)) {
+            return;
+        }
+        plugin.getLogger().info(String.format(message, args));
+    }
+
     private void startMusic() {
         CrateDefinition.MusicSettings music = crate.cutsceneSettings().musicSettings();
         if (music == null || music.sound().isEmpty()) {
@@ -1050,15 +1147,13 @@ public class CrateSession {
         if (rewards == null || rewards.size() <= 1) {
             return;
         }
-        Component message;
         if (rerollLocked) {
-            message = Component.text("Recompensa seleccionada", NamedTextColor.YELLOW);
+            player.sendActionBar(languageManager.getMessage("reroll.confirmed-bar"));
         } else if (elapsedTicks >= rerollEnabledAtTick) {
-            message = Component.text("Clic para reroll \u2022 Shift para reclamar", NamedTextColor.YELLOW);
+            player.sendActionBar(languageManager.getMessage("reroll.ready"));
         } else {
-            message = Component.text("Reroll disponible pronto...", NamedTextColor.YELLOW);
+            player.sendActionBar(languageManager.getMessage("reroll.waiting"));
         }
-        player.sendActionBar(message);
     }
 
     private void clearRerollDisplay() {
@@ -1066,5 +1161,8 @@ public class CrateSession {
             return;
         }
         player.sendActionBar(Component.empty());
+    }
+
+    private record RewardDisplayCacheKey(String rewardId, String worldName, String rewardModel) {
     }
 }

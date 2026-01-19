@@ -152,4 +152,8 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     public MapImageCache getMapImageCache() {
         return mapImageCache;
     }
+
+    public PendingRewardStore getPendingRewardStore() {
+        return pendingRewardStore;
+    }
 }
