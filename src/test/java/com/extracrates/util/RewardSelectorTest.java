@@ -16,7 +16,7 @@ class RewardSelectorTest {
 
     @Test
     void rollCountDefaultsToAtLeastOne() {
-        RewardPool pool = new RewardPool("pool", 0, List.of(reward("reward", 1.0)));
+        RewardPool pool = new RewardPool("pool", 0, false, List.of(reward("reward", 1.0)));
 
         List<Reward> results = RewardSelector.roll(pool, new FixedRandom(), null);
 
@@ -28,7 +28,7 @@ class RewardSelectorTest {
     void weightedRollsRespectChanceDistribution() {
         Reward first = reward("first", 0.2);
         Reward second = reward("second", 0.8);
-        RewardPool pool = new RewardPool("pool", 2, List.of(first, second));
+        RewardPool pool = new RewardPool("pool", 2, false, List.of(first, second));
 
         FixedRandom random = new FixedRandom().withDoubles(0.1, 0.95);
 
@@ -41,7 +41,7 @@ class RewardSelectorTest {
     void zeroTotalFallsBackToIndexSelectionAndLogs() {
         Reward first = reward("first", 0.0);
         Reward second = reward("second", 0.0);
-        RewardPool pool = new RewardPool("pool", 1, List.of(first, second));
+        RewardPool pool = new RewardPool("pool", 1, false, List.of(first, second));
 
         FixedRandom random = new FixedRandom()
                 .withDoubles(0.42)
@@ -72,6 +72,7 @@ class RewardSelectorTest {
                 null,
                 new Reward.RewardMessage("", ""),
                 new Reward.RewardEffects("", "", ""),
+                null,
                 "",
                 ""
         );
