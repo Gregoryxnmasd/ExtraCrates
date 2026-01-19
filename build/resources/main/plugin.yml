@@ -1,0 +1,72 @@
+name: ExtraCrates
+main: com.extracrates.ExtraCratesPlugin
+version: ${project.version}
+description: Base scaffolding for a complex crates plugin.
+author: Savaduki
+api-version: '1.21'
+softdepend: [ProtocolLib]
+commands:
+  crate:
+    description: Gestiona crates y sus opciones principales.
+    usage: /<command> <gui|open|preview|cutscene|reload|givekey|route|sync|migrate>
+permissions:
+  extracrates.gui:
+    description: Permite abrir el GUI de crates.
+    default: true
+  extracrates.history:
+    description: Permite ver el historial de aperturas.
+    default: true
+  extracrates.open:
+    description: Permite abrir crates.
+    default: true
+  extracrates.preview:
+    description: Permite previsualizar crates.
+    default: true
+  extracrates.reroll:
+    description: Permite rerollear recompensas de crates.
+    default: true
+  extracrates.reload:
+    description: Permite recargar la configuración de crates.
+    default: op
+  extracrates.givekey:
+    description: Permite otorgar llaves de crates.
+    default: op
+  extracrates.route.editor:
+    description: Permite editar rutas de cutscene para crates.
+    default: op
+  extracrates.sync:
+    description: Permite gestionar la sincronización de crates.
+    default: op
+  extracrates.migrate:
+    description: Permite migrar datos entre storages.
+    default: op
+  extracrates.crate.edit:
+    description: Permite editar crates desde comando.
+    default: op
+  extracrates.crate.delete:
+    description: Permite borrar crates desde comando.
+    default: op
+  extracrates.pool.create:
+    description: Permite crear pools desde comando.
+    default: op
+  extracrates.pool.edit:
+    description: Permite editar pools desde comando.
+    default: op
+  extracrates.pool.delete:
+    description: Permite borrar pools desde comando.
+    default: op
+  extracrates.reward.create:
+    description: Permite crear rewards desde comando.
+    default: op
+  extracrates.reward.edit:
+    description: Permite editar rewards desde comando.
+    default: op
+  extracrates.reward.delete:
+    description: Permite borrar rewards desde comando.
+    default: op
+  extracrates.reward.give:
+    description: Permite entregar rewards manualmente.
+    default: op
+  extracrates.reward.claim:
+    description: Permite reclamar rewards pendientes.
+    default: true
