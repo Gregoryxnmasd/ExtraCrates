@@ -10,6 +10,7 @@ gui:
   history-title: "&8Crate History"
   preview-enabled: true
   click-sounds: true
+  editor-confirmations: true
   crates:
     legendary:
       slot: 10
