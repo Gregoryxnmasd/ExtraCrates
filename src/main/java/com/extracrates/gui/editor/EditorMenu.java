@@ -20,6 +20,14 @@ import java.util.List;
 
 @SuppressWarnings("unused")
 public class EditorMenu implements Listener {
+    // Layout: acciones principales al centro (fila media), navegación en la fila inferior.
+    private static final int SLOT_ACTION_CRATES = 10;
+    private static final int SLOT_ACTION_REWARDS = 12;
+    private static final int SLOT_ACTION_PATHS = 14;
+    private static final int SLOT_ACTION_KEYS = 16;
+    private static final int SLOT_NAV_CLOSE = 22;
+    private static final int[] NAV_FILLER_SLOTS = {18, 19, 20, 21, 23, 24, 25, 26};
+
     private final ExtraCratesPlugin plugin;
     private final LanguageManager languageManager;
     private final Component title;
@@ -47,31 +55,12 @@ public class EditorMenu implements Listener {
 
     public void open(Player player) {
         Inventory inventory = Bukkit.createInventory(player, 27, title);
-        inventory.setItem(11, buildItem(
-                Material.CHEST,
-                languageManager.getRaw("editor.menu.crates.name", java.util.Collections.emptyMap()),
-                List.of(languageManager.getRaw("editor.menu.crates.lore", java.util.Collections.emptyMap()))
-        ));
-        inventory.setItem(13, buildItem(
-                Material.EMERALD,
-                languageManager.getRaw("editor.menu.rewards.name", java.util.Collections.emptyMap()),
-                List.of(languageManager.getRaw("editor.menu.rewards.lore", java.util.Collections.emptyMap()))
-        ));
-        inventory.setItem(15, buildItem(
-                Material.ENDER_EYE,
-                languageManager.getRaw("editor.menu.paths.name", java.util.Collections.emptyMap()),
-                List.of(languageManager.getRaw("editor.menu.paths.lore", java.util.Collections.emptyMap()))
-        ));
-        inventory.setItem(20, buildItem(
-                Material.TRIPWIRE_HOOK,
-                languageManager.getRaw("editor.menu.keys.name", java.util.Collections.emptyMap()),
-                List.of(languageManager.getRaw("editor.menu.keys.lore", java.util.Collections.emptyMap()))
-        ));
-        inventory.setItem(22, buildItem(
-                Material.BARRIER,
-                languageManager.getRaw("editor.menu.close.name", java.util.Collections.emptyMap()),
-                List.of(languageManager.getRaw("editor.menu.close.lore", java.util.Collections.emptyMap()))
-        ));
+        inventory.setItem(SLOT_ACTION_CRATES, buildItem(Material.CHEST, "&eCrates", List.of("&7Crear, editar y borrar crates.")));
+        inventory.setItem(SLOT_ACTION_REWARDS, buildItem(Material.EMERALD, "&aRewards", List.of("&7Editar pools y recompensas.")));
+        inventory.setItem(SLOT_ACTION_PATHS, buildItem(Material.ENDER_EYE, "&bPaths", List.of("&7Gestionar rutas cinemáticas.")));
+        inventory.setItem(SLOT_ACTION_KEYS, buildItem(Material.TRIPWIRE_HOOK, "&dLlaves", List.of("&7Buscar jugador y gestionar llaves.")));
+        fillNavigation(inventory);
+        inventory.setItem(SLOT_NAV_CLOSE, buildItem(Material.BARRIER, "&cCerrar", List.of("&7Salir del editor.")));
         player.openInventory(inventory);
     }
 
@@ -85,13 +74,20 @@ public class EditorMenu implements Listener {
         }
         event.setCancelled(true);
         switch (event.getSlot()) {
-            case 11 -> crateEditorMenu.open(player);
-            case 13 -> rewardEditorMenu.openPools(player);
-            case 15 -> pathEditorMenu.open(player);
-            case 20 -> keyManagerMenu.open(player);
-            case 22 -> player.closeInventory();
+            case SLOT_ACTION_CRATES -> crateEditorMenu.open(player);
+            case SLOT_ACTION_REWARDS -> rewardEditorMenu.openPools(player);
+            case SLOT_ACTION_PATHS -> pathEditorMenu.open(player);
+            case SLOT_ACTION_KEYS -> keyManagerMenu.open(player);
+            case SLOT_NAV_CLOSE -> player.closeInventory();
             default -> {
             }
+        }
+    }
+
+    private void fillNavigation(Inventory inventory) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        for (int slot : NAV_FILLER_SLOTS) {
+            inventory.setItem(slot, filler);
         }
     }
 
