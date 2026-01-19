@@ -98,6 +98,9 @@ public class PathEditorMenu implements Listener {
         Inventory inventory = Bukkit.createInventory(player, 27, TextUtil.color("&8Path: " + pathId));
         inventory.setItem(9, buildItem(Material.MAP, "&eEditar puntos", List.of(
                 "&7Click para iniciar el editor.",
+                "&7Block mode: clic en bloques.",
+                "&7Free mode: &f/crate route editor add&7.",
+                "&7Fuente: &f/crate route editor source <player|marker>&7.",
                 "&7Guarda con &f/crate route editor stop&7."
         )));
         inventory.setItem(10, buildItem(Material.CLOCK, "&eDuración", List.of(
@@ -314,8 +317,8 @@ public class PathEditorMenu implements Listener {
             return;
         }
         player.closeInventory();
-        player.sendMessage(languageManager.getMessage("editor.path.success.editor-started"));
-        player.sendMessage(languageManager.getMessage("editor.path.info.editor-commands"));
+        player.sendMessage(plugin.getLanguageManager().getMessage("command.route-started", java.util.Map.of("path", pathId)));
+        player.sendMessage(plugin.getLanguageManager().getMessage("command.route-instructions"));
     }
 
     private void togglePreview(Player player, String pathId) {

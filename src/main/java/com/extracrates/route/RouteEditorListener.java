@@ -30,6 +30,9 @@ public class RouteEditorListener implements Listener {
         }
         switch (event.getAction()) {
             case RIGHT_CLICK_BLOCK, LEFT_CLICK_BLOCK -> {
+                if (!routeEditorManager.isBlockClickCapture(event.getPlayer())) {
+                    return;
+                }
                 routeEditorManager.handleClick(event.getPlayer(), event.getClickedBlock().getLocation());
                 event.setCancelled(true);
             }

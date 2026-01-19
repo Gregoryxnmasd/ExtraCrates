@@ -326,6 +326,61 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     }
                     return true;
                 }
+                if (action.equalsIgnoreCase("mode")) {
+                    if (routeEditorManager.hasNoSession(player)) {
+                        sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
+                        return true;
+                    }
+                    if (args.length < 4) {
+                        sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
+                        return true;
+                    }
+                    String modeValue = args[3].toLowerCase(Locale.ROOT);
+                    switch (modeValue) {
+                        case "toggle" -> routeEditorManager.toggleCaptureMode(player);
+                        case "block", "block-click" -> routeEditorManager.setCaptureMode(player, com.extracrates.route.RouteCaptureMode.BLOCK_CLICK);
+                        case "free", "free-position" -> routeEditorManager.setCaptureMode(player, com.extracrates.route.RouteCaptureMode.FREE_POSITION);
+                        default -> sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
+                    }
+                    return true;
+                }
+                if (action.equalsIgnoreCase("source")) {
+                    if (routeEditorManager.hasNoSession(player)) {
+                        sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
+                        return true;
+                    }
+                    if (args.length < 4) {
+                        sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
+                        return true;
+                    }
+                    String sourceValue = args[3].toLowerCase(Locale.ROOT);
+                    switch (sourceValue) {
+                        case "player" -> routeEditorManager.setCaptureSource(player, com.extracrates.route.RouteCaptureSource.PLAYER);
+                        case "marker" -> routeEditorManager.setCaptureSource(player, com.extracrates.route.RouteCaptureSource.MARKER);
+                        default -> sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
+                    }
+                    return true;
+                }
+                if (action.equalsIgnoreCase("marker")) {
+                    if (routeEditorManager.hasNoSession(player)) {
+                        sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
+                        return true;
+                    }
+                    if (args.length < 4 || !args[3].equalsIgnoreCase("move")) {
+                        sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
+                        return true;
+                    }
+                    routeEditorManager.moveMarkerToPlayer(player);
+                    return true;
+                }
+                if (action.equalsIgnoreCase("add") || action.equalsIgnoreCase("capture")) {
+                    if (routeEditorManager.hasNoSession(player)) {
+                        sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
+                        return true;
+                    }
+                    routeEditorManager.capturePoint(player);
+                    return true;
+                }
                 if (!routeEditorManager.startSession(player, action)) {
                     sender.sendMessage(languageManager.getMessage("command.route-already-active"));
                     return true;
@@ -455,6 +510,26 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {
             results.add("editor");
             return results;
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("editor")) {
+            results.addAll(List.of("stop", "cancel", "mode", "source", "add", "capture", "marker"));
+            results.addAll(configLoader.getPaths().keySet());
+            return results;
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("editor")) {
+            String action = args[2].toLowerCase(Locale.ROOT);
+            if (action.equals("mode")) {
+                results.addAll(List.of("toggle", "block", "free"));
+                return results;
+            }
+            if (action.equals("source")) {
+                results.addAll(List.of("player", "marker"));
+                return results;
+            }
+            if (action.equals("marker")) {
+                results.add("move");
+                return results;
+            }
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("migrate")) {
             results.add("sql");
