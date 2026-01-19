@@ -92,20 +92,6 @@ public class ConfigValidator {
                         ));
                     }
                 }
-                if (!invalidEnchantments.isEmpty()) {
-                    issues.add("encantamientos inválidos " + invalidEnchantments);
-                }
-                boolean hasBlankCommand = reward.commands().stream().anyMatch(command -> command == null || command.isBlank());
-                if (reward.commands().isEmpty() || hasBlankCommand) {
-                    issues.add("comandos vacíos");
-                }
-                if (!issues.isEmpty()) {
-                    warnings.add("Recompensa inválida '" + reward.id() + "' (pool '" + pool.id() + "'): " + String.join(", ", issues) + ".");
-                    poolInvalid = true;
-                }
-            }
-            if (poolInvalid) {
-                invalidPools.add(pool.id());
             }
         }
 

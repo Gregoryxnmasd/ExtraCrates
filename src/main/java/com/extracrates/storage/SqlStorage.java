@@ -198,6 +198,61 @@ public class SqlStorage implements CrateStorage {
     }
 
     @Override
+    public List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        StringBuilder sql = new StringBuilder(
+                "SELECT crate_id, reward_id, server_id, opened_at FROM crate_opens WHERE player_uuid=?"
+        );
+        List<Object> params = new ArrayList<>();
+        params.add(playerId.toString());
+        if (filter != null && filter.crateId() != null && !filter.crateId().isEmpty()) {
+            sql.append(" AND crate_id=?");
+            params.add(filter.crateId());
+        }
+        if (filter != null && filter.from() != null) {
+            sql.append(" AND opened_at>=?");
+            params.add(filter.from().toEpochMilli());
+        }
+        if (filter != null && filter.to() != null) {
+            sql.append(" AND opened_at<=?");
+            params.add(filter.to().toEpochMilli());
+        }
+        sql.append(" ORDER BY opened_at DESC LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
+
+        return withConnection(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+                for (int i = 0; i < params.size(); i++) {
+                    Object param = params.get(i);
+                    if (param instanceof String value) {
+                        statement.setString(i + 1, value);
+                    } else if (param instanceof Long value) {
+                        statement.setLong(i + 1, value);
+                    } else if (param instanceof Integer value) {
+                        statement.setInt(i + 1, value);
+                    } else {
+                        statement.setObject(i + 1, param);
+                    }
+                }
+                List<CrateOpenEntry> entries = new ArrayList<>();
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        String crateId = resultSet.getString("crate_id");
+                        String rewardId = resultSet.getString("reward_id");
+                        String serverId = resultSet.getString("server_id");
+                        Instant openedAt = Instant.ofEpochMilli(resultSet.getLong("opened_at"));
+                        entries.add(new CrateOpenEntry(playerId, crateId, rewardId, serverId, openedAt));
+                    }
+                }
+                return entries;
+            }
+        });
+    }
+
+    @Override
     public boolean acquireLock(UUID playerId, String crateId) {
         String sql = "INSERT INTO crate_locks (player_uuid, crate_id, locked_at) VALUES (?, ?, ?)";
         return withConnection(connection -> {
@@ -233,7 +288,7 @@ public class SqlStorage implements CrateStorage {
 
     @Override
     public Optional<PendingReward> getPendingReward(UUID playerId) {
-        String sql = "SELECT crate_id, reward_id, status FROM crate_pending_rewards WHERE player_uuid=?";
+        String sql = "SELECT crate_id, reward_id, status, updated_at FROM crate_pending_rewards WHERE player_uuid=?";
         return withConnection(connection -> {
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.setString(1, playerId.toString());
@@ -244,7 +299,8 @@ public class SqlStorage implements CrateStorage {
                     String crateId = resultSet.getString("crate_id");
                     String rewardId = resultSet.getString("reward_id");
                     String status = resultSet.getString("status");
-                    return Optional.of(new PendingReward(crateId, rewardId, PendingRewardStatus.fromString(status)));
+                    Instant updatedAt = Instant.ofEpochMilli(resultSet.getLong("updated_at"));
+                    return Optional.of(new PendingReward(crateId, rewardId, RewardDeliveryStatus.fromString(status), updatedAt));
                 }
             }
         });
@@ -263,7 +319,7 @@ public class SqlStorage implements CrateStorage {
                 insert.setString(1, playerId.toString());
                 insert.setString(2, crateId);
                 insert.setString(3, rewardId);
-                insert.setString(4, PendingRewardStatus.PENDING.name());
+                insert.setString(4, RewardDeliveryStatus.PENDING.name());
                 insert.setLong(5, Instant.now().toEpochMilli());
                 insert.executeUpdate();
             }
@@ -276,7 +332,7 @@ public class SqlStorage implements CrateStorage {
         withConnection(connection -> {
             String updateSql = "UPDATE crate_pending_rewards SET status=?, updated_at=? WHERE player_uuid=? AND crate_id=? AND reward_id=?";
             try (PreparedStatement update = connection.prepareStatement(updateSql)) {
-                update.setString(1, PendingRewardStatus.DELIVERED.name());
+                update.setString(1, RewardDeliveryStatus.DELIVERED.name());
                 update.setLong(2, Instant.now().toEpochMilli());
                 update.setString(3, playerId.toString());
                 update.setString(4, crateId);
@@ -291,7 +347,7 @@ public class SqlStorage implements CrateStorage {
                 insert.setString(1, playerId.toString());
                 insert.setString(2, crateId);
                 insert.setString(3, rewardId);
-                insert.setString(4, PendingRewardStatus.DELIVERED.name());
+                insert.setString(4, RewardDeliveryStatus.DELIVERED.name());
                 insert.setLong(5, Instant.now().toEpochMilli());
                 insert.executeUpdate();
             }

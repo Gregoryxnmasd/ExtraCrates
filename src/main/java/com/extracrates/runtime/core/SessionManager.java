@@ -6,15 +6,15 @@ import com.extracrates.config.LanguageManager;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.cutscene.CutscenePoint;
 import com.extracrates.economy.EconomyService;
-import com.extracrates.event.CrateOpenEvent;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
+import com.extracrates.storage.CrateOpenEntry;
 import com.extracrates.storage.CrateStorage;
 import com.extracrates.storage.DeliveryStatus;
 import com.extracrates.storage.LocalStorage;
 import com.extracrates.storage.PendingReward;
-import com.extracrates.storage.RewardDeliveryStatus;
+import com.extracrates.storage.OpenHistoryFilter;
 import com.extracrates.storage.SqlStorage;
 import com.extracrates.storage.StorageFallback;
 import com.extracrates.storage.StorageMigrationReport;
@@ -22,10 +22,14 @@ import com.extracrates.storage.StorageMigrator;
 import com.extracrates.storage.StorageSettings;
 import com.extracrates.storage.StorageTarget;
 import com.extracrates.sync.SyncBridge;
+import com.extracrates.sync.SyncEventType;
+import com.extracrates.sync.SyncSettings;
+import com.extracrates.sync.CrateHistoryEntry;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -37,12 +41,14 @@ import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -66,6 +72,9 @@ public class SessionManager {
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
     private final Map<UUID, Random> sessionRandoms = new HashMap<>();
     private final Map<UUID, Deque<CrateHistoryEntry>> history = new HashMap<>();
+    private final Map<UUID, BukkitRunnable> cooldownTasks = new HashMap<>();
+    private final Map<UUID, BossBar> cooldownBars = new HashMap<>();
+    private final Map<UUID, Map<String, String>> pendingRewards = new HashMap<>();
     private static final int HISTORY_LIMIT = 200;
 
     public SessionManager(ExtraCratesPlugin plugin, ConfigLoader configLoader, EconomyService economyService) {
@@ -317,10 +326,21 @@ public class SessionManager {
         return configLoader.getMainConfig().getBoolean("qa-mode", false);
     }
 
+    private long getCooldownRemainingSeconds(Player player, String cooldownKey, int cooldownSeconds) {
+        if (cooldownSeconds <= 0) {
+            return 0;
+        }
+        Instant timestamp = getCooldownTimestamp(player, cooldownKey);
+        if (timestamp == null) {
+            return 0;
+        }
+        long elapsedSeconds = Duration.between(timestamp, Instant.now()).getSeconds();
+        long remaining = cooldownSeconds - elapsedSeconds;
+        return Math.max(0L, remaining);
+    }
+
     public long getCooldownRemainingSeconds(Player player, CrateDefinition crate) {
-        long crateRemaining = getCooldownRemainingSeconds(player, crate.id(), crate.cooldownSeconds());
-        long typeRemaining = getCooldownRemainingSeconds(player, typeCooldownKey(crate.type()), getTypeCooldownSeconds(crate.type()));
-        return Math.max(crateRemaining, typeRemaining);
+        return getCooldownRemainingSeconds(player, crate.id(), crate.cooldownSeconds());
     }
 
     private Instant getCooldownTimestamp(Player player, String crateId) {
@@ -343,11 +363,10 @@ public class SessionManager {
 
     private void applyCooldown(Player player, CrateDefinition crate) {
         Instant now = Instant.now();
-        applyCooldown(player, crate.id(), crate.cooldownSeconds(), now, true);
-        applyCooldown(player, typeCooldownKey(crate.type()), getTypeCooldownSeconds(crate.type()), now, true);
+        applyCooldown(player, crate.id(), crate.cooldownSeconds(), now, true, crate.id());
     }
 
-    private void applyCooldown(Player player, String cooldownKey, int cooldownSeconds, Instant timestamp, boolean record) {
+    private void applyCooldown(Player player, String cooldownKey, int cooldownSeconds, Instant timestamp, boolean record, String historyCrateId) {
         if (cooldownSeconds <= 0) {
             return;
         }
@@ -357,10 +376,10 @@ public class SessionManager {
             storage.setCooldown(player.getUniqueId(), cooldownKey, appliedAt);
         }
         if (record && syncBridge != null) {
-            recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.COOLDOWN_SET, appliedAt);
-            syncBridge.recordCooldown(player.getUniqueId(), crate.id(), appliedAt);
+            recordHistory(player.getUniqueId(), historyCrateId, null, SyncEventType.COOLDOWN_SET, appliedAt);
+            syncBridge.recordCooldown(player.getUniqueId(), historyCrateId, appliedAt);
         } else if (record) {
-            recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.COOLDOWN_SET, appliedAt);
+            recordHistory(player.getUniqueId(), historyCrateId, null, SyncEventType.COOLDOWN_SET, appliedAt);
         }
     }
 
@@ -495,6 +514,8 @@ public class SessionManager {
     public void completeOpen(Player player, CrateDefinition crate, Reward reward, OpenState openState) {
         if (storage != null) {
             storage.logOpen(player.getUniqueId(), crate.id(), reward.id(), resolveServerId(), Instant.now());
+            storage.recordDelivery(player.getUniqueId(), crate.id(), reward.id(), DeliveryStatus.COMPLETED, 1, Instant.now());
+            storage.markRewardDelivered(player.getUniqueId(), crate.id(), reward.id());
             if (openState != null && openState.isLockAcquired() && !openState.isLockReleased()) {
                 storage.releaseLock(player.getUniqueId(), crate.id());
                 openState.markLockReleased();
@@ -540,24 +561,6 @@ public class SessionManager {
         if (!remaining.isEmpty()) {
             remaining.values().forEach(item -> player.getWorld().dropItemNaturally(player.getLocation(), item));
         }
-    }
-
-    private ItemStack buildKeyItem(CrateDefinition crate) {
-        ItemStack key = new ItemStack(crate.keyMaterial());
-        ItemMeta meta = key.getItemMeta();
-        if (meta == null) {
-            return key;
-        }
-        String keyName = languageManager.getRaw("command.key-item-name", Map.of("crate_name", crate.displayName()));
-        meta.displayName(TextUtil.color(keyName));
-        if (crate.keyModel() != null && !crate.keyModel().isEmpty()) {
-            int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.keyModel());
-            if (modelData >= 0) {
-                meta.setCustomModelData(modelData);
-            }
-        }
-        key.setItemMeta(meta);
-        return key;
     }
 
     private String resolveServerId() {
@@ -628,6 +631,128 @@ public class SessionManager {
 
     public CrateStorage getStorage() {
         return storage;
+    }
+
+    public List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset) {
+        if (storage == null) {
+            return List.of();
+        }
+        return storage.getOpenHistory(playerId, filter, limit, offset);
+    }
+
+    public List<CrateHistoryEntry> getHistory(UUID playerId, String crateId, int limit, int offset) {
+        if (syncBridge != null && syncBridge.isHistoryAvailable()) {
+            return syncBridge.getHistory(playerId, crateId, limit, offset);
+        }
+        Deque<CrateHistoryEntry> entries = history.get(playerId);
+        if (entries == null || entries.isEmpty() || limit <= 0) {
+            return List.of();
+        }
+        List<CrateHistoryEntry> filtered = new java.util.ArrayList<>();
+        int skipped = 0;
+        for (CrateHistoryEntry entry : entries) {
+            if (crateId != null && !crateId.isEmpty() && !crateId.equalsIgnoreCase(entry.crateId())) {
+                continue;
+            }
+            if (skipped < offset) {
+                skipped++;
+                continue;
+            }
+            filtered.add(entry);
+            if (filtered.size() >= limit) {
+                break;
+            }
+        }
+        return filtered;
+    }
+
+    public void grantKey(Player player, CrateDefinition crate, int amount) {
+        if (amount <= 0 || player == null || crate == null) {
+            return;
+        }
+        if (storageEnabled) {
+            storage.addKey(player.getUniqueId(), crate.id(), amount);
+            return;
+        }
+        ItemStack key = buildKeyItem(crate);
+        for (int i = 0; i < amount; i++) {
+            Map<Integer, ItemStack> remaining = player.getInventory().addItem(key.clone());
+            if (!remaining.isEmpty()) {
+                remaining.values().forEach(item -> player.getWorld().dropItemNaturally(player.getLocation(), item));
+            }
+        }
+    }
+
+    public void updatePendingReward(Player player, CrateDefinition crate, Reward reward) {
+        if (player == null || crate == null || reward == null) {
+            return;
+        }
+        if (storage != null) {
+            storage.setPendingReward(player.getUniqueId(), crate.id(), reward.id());
+        }
+        pendingRewards.computeIfAbsent(player.getUniqueId(), key -> new HashMap<>()).put(crate.id(), reward.id());
+    }
+
+    private void setPendingReward(Player player, CrateDefinition crate, Reward reward) {
+        if (player == null || crate == null || reward == null) {
+            return;
+        }
+        if (storage != null) {
+            storage.setPendingReward(player.getUniqueId(), crate.id(), reward.id());
+        }
+        pendingRewards.computeIfAbsent(player.getUniqueId(), key -> new HashMap<>()).put(crate.id(), reward.id());
+    }
+
+    public void recordDeliveryStarted(Player player, CrateDefinition crate, Reward reward, int attempt) {
+        if (storage == null || player == null || crate == null || reward == null) {
+            return;
+        }
+        storage.recordDelivery(player.getUniqueId(), crate.id(), reward.id(), DeliveryStatus.STARTED, attempt, Instant.now());
+    }
+
+    public void recordDeliveryPending(Player player, CrateDefinition crate, Reward reward, int attempt) {
+        if (storage == null || player == null || crate == null || reward == null) {
+            return;
+        }
+        storage.recordDelivery(player.getUniqueId(), crate.id(), reward.id(), DeliveryStatus.PENDING, attempt, Instant.now());
+        storage.setPendingReward(player.getUniqueId(), crate.id(), reward.id());
+        pendingRewards.computeIfAbsent(player.getUniqueId(), key -> new HashMap<>()).put(crate.id(), reward.id());
+    }
+
+    private void recordHistory(UUID playerId, String crateId, String rewardId, SyncEventType type, Instant timestamp) {
+        if (playerId == null || crateId == null || type == null) {
+            return;
+        }
+        Deque<CrateHistoryEntry> entries = history.computeIfAbsent(playerId, key -> new ArrayDeque<>());
+        entries.addFirst(new CrateHistoryEntry(type, playerId, crateId, rewardId, timestamp, serverId));
+        while (entries.size() > HISTORY_LIMIT) {
+            entries.removeLast();
+        }
+    }
+
+    private boolean chargeRerollCost(Player player, CrateDefinition crate) {
+        if (player == null || crate == null) {
+            return false;
+        }
+        double cost = crate.rerollCost();
+        if (cost <= 0) {
+            return true;
+        }
+        if (!economyService.isAvailable()) {
+            return true;
+        }
+        if (!economyService.hasBalance(player, cost)) {
+            player.sendMessage(Component.text("No tienes suficiente dinero para reroll."));
+            return false;
+        }
+        return economyService.withdraw(player, cost).transactionSuccess();
+    }
+
+    private void logVerbose(String message, Object... args) {
+        if (!plugin.getConfig().getBoolean("debug.verbose", false)) {
+            return;
+        }
+        plugin.getLogger().info(String.format(message, args));
     }
 
     private void showCooldownBossBar(Player player, CrateDefinition crate, long remainingSeconds) {

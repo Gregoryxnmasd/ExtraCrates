@@ -11,24 +11,37 @@ import com.extracrates.model.RewardPool;
 import com.extracrates.route.RouteEditorManager;
 import com.extracrates.runtime.CutscenePreviewSession;
 import com.extracrates.config.ConfigLoader;
+import com.extracrates.runtime.core.CrateSession;
 import com.extracrates.runtime.core.SessionManager;
+import com.extracrates.storage.PendingRewardStore;
+import com.extracrates.storage.StorageMigrationReport;
+import com.extracrates.storage.StorageTarget;
+import com.extracrates.sync.CrateHistoryEntry;
+import com.extracrates.sync.SyncEventType;
+import com.extracrates.util.ItemUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -58,6 +71,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
     private final EditorMenu editorMenu;
     private final SyncCommand syncCommand;
     private final RouteEditorManager routeEditorManager;
+    private final PendingRewardStore pendingRewardStore;
 
     public CrateCommand(
             ExtraCratesPlugin plugin,
@@ -79,6 +93,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         this.editorMenu = editorMenu;
         this.syncCommand = syncCommand;
         this.routeEditorManager = routeEditorManager;
+        this.pendingRewardStore = plugin.getPendingRewardStore();
     }
 
     @Override
@@ -107,16 +122,19 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             case "history" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage(languageManager.getMessage("command.only-players"));
+                if (args.length == 1) {
+                    if (!(sender instanceof Player player)) {
+                        sender.sendMessage(languageManager.getMessage("command.only-players"));
+                        return true;
+                    }
+                    if (!sender.hasPermission("extracrates.history")) {
+                        sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                        return true;
+                    }
+                    openHistoryGui.open(player);
                     return true;
                 }
-                if (!sender.hasPermission("extracrates.history")) {
-                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
-                    return true;
-                }
-                openHistoryGui.open(player);
-                return true;
+                return handleHistory(sender, args);
             }
             case "editor" -> {
                 if (!(sender instanceof Player player)) {
@@ -314,70 +332,6 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 }
                 sender.sendMessage(languageManager.getMessage("command.route-started", java.util.Map.of("path", action)));
                 sender.sendMessage(languageManager.getMessage("command.route-instructions"));
-                return true;
-            }
-            case "history" -> {
-                if (!sender.hasPermission("extracrates.history")) {
-                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
-                    return true;
-                }
-                if (args.length < 2) {
-                    sender.sendMessage(Component.text("Uso: /crate history <player> [crate] [page]"));
-                    return true;
-                }
-                OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
-                if (target == null || (!target.isOnline() && !target.hasPlayedBefore())) {
-                    sender.sendMessage(Component.text("Jugador no encontrado."));
-                    return true;
-                }
-                String crateId = null;
-                int page = 1;
-                if (args.length >= 3) {
-                    if (isInteger(args[2])) {
-                        page = parsePage(args[2]);
-                    } else {
-                        crateId = args[2];
-                    }
-                }
-                if (args.length >= 4) {
-                    crateId = args[2];
-                    if (!isInteger(args[3])) {
-                        sender.sendMessage(Component.text("Página inválida."));
-                        return true;
-                    }
-                    page = parsePage(args[3]);
-                }
-                if (crateId != null && !configLoader.getCrates().containsKey(crateId)) {
-                    sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
-                    return true;
-                }
-                int pageSize = 10;
-                int offset = Math.max(0, page - 1) * pageSize;
-                List<CrateHistoryEntry> history = sessionManager.getHistory(target.getUniqueId(), crateId, pageSize + 1, offset);
-                boolean hasNext = history.size() > pageSize;
-                if (hasNext) {
-                    history = history.subList(0, pageSize);
-                }
-                if (history.isEmpty()) {
-                    sender.sendMessage(Component.text("Sin historial para este jugador."));
-                    return true;
-                }
-                String header = "Historial de crates de " + target.getName()
-                        + (crateId != null ? " (" + crateId + ")" : "")
-                        + " - Página " + page;
-                sender.sendMessage(Component.text(header));
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
-                for (CrateHistoryEntry entry : history) {
-                    String line = "- [" + formatter.format(entry.timestamp()) + "] "
-                            + formatEvent(entry.type(), entry.crateId(), entry.rewardId());
-                    sender.sendMessage(Component.text(line));
-                }
-                if (page > 1) {
-                    sender.sendMessage(Component.text("Anterior: " + buildHistoryCommand(args[1], crateId, page - 1)));
-                }
-                if (hasNext) {
-                    sender.sendMessage(Component.text("Siguiente: " + buildHistoryCommand(args[1], crateId, page + 1)));
-                }
                 return true;
             }
             case "crates" -> {
@@ -612,6 +566,71 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         } catch (IllegalArgumentException ignored) {
             return Particle.END_ROD;
         }
+    }
+
+    private boolean handleHistory(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("extracrates.history")) {
+            sender.sendMessage(languageManager.getMessage("command.no-permission"));
+            return true;
+        }
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Uso: /crate history <player> [crate] [page]"));
+            return true;
+        }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+        if (target == null || (!target.isOnline() && !target.hasPlayedBefore())) {
+            sender.sendMessage(Component.text("Jugador no encontrado."));
+            return true;
+        }
+        String crateId = null;
+        int page = 1;
+        if (args.length >= 3) {
+            if (isInteger(args[2])) {
+                page = parsePage(args[2]);
+            } else {
+                crateId = args[2];
+            }
+        }
+        if (args.length >= 4) {
+            crateId = args[2];
+            if (!isInteger(args[3])) {
+                sender.sendMessage(Component.text("Página inválida."));
+                return true;
+            }
+            page = parsePage(args[3]);
+        }
+        if (crateId != null && !configLoader.getCrates().containsKey(crateId)) {
+            sender.sendMessage(languageManager.getMessage("command.crate-not-found"));
+            return true;
+        }
+        int pageSize = 10;
+        int offset = Math.max(0, page - 1) * pageSize;
+        List<CrateHistoryEntry> history = sessionManager.getHistory(target.getUniqueId(), crateId, pageSize + 1, offset);
+        boolean hasNext = history.size() > pageSize;
+        if (hasNext) {
+            history = history.subList(0, pageSize);
+        }
+        if (history.isEmpty()) {
+            sender.sendMessage(Component.text("Sin historial para este jugador."));
+            return true;
+        }
+        String header = "Historial de crates de " + target.getName()
+                + (crateId != null ? " (" + crateId + ")" : "")
+                + " - Página " + page;
+        sender.sendMessage(Component.text(header));
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
+        for (CrateHistoryEntry entry : history) {
+            String line = "- [" + formatter.format(entry.timestamp()) + "] "
+                    + formatEvent(entry.type(), entry.crateId(), entry.rewardId());
+            sender.sendMessage(Component.text(line));
+        }
+        if (page > 1) {
+            sender.sendMessage(Component.text("Anterior: " + buildHistoryCommand(args[1], crateId, page - 1)));
+        }
+        if (hasNext) {
+            sender.sendMessage(Component.text("Siguiente: " + buildHistoryCommand(args[1], crateId, page + 1)));
+        }
+        return true;
     }
 
     private boolean handleCrates(CommandSender sender, String[] args) {
@@ -956,14 +975,14 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(languageManager.getMessage("command.rewards-claim-usage"));
             return true;
         }
-        List<PendingReward> pending = pendingRewardStore.getPending(target.getUniqueId());
+        List<PendingRewardStore.PendingReward> pending = pendingRewardStore.getPending(target.getUniqueId());
         if (pending.isEmpty()) {
             sender.sendMessage(languageManager.getMessage("command.reward-claim-none"));
             return true;
         }
         int delivered = 0;
-        List<PendingReward> remaining = new ArrayList<>();
-        for (PendingReward entry : pending) {
+        List<PendingRewardStore.PendingReward> remaining = new ArrayList<>();
+        for (PendingRewardStore.PendingReward entry : pending) {
             Reward reward = findReward(entry.poolId(), entry.rewardId());
             if (reward == null) {
                 remaining.add(entry);
@@ -1061,5 +1080,173 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             }
         }
         return trimmed;
+    }
+
+    private ParsedValue parseValue(String field, FieldType fieldType, String rawValue) {
+        if (rawValue == null) {
+            return null;
+        }
+        String trimmed = rawValue.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return switch (fieldType) {
+            case STRING -> new ParsedValue(trimmed, trimmed);
+            case INTEGER -> {
+                try {
+                    int value = Integer.parseInt(trimmed);
+                    yield new ParsedValue(value, Integer.toString(value));
+                } catch (NumberFormatException ex) {
+                    yield null;
+                }
+            }
+            case DECIMAL -> {
+                try {
+                    double value = Double.parseDouble(trimmed);
+                    yield new ParsedValue(value, Double.toString(value));
+                } catch (NumberFormatException ex) {
+                    yield null;
+                }
+            }
+            case MATERIAL -> {
+                org.bukkit.Material material = org.bukkit.Material.matchMaterial(trimmed);
+                if (material == null) {
+                    yield null;
+                }
+                yield new ParsedValue(material.name(), material.name());
+            }
+            case CRATE_TYPE -> {
+                com.extracrates.model.CrateType type = com.extracrates.model.CrateType.fromString(trimmed);
+                yield new ParsedValue(type.name().toLowerCase(Locale.ROOT), type.name());
+            }
+            case OPEN_MODE -> new ParsedValue(trimmed.toLowerCase(Locale.ROOT), trimmed);
+            case REWARDS_POOL -> new ParsedValue(trimmed, trimmed);
+        };
+    }
+
+    private FilterSpec parseFilter(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String[] parts = raw.split("[:=]", 2);
+        if (parts.length != 2) {
+            return null;
+        }
+        String key = parts[0].trim().toLowerCase(Locale.ROOT);
+        String value = parts[1].trim();
+        if (value.isEmpty()) {
+            return null;
+        }
+        return switch (key) {
+            case "id" -> crate -> crate.id().equalsIgnoreCase(value);
+            case "type" -> crate -> crate.type().name().equalsIgnoreCase(value);
+            case "open-mode", "openmode" -> crate -> crate.openMode().equalsIgnoreCase(value);
+            case "permission" -> crate -> crate.permission().equalsIgnoreCase(value);
+            case "rewards-pool", "pool" -> crate -> crate.rewardsPool() != null && crate.rewardsPool().equalsIgnoreCase(value);
+            default -> null;
+        };
+    }
+
+    private FileConfiguration loadCratesConfig() {
+        return loadConfig("crates.yml");
+    }
+
+    private void saveCratesConfig(FileConfiguration config) {
+        saveConfig(config, "crates.yml");
+    }
+
+    private Object getCurrentValue(CrateDefinition crate, FieldType fieldType, String field) {
+        return switch (fieldType) {
+            case STRING -> switch (field) {
+                case "display-name" -> crate.displayName();
+                case "key-model" -> crate.keyModel();
+                case "permission" -> crate.permission();
+                case "rewards-pool" -> crate.rewardsPool();
+                default -> "";
+            };
+            case INTEGER -> crate.cooldownSeconds();
+            case DECIMAL -> crate.cost();
+            case MATERIAL -> crate.keyMaterial() != null ? crate.keyMaterial().name() : "";
+            case CRATE_TYPE -> crate.type();
+            case OPEN_MODE -> crate.openMode();
+            case REWARDS_POOL -> crate.rewardsPool();
+        };
+    }
+
+    private boolean valuesEqual(Object currentValue, Object newValue) {
+        if (currentValue == null && newValue == null) {
+            return true;
+        }
+        if (currentValue == null || newValue == null) {
+            return false;
+        }
+        if (currentValue instanceof String currentString && newValue instanceof String newString) {
+            return currentString.equalsIgnoreCase(newString);
+        }
+        return Objects.equals(currentValue, newValue);
+    }
+
+    private String formatValue(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof org.bukkit.Material material) {
+            return material.name();
+        }
+        if (value instanceof com.extracrates.model.CrateType crateType) {
+            return crateType.name().toLowerCase(Locale.ROOT);
+        }
+        return value.toString();
+    }
+
+    private boolean isInteger(@NotNull String value) {
+        return value.matches("-?\\d+");
+    }
+
+    private int parsePage(@NotNull String value) {
+        try {
+            int page = Integer.parseInt(value);
+            return Math.max(1, page);
+        } catch (NumberFormatException ex) {
+            return 1;
+        }
+    }
+
+    private String buildHistoryCommand(@NotNull String playerName, @Nullable String crateId, int page) {
+        if (crateId == null || crateId.isEmpty()) {
+            return "/crate history " + playerName + " " + page;
+        }
+        return "/crate history " + playerName + " " + crateId + " " + page;
+    }
+
+    private String formatEvent(SyncEventType type, String crateId, String rewardId) {
+        if (type == null) {
+            return "Evento desconocido";
+        }
+        return switch (type) {
+            case CRATE_OPEN -> "Apertura de crate " + crateId;
+            case REWARD_GRANTED -> "Recompensa " + rewardId;
+            case KEY_CONSUMED -> "Llave consumida en " + crateId;
+            case COOLDOWN_SET -> "Cooldown aplicado en " + crateId;
+            default -> "Evento " + type.name().toLowerCase(Locale.ROOT);
+        };
+    }
+
+    private record ParsedValue(Object value, String displayValue) {
+    }
+
+    private enum FieldType {
+        STRING,
+        INTEGER,
+        DECIMAL,
+        MATERIAL,
+        CRATE_TYPE,
+        OPEN_MODE,
+        REWARDS_POOL
+    }
+
+    @FunctionalInterface
+    private interface FilterSpec {
+        boolean matches(CrateDefinition crate);
     }
 }

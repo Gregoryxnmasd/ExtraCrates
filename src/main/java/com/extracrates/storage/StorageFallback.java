@@ -131,6 +131,14 @@ public class StorageFallback implements CrateStorage {
     }
 
     @Override
+    public List<CrateOpenEntry> getOpenHistory(UUID playerId, OpenHistoryFilter filter, int limit, int offset) {
+        return callWithFallback(
+                () -> primary.getOpenHistory(playerId, filter, limit, offset),
+                () -> fallback.getOpenHistory(playerId, filter, limit, offset)
+        );
+    }
+
+    @Override
     public Optional<PendingReward> getPendingReward(UUID playerId) {
         return callWithFallback(
                 () -> primary.getPendingReward(playerId),
@@ -162,9 +170,5 @@ public class StorageFallback implements CrateStorage {
 
     CrateStorage activeStorage() {
         return usingFallback ? fallback : primary;
-    }
-
-    boolean isUsingFallback() {
-        return usingFallback;
     }
 }
