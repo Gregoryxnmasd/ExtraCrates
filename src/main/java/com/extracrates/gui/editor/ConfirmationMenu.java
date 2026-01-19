@@ -36,8 +36,8 @@ public class ConfirmationMenu implements Listener {
             return;
         }
         Inventory inventory = Bukkit.createInventory(player, 9, TextUtil.color(title));
-        inventory.setItem(3, buildItem(Material.LIME_WOOL, "&aConfirmar", description));
-        inventory.setItem(5, buildItem(Material.RED_WOOL, "&cCancelar", "Volver sin guardar"));
+        inventory.setItem(3, buildItem(Material.LIME_WOOL, confirmName(), description));
+        inventory.setItem(5, buildItem(Material.RED_WOOL, cancelName(), cancelLore()));
         confirmations.put(player.getUniqueId(), new ConfirmationRequest(title, onConfirm, onCancel));
         player.openInventory(inventory);
     }
@@ -91,6 +91,18 @@ public class ConfirmationMenu implements Listener {
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    private String confirmName() {
+        return languageManager.getRaw("editor.confirmation.confirm-name", java.util.Collections.emptyMap());
+    }
+
+    private String cancelName() {
+        return languageManager.getRaw("editor.confirmation.cancel-name", java.util.Collections.emptyMap());
+    }
+
+    private String cancelLore() {
+        return languageManager.getRaw("editor.confirmation.cancel-lore", java.util.Collections.emptyMap());
     }
 
     private record ConfirmationRequest(String title, Runnable onConfirm, Runnable onCancel) {
