@@ -41,6 +41,8 @@ import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.time.Duration;
@@ -67,6 +69,7 @@ public class SessionManager {
     private final SyncBridge syncBridge;
     private final boolean storageEnabled;
     private final String serverId;
+    private final NamespacedKey keyMarker;
     // Stores both preview and normal crate sessions. Preview sessions are marked in CrateSession.
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
@@ -87,6 +90,7 @@ public class SessionManager {
         this.storage = initializeStorage(storageSettings);
         this.syncBridge = new SyncBridge(plugin, configLoader, this);
         this.serverId = SyncSettings.fromConfig(configLoader.getMainConfig()).getServerId();
+        this.keyMarker = new NamespacedKey(plugin, "crate_key_id");
     }
 
     public void shutdown() {
@@ -411,25 +415,8 @@ public class SessionManager {
     }
 
     private boolean hasKey(Player player, CrateDefinition crate) {
-        if (storageEnabled) {
-            return storage.getKeyCount(player.getUniqueId(), crate.id()) > 0;
-        }
-        if (crate.keyModel() == null || crate.keyModel().isEmpty()) {
-            return true;
-        }
-        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.keyModel());
-        if (modelData < 0) {
-            return false;
-        }
-        return Arrays.stream(player.getInventory().getContents()).anyMatch(item -> {
-            if (item == null || item.getItemMeta() == null) {
-                return false;
-            }
-            if (!item.getItemMeta().hasCustomModelData()) {
-                return false;
-            }
-            return item.getItemMeta().getCustomModelData() == modelData;
-        });
+        return Arrays.stream(player.getInventory().getContents())
+                .anyMatch(item -> isKeyItem(item, crate));
     }
 
     private boolean consumeKey(Player player, CrateDefinition crate) {
@@ -437,31 +424,13 @@ public class SessionManager {
     }
 
     private boolean consumeKey(Player player, CrateDefinition crate, boolean record) {
-        if (storageEnabled) {
-            boolean consumed = storage.consumeKey(player.getUniqueId(), crate.id());
-            if (consumed && record && syncBridge != null) {
-                Instant timestamp = Instant.now();
-                recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.KEY_CONSUMED, timestamp);
-                syncBridge.recordKeyConsumed(player.getUniqueId(), crate.id(), timestamp);
-            } else if (consumed && record) {
-                recordHistory(player.getUniqueId(), crate.id(), null, SyncEventType.KEY_CONSUMED, Instant.now());
-            }
-            return consumed;
-        }
-        if (crate.keyModel() == null || crate.keyModel().isEmpty()) {
-            return true;
-        }
-        int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.keyModel());
-        if (modelData < 0) {
-            return false;
-        }
         ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {
             ItemStack item = contents[i];
-            if (item == null || item.getItemMeta() == null || !item.getItemMeta().hasCustomModelData()) {
+            if (!isKeyItem(item, crate)) {
                 continue;
             }
-            if (item.getItemMeta().getCustomModelData() == modelData) {
+            if (item != null) {
                 int amount = item.getAmount();
                 if (amount <= 1) {
                     contents[i] = null;
@@ -577,10 +546,6 @@ public class SessionManager {
     }
 
     private void restoreKey(Player player, CrateDefinition crate) {
-        if (storageEnabled) {
-            storage.addKey(player.getUniqueId(), crate.id(), 1);
-            return;
-        }
         ItemStack key = buildKeyItem(crate);
         Map<Integer, ItemStack> remaining = player.getInventory().addItem(key);
         if (!remaining.isEmpty()) {
@@ -693,10 +658,6 @@ public class SessionManager {
 
     public void grantKey(Player player, CrateDefinition crate, int amount) {
         if (amount <= 0 || player == null || crate == null) {
-            return;
-        }
-        if (storageEnabled) {
-            storage.addKey(player.getUniqueId(), crate.id(), amount);
             return;
         }
         ItemStack key = buildKeyItem(crate);
@@ -841,7 +802,9 @@ public class SessionManager {
                     "command.key-item-name",
                     java.util.Map.of("crate_name", crate.displayName())
             );
-            meta.displayName(TextUtil.color(keyName));
+            meta.displayName(TextUtil.colorNoItalic(keyName));
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+            container.set(keyMarker, PersistentDataType.STRING, crate.id());
             int modelData = ResourcepackModelResolver.resolveCustomModelData(configLoader, crate.keyModel());
             if (modelData >= 0) {
                 meta.setCustomModelData(modelData);
@@ -849,5 +812,18 @@ public class SessionManager {
             key.setItemMeta(meta);
         }
         return key;
+    }
+
+    public boolean isKeyItem(ItemStack item, CrateDefinition crate) {
+        if (item == null || crate == null || item.getType() != crate.keyMaterial()) {
+            return false;
+        }
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return false;
+        }
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        String stored = container.get(keyMarker, PersistentDataType.STRING);
+        return stored != null && stored.equalsIgnoreCase(crate.id());
     }
 }

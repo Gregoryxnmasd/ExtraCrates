@@ -38,7 +38,7 @@ public class ConfirmationMenu implements Listener {
             onConfirm.run();
             return;
         }
-        Inventory inventory = Bukkit.createInventory(player, 9, TextUtil.color(title));
+        Inventory inventory = Bukkit.createInventory(player, 9, TextUtil.colorNoItalic(title));
         inventory.setItem(3, buildItem(Material.LIME_WOOL,
                 languageManager.getRaw("editor.confirmation.confirm-button", java.util.Collections.emptyMap()),
                 description));
@@ -58,7 +58,7 @@ public class ConfirmationMenu implements Listener {
         if (request == null) {
             return;
         }
-        if (!event.getView().title().equals(TextUtil.color(request.title()))) {
+        if (!event.getView().title().equals(TextUtil.colorNoItalic(request.title()))) {
             return;
         }
         event.setCancelled(true);
@@ -80,7 +80,7 @@ public class ConfirmationMenu implements Listener {
         if (request == null) {
             return;
         }
-        if (!event.getView().title().equals(TextUtil.color(request.title()))) {
+        if (!event.getView().title().equals(TextUtil.colorNoItalic(request.title()))) {
             return;
         }
         confirmations.remove(event.getPlayer().getUniqueId());
@@ -91,9 +91,9 @@ public class ConfirmationMenu implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(TextUtil.color(name));
+            meta.displayName(TextUtil.colorNoItalic(name));
             if (loreLine != null && !loreLine.isEmpty()) {
-                meta.lore(java.util.List.of(TextUtil.color(loreLine)));
+                meta.lore(java.util.List.of(TextUtil.colorNoItalic(loreLine)));
             }
             item.setItemMeta(meta);
         }

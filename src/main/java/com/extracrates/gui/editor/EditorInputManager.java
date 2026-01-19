@@ -47,6 +47,7 @@ public class EditorInputManager implements Listener {
     ) {
         pendingInputs.put(player.getUniqueId(), new InputRequest(onInput, reopenAction));
         String prompt = languageManager.getRaw(promptKey, placeholders);
+        player.closeInventory();
         player.sendMessage(languageManager.getMessage("editor.input.prompt", Map.of("prompt", prompt)));
     }
 
@@ -71,7 +72,13 @@ public class EditorInputManager implements Listener {
                 }
                 return;
             }
-            request.onInput().accept(message);
+            try {
+                request.onInput().accept(message);
+            } finally {
+                if (request.reopenAction() != null) {
+                    request.reopenAction().run();
+                }
+            }
         });
     }
 

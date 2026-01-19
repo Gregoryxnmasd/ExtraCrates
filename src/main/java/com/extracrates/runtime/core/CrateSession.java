@@ -194,19 +194,8 @@ public class CrateSession {
         player.setSpectatorTarget(cameraEntity);
 
         previousHelmet = player.getInventory().getHelmet();
-        String overlayModel = crate.cutsceneSettings().overlayModel();
-        if (overlayModel != null && !overlayModel.isEmpty()) {
-            ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
-            ItemMeta meta = pumpkin.getItemMeta();
-            if (meta != null) {
-                Integer modelData = configLoader.resolveModelData(overlayModel);
-                if (modelData != null) {
-                    meta.setCustomModelData(modelData);
-                }
-                pumpkin.setItemMeta(meta);
-            }
-            player.sendEquipmentChange(player, EquipmentSlot.HEAD, pumpkin);
-        }
+        ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
+        player.sendEquipmentChange(player, EquipmentSlot.HEAD, pumpkin);
 
         if (crate.cutsceneSettings().hideHud()) {
             hudHiddenApplied = toggleHud(true);

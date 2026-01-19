@@ -41,6 +41,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -104,7 +105,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             @NotNull String[] args
     ) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usa /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route|migrate"));
+            sender.sendMessage(languageManager.getMessage("command.usage"));
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -145,13 +146,9 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             case "open", "preview" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage(languageManager.getMessage("command.only-players"));
-                    return true;
-                }
                 String permission = sub.equals("preview") ? "extracrates.preview" : "extracrates.open";
                 if (!sender.hasPermission(permission)) {
-                    sender.sendMessage(languageManager.getMessage("command.no-permission", player, null, null, null));
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
                     return true;
                 }
                 if (sub.equals("preview") && !configLoader.getMainConfig().getBoolean("gui.preview-enabled", true)) {
@@ -162,12 +159,29 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(languageManager.getMessage("command.open-usage", java.util.Map.of("sub", sub)));
                     return true;
                 }
-                CrateDefinition crate = configLoader.getCrates().get(args[1]);
+                Player target;
+                String crateId;
+                if (sender instanceof Player player && args.length == 2) {
+                    target = player;
+                    crateId = args[1];
+                } else {
+                    if (args.length < 3) {
+                        sender.sendMessage(languageManager.getMessage("command.open-usage", java.util.Map.of("sub", sub)));
+                        return true;
+                    }
+                    target = Bukkit.getPlayerExact(args[1]);
+                    crateId = args[2];
+                    if (target == null) {
+                        sender.sendMessage(languageManager.getMessage("command.player-not-found"));
+                        return true;
+                    }
+                }
+                CrateDefinition crate = configLoader.getCrates().get(crateId);
                 if (crate == null) {
-                    sender.sendMessage(languageManager.getMessage("command.crate-not-found", player, null, null, null));
+                    sender.sendMessage(languageManager.getMessage("command.crate-not-found", target, null, null, null));
                     return true;
                 }
-                sessionManager.openCrate(player, crate, sub.equals("preview"));
+                sessionManager.openCrate(target, crate, sub.equals("preview"));
                 return true;
             }
             case "reroll" -> {
@@ -201,7 +215,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (args.length < 3 || !args[1].equalsIgnoreCase("verbose")) {
-                    sender.sendMessage(Component.text("Uso: /crate debug verbose <on|off|toggle>"));
+                    sender.sendMessage(Component.text("Uso: /crates debug verbose <on|off|toggle>"));
                     return true;
                 }
                 boolean current = plugin.getConfig().getBoolean("debug.verbose", false);
@@ -212,7 +226,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     case "off", "false", "disable" -> next = false;
                     case "toggle" -> next = !current;
                     default -> {
-                        sender.sendMessage(Component.text("Uso: /crate debug verbose <on|off|toggle>"));
+                        sender.sendMessage(Component.text("Uso: /crates debug verbose <on|off|toggle>"));
                         return true;
                     }
                 }
@@ -230,12 +244,12 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (args.length < 2) {
-                    sender.sendMessage(Component.text("Uso: /crate migrate <sql|local>"));
+                    sender.sendMessage(Component.text("Uso: /crates migrate <sql|local>"));
                     return true;
                 }
                 StorageTarget target = StorageTarget.fromString(args[1]).orElse(null);
                 if (target == null) {
-                    sender.sendMessage(Component.text("Destino inválido. Usa /crate migrate <sql|local>"));
+                    sender.sendMessage(Component.text("Destino inválido. Usa /crates migrate <sql|local>"));
                     return true;
                 }
                 StorageMigrationReport report = sessionManager.migrateStorage(target);
@@ -297,19 +311,15 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(languageManager.getMessage("command.only-players"));
                     return true;
                 }
-                if (args.length < 2 || !args[1].equalsIgnoreCase("editor")) {
-                    sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
-                    return true;
-                }
                 if (!sender.hasPermission("extracrates.route.editor")) {
                     sender.sendMessage(languageManager.getMessage("command.no-permission"));
                     return true;
                 }
-                if (args.length < 3) {
-                    sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
+                if (args.length < 2) {
+                    sender.sendMessage(languageManager.getMessage("command.route-usage"));
                     return true;
                 }
-                String action = args[2];
+                String action = args[1];
                 if (action.equalsIgnoreCase("stop")) {
                     if (routeEditorManager.endSession(player, true)) {
                         sender.sendMessage(languageManager.getMessage("command.route-saved"));
@@ -326,38 +336,20 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     }
                     return true;
                 }
-                if (action.equalsIgnoreCase("mode")) {
-                    if (routeEditorManager.hasNoSession(player)) {
-                        sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
-                        return true;
-                    }
-                    if (args.length < 4) {
-                        sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
-                        return true;
-                    }
-                    String modeValue = args[3].toLowerCase(Locale.ROOT);
-                    switch (modeValue) {
-                        case "toggle" -> routeEditorManager.toggleCaptureMode(player);
-                        case "block", "block-click" -> routeEditorManager.setCaptureMode(player, com.extracrates.route.RouteCaptureMode.BLOCK_CLICK);
-                        case "free", "free-position" -> routeEditorManager.setCaptureMode(player, com.extracrates.route.RouteCaptureMode.FREE_POSITION);
-                        default -> sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
-                    }
-                    return true;
-                }
                 if (action.equalsIgnoreCase("source")) {
                     if (routeEditorManager.hasNoSession(player)) {
                         sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
                         return true;
                     }
-                    if (args.length < 4) {
-                        sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
+                    if (args.length < 3) {
+                        sender.sendMessage(languageManager.getMessage("command.route-usage"));
                         return true;
                     }
-                    String sourceValue = args[3].toLowerCase(Locale.ROOT);
+                    String sourceValue = args[2].toLowerCase(Locale.ROOT);
                     switch (sourceValue) {
                         case "player" -> routeEditorManager.setCaptureSource(player, com.extracrates.route.RouteCaptureSource.PLAYER);
                         case "marker" -> routeEditorManager.setCaptureSource(player, com.extracrates.route.RouteCaptureSource.MARKER);
-                        default -> sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
+                        default -> sender.sendMessage(languageManager.getMessage("command.route-usage"));
                     }
                     return true;
                 }
@@ -366,8 +358,8 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                         sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
                         return true;
                     }
-                    if (args.length < 4 || !args[3].equalsIgnoreCase("move")) {
-                        sender.sendMessage(languageManager.getMessage("command.route-editor-usage"));
+                    if (args.length < 3 || !args[2].equalsIgnoreCase("move")) {
+                        sender.sendMessage(languageManager.getMessage("command.route-usage"));
                         return true;
                     }
                     routeEditorManager.moveMarkerToPlayer(player);
@@ -412,53 +404,41 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             @NotNull String alias,
             @NotNull String[] args
     ) {
-        List<String> results = new ArrayList<>();
+        List<String> options = new ArrayList<>();
+        String current = args.length > 0 ? args[args.length - 1] : "";
         if (args.length == 1) {
-            results.add("gui");
-            results.add("history");
-            results.add("editor");
-            results.add("open");
-            results.add("preview");
-            results.add("claim");
-            results.add("cutscene");
-            results.add("reroll");
-            results.add("reload");
-            results.add("debug");
-            results.add("sync");
-            results.add("givekey");
-            results.add("route");
-            results.add("migrate");
-            return results;
+            options.addAll(List.of("gui", "history", "editor", "open", "preview", "claim", "cutscene", "reroll", "reload", "debug", "sync", "givekey", "route", "migrate"));
+            return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("crates")) {
-            results.addAll(List.of("create", "edit", "delete"));
-            return results;
+            options.addAll(List.of("create", "edit", "delete"));
+            return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("pools")) {
-            results.addAll(List.of("create", "edit", "delete"));
-            return results;
+            options.addAll(List.of("create", "edit", "delete"));
+            return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("rewards")) {
-            results.addAll(List.of("create", "edit", "delete", "give", "claim"));
-            return results;
+            options.addAll(List.of("create", "edit", "delete", "give", "claim"));
+            return filterByPrefix(options, current);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("crates") && (args[1].equalsIgnoreCase("edit") || args[1].equalsIgnoreCase("delete"))) {
-            results.addAll(configLoader.getCrates().keySet());
-            return results;
+            options.addAll(configLoader.getCrates().keySet());
+            return filterByPrefix(options, current);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("pools") && (args[1].equalsIgnoreCase("edit") || args[1].equalsIgnoreCase("delete"))) {
-            results.addAll(configLoader.getRewardPools().keySet());
-            return results;
+            options.addAll(configLoader.getRewardPools().keySet());
+            return filterByPrefix(options, current);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("rewards")) {
             String action = args[1].toLowerCase(Locale.ROOT);
             if (action.equals("create") || action.equals("edit") || action.equals("delete")) {
-                results.addAll(configLoader.getRewardPools().keySet());
-                return results;
+                options.addAll(configLoader.getRewardPools().keySet());
+                return filterByPrefix(options, current);
             }
             if (action.equals("give") || action.equals("claim")) {
-                Bukkit.getOnlinePlayers().forEach(player -> results.add(player.getName()));
-                return results;
+                Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
+                return filterByPrefix(options, current);
             }
         }
         if (args.length == 4 && args[0].equalsIgnoreCase("rewards")) {
@@ -466,90 +446,89 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             if (action.equals("edit") || action.equals("delete")) {
                 RewardPool pool = configLoader.getRewardPools().get(args[2]);
                 if (pool != null) {
-                    pool.rewards().forEach(reward -> results.add(reward.id()));
+                    pool.rewards().forEach(reward -> options.add(reward.id()));
                 }
-                return results;
+                return filterByPrefix(options, current);
             }
             if (action.equals("give")) {
-                results.addAll(configLoader.getRewardPools().keySet());
-                return results;
+                options.addAll(configLoader.getRewardPools().keySet());
+                return filterByPrefix(options, current);
             }
         }
         if (args.length == 5 && args[0].equalsIgnoreCase("rewards") && args[1].equalsIgnoreCase("give")) {
             RewardPool pool = configLoader.getRewardPools().get(args[3]);
             if (pool != null) {
-                pool.rewards().forEach(reward -> results.add(reward.id()));
+                pool.rewards().forEach(reward -> options.add(reward.id()));
             }
-            return results;
+            return filterByPrefix(options, current);
         }
         if (args.length == 4 && args[0].equalsIgnoreCase("crates") && args[1].equalsIgnoreCase("edit")) {
-            results.addAll(List.of("display-name", "type", "open-mode", "key-model", "cooldown-seconds", "cost", "permission", "rewards-pool"));
-            return results;
+            options.addAll(List.of("display-name", "type", "open-mode", "key-model", "cooldown-seconds", "cost", "permission", "rewards-pool", "cutscene.max-rerolls", "animation.path"));
+            return filterByPrefix(options, current);
         }
         if (args.length == 4 && args[0].equalsIgnoreCase("pools") && args[1].equalsIgnoreCase("edit")) {
-            results.add("roll-count");
-            return results;
+            options.add("roll-count");
+            return filterByPrefix(options, current);
         }
         if (args.length == 5 && args[0].equalsIgnoreCase("rewards") && args[1].equalsIgnoreCase("edit")) {
-            results.addAll(List.of("display-name", "chance", "item", "amount", "custom-model", "glow", "commands", "hologram", "map-image"));
-            return results;
+            options.addAll(List.of("display-name", "chance", "item", "amount", "custom-model", "glow", "commands", "hologram", "map-image"));
+            return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("history")) {
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                results.add(player.getName());
-            }
-            return results;
+            Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
+            return filterByPrefix(options, current);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("history")) {
-            results.addAll(configLoader.getCrates().keySet());
-            results.add("1");
+            options.addAll(configLoader.getCrates().keySet());
+            options.add("1");
+            return filterByPrefix(options, current);
         }
         if (args.length == 4 && args[0].equalsIgnoreCase("history")) {
-            results.add("1");
+            options.add("1");
+            return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {
-            results.add("editor");
-            return results;
+            options.addAll(List.of("stop", "cancel", "source", "add", "capture", "marker"));
+            options.addAll(configLoader.getPaths().keySet());
+            return filterByPrefix(options, current);
         }
-        if (args.length == 3 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("editor")) {
-            results.addAll(List.of("stop", "cancel", "mode", "source", "add", "capture", "marker"));
-            results.addAll(configLoader.getPaths().keySet());
-            return results;
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("editor")) {
-            String action = args[2].toLowerCase(Locale.ROOT);
-            if (action.equals("mode")) {
-                results.addAll(List.of("toggle", "block", "free"));
-                return results;
-            }
+        if (args.length == 3 && args[0].equalsIgnoreCase("route")) {
+            String action = args[1].toLowerCase(Locale.ROOT);
             if (action.equals("source")) {
-                results.addAll(List.of("player", "marker"));
-                return results;
+                options.addAll(List.of("player", "marker"));
+                return filterByPrefix(options, current);
             }
             if (action.equals("marker")) {
-                results.add("move");
-                return results;
+                options.add("move");
+                return filterByPrefix(options, current);
             }
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("migrate")) {
-            results.add("sql");
-            results.add("local");
-            return results;
+            options.addAll(List.of("sql", "local"));
+            return filterByPrefix(options, current);
         }
         if (args.length >= 2 && args[0].equalsIgnoreCase("sync")) {
-            results.addAll(syncCommand.tabComplete(args));
-            return results;
+            options.addAll(syncCommand.tabComplete(args));
+            return filterByPrefix(options, current);
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview") || args[0].equalsIgnoreCase("givekey"))) {
-            results.addAll(configLoader.getCrates().keySet());
+            configLoader.getCrates().keySet().forEach(options::add);
+            Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
+            return filterByPrefix(options, current);
+        }
+        if (args.length == 3 && (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview"))) {
+            options.addAll(configLoader.getCrates().keySet());
+            return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("cutscene")) {
-            results.add("test");
+            options.add("test");
+            return filterByPrefix(options, current);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("cutscene") && args[1].equalsIgnoreCase("test")) {
-            results.addAll(configLoader.getPaths().keySet());
+            options.addAll(configLoader.getPaths().keySet());
+            return filterByPrefix(options, current);
         }
-        return results;
+        return List.of();
     }
 
     private boolean handleMass(CommandSender sender, String[] args) {
@@ -643,13 +622,28 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         }
     }
 
+    private List<String> filterByPrefix(@NotNull Collection<String> options, @Nullable String input) {
+        if (options.isEmpty()) {
+            return List.of();
+        }
+        if (input == null || input.isBlank()) {
+            return options.stream().distinct().sorted(String.CASE_INSENSITIVE_ORDER).toList();
+        }
+        String lowered = input.toLowerCase(Locale.ROOT);
+        return options.stream()
+                .filter(option -> option.toLowerCase(Locale.ROOT).startsWith(lowered))
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+    }
+
     private boolean handleHistory(CommandSender sender, String[] args) {
         if (!sender.hasPermission("extracrates.history")) {
             sender.sendMessage(languageManager.getMessage("command.no-permission"));
             return true;
         }
         if (args.length < 2) {
-            sender.sendMessage(Component.text("Uso: /crate history <player> [crate] [page]"));
+            sender.sendMessage(Component.text("Uso: /crates history <player> [crate] [page]"));
             return true;
         }
         OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
@@ -749,6 +743,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         config.set(path + ".cost", 0);
         config.set(path + ".permission", "extracrates.open");
         config.set(path + ".rewards-pool", "");
+        config.set(path + ".created-at", System.currentTimeMillis());
         saveConfig(config, "crates.yml");
         sender.sendMessage(languageManager.getMessage("command.crate-created", Map.of("crate", id)));
         return true;
@@ -833,6 +828,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         String path = "pools." + id;
         config.set(path + ".roll-count", 1);
         config.set(path + ".rewards", new java.util.HashMap<>());
+        config.set(path + ".created-at", System.currentTimeMillis());
         saveConfig(config, "rewards.yml");
         sender.sendMessage(languageManager.getMessage("command.pool-created", Map.of("pool", id)));
         return true;
@@ -1289,9 +1285,9 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
 
     private String buildHistoryCommand(@NotNull String playerName, @Nullable String crateId, int page) {
         if (crateId == null || crateId.isEmpty()) {
-            return "/crate history " + playerName + " " + page;
+            return "/crates history " + playerName + " " + page;
         }
-        return "/crate history " + playerName + " " + crateId + " " + page;
+        return "/crates history " + playerName + " " + crateId + " " + page;
     }
 
     private String formatEvent(SyncEventType type, String crateId, String rewardId) {
