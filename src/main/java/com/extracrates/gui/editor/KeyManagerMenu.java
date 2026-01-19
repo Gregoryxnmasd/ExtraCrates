@@ -272,7 +272,7 @@ public class KeyManagerMenu implements Listener {
             }
             activeTargets.put(player.getUniqueId(), new TargetSelection(target.getUniqueId(), target.getName()));
             openCrateList(player, activeTargets.get(player.getUniqueId()));
-        });
+        }, () -> openSearch(player));
     }
 
     private void adjustKeys(Player editor, TargetSelection target, CrateDefinition crate, int delta) {

@@ -331,10 +331,12 @@ public class RewardEditorMenu implements Listener {
                 player.sendMessage(languageManager.getMessage("editor.rewards.messages.pool-exists"));
                 return;
             }
-            createPool(input);
-            player.sendMessage(Component.text("Pool creada y guardada en YAML."));
-            openPools(player);
-        });
+            confirmationMenu.open(player, "&8Confirmar creación", "Crear pool " + input, () -> {
+                createPool(input);
+                player.sendMessage(Component.text("Pool creada y guardada en YAML."));
+                openPools(player);
+            }, () -> openPools(player));
+        }, () -> openPools(player));
     }
 
     private void promptClonePool(Player player, String sourceId) {
@@ -360,7 +362,7 @@ public class RewardEditorMenu implements Listener {
                 player.sendMessage(languageManager.getMessage("editor.rewards.messages.pool-cloned"));
                 openPools(player);
             }, () -> openPools(player));
-        });
+        }, () -> openPools(player));
     }
 
     private void promptPoolRoll(Player player, String poolId) {
@@ -368,11 +370,17 @@ public class RewardEditorMenu implements Listener {
             player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, "Nuevo roll-count", input -> {
-            updatePoolField(poolId, "roll-count", parseInt(input));
-            player.sendMessage(Component.text("Pool actualizada y guardada en YAML."));
-            openPoolDetail(player, poolId);
-        });
+        inputManager.requestInput(player, "Nuevo roll-count", input -> confirmationMenu.open(
+                player,
+                "&8Confirmar cambio",
+                "Actualizar roll-count de " + poolId,
+                () -> {
+                    updatePoolField(poolId, "roll-count", parseInt(input));
+                    player.sendMessage(Component.text("Pool actualizada y guardada en YAML."));
+                    openPoolDetail(player, poolId);
+                },
+                () -> openPoolDetail(player, poolId)
+        ), () -> openPoolDetail(player, poolId));
     }
 
     private void promptCreateReward(Player player, String poolId) {
@@ -389,10 +397,12 @@ public class RewardEditorMenu implements Listener {
                 player.sendMessage(languageManager.getMessage("editor.rewards.messages.reward-exists"));
                 return;
             }
-            createReward(poolId, input);
-            player.sendMessage(Component.text("Reward creada y guardada en YAML."));
-            openPoolDetail(player, poolId);
-        });
+            confirmationMenu.open(player, "&8Confirmar creación", "Crear reward " + input, () -> {
+                createReward(poolId, input);
+                player.sendMessage(Component.text("Reward creada y guardada en YAML."));
+                openPoolDetail(player, poolId);
+            }, () -> openPoolDetail(player, poolId));
+        }, () -> openPoolDetail(player, poolId));
     }
 
     private void promptCloneReward(Player player, String poolId, String rewardId) {
@@ -418,7 +428,7 @@ public class RewardEditorMenu implements Listener {
                 player.sendMessage(languageManager.getMessage("editor.rewards.messages.reward-cloned"));
                 openPoolDetail(player, poolId);
             }, () -> openPoolDetail(player, poolId));
-        });
+        }, () -> openPoolDetail(player, poolId));
     }
 
     private void promptRewardField(Player player, String poolId, String rewardId, String field, String promptKey) {
@@ -432,10 +442,18 @@ public class RewardEditorMenu implements Listener {
                 player.sendMessage(TextUtil.color(validation.errorMessage()));
                 return;
             }
-            updateRewardField(poolId, rewardId, field, validation.value());
-            player.sendMessage(Component.text("Reward actualizada y guardada en YAML."));
-            openRewardDetail(player, poolId, rewardId);
-        });
+            confirmationMenu.open(
+                    player,
+                    "&8Confirmar cambio",
+                    "Actualizar " + field + " de " + rewardId,
+                    () -> {
+                        updateRewardField(poolId, rewardId, field, validation.value());
+                        player.sendMessage(Component.text("Reward actualizada y guardada en YAML."));
+                        openRewardDetail(player, poolId, rewardId);
+                    },
+                    () -> openRewardDetail(player, poolId, rewardId)
+            );
+        }, () -> openRewardDetail(player, poolId, rewardId));
     }
 
     private void createPool(String id) {

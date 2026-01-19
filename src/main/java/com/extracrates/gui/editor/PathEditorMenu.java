@@ -225,10 +225,12 @@ public class PathEditorMenu implements Listener {
                 player.sendMessage(languageManager.getMessage("editor.paths.messages.exists"));
                 return;
             }
-            createPath(input);
-            player.sendMessage(Component.text("Path creada y guardada en YAML."));
-            open(player);
-        });
+            confirmationMenu.open(player, "&8Confirmar creación", "Crear path " + input, () -> {
+                createPath(input);
+                player.sendMessage(Component.text("Path creada y guardada en YAML."));
+                open(player);
+            }, () -> open(player));
+        }, () -> open(player));
     }
 
     private void promptClone(Player player, String sourceId) {
@@ -254,7 +256,7 @@ public class PathEditorMenu implements Listener {
                 player.sendMessage(languageManager.getMessage("editor.paths.messages.cloned"));
                 open(player);
             }, () -> open(player));
-        });
+        }, () -> open(player));
     }
 
     private void promptField(Player player, String pathId, String field, String promptKey) {
@@ -262,15 +264,21 @@ public class PathEditorMenu implements Listener {
             player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, prompt, input -> {
-            Object value = input;
-            if (field.equals("duration-seconds") || field.equals("step-resolution")) {
-                value = parseDouble(input);
-            }
-            updatePathField(pathId, field, value);
-            player.sendMessage(Component.text("Path actualizada y guardada en YAML."));
-            openDetail(player, pathId);
-        });
+        inputManager.requestInput(player, prompt, input -> confirmationMenu.open(
+                player,
+                "&8Confirmar cambio",
+                "Actualizar " + field + " de " + pathId,
+                () -> {
+                    Object value = input;
+                    if (field.equals("duration-seconds") || field.equals("step-resolution")) {
+                        value = parseDouble(input);
+                    }
+                    updatePathField(pathId, field, value);
+                    player.sendMessage(Component.text("Path actualizada y guardada en YAML."));
+                    openDetail(player, pathId);
+                },
+                () -> openDetail(player, pathId)
+        ), () -> openDetail(player, pathId));
     }
 
     private void toggleConstantSpeed(Player player, String pathId) {

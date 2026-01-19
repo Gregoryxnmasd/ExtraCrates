@@ -295,10 +295,12 @@ public class CrateEditorMenu implements Listener {
                 player.sendMessage(languageManager.getMessage("editor.crates.messages.exists"));
                 return;
             }
-            createCrate(input);
-            player.sendMessage(Component.text("Crate creada y guardada en YAML."));
-            open(player);
-        });
+            confirmationMenu.open(player, "&8Confirmar creación", "Crear crate " + input, () -> {
+                createCrate(input);
+                player.sendMessage(Component.text("Crate creada y guardada en YAML."));
+                open(player);
+            }, () -> open(player));
+        }, () -> open(player));
     }
 
     private void promptClone(Player player, String sourceId) {
@@ -324,7 +326,7 @@ public class CrateEditorMenu implements Listener {
                 player.sendMessage(languageManager.getMessage("editor.crates.messages.cloned"));
                 open(player);
             }, () -> open(player));
-        });
+        }, () -> open(player));
     }
 
     private void promptField(Player player, String crateId, String field, String promptKey) {
@@ -332,11 +334,17 @@ public class CrateEditorMenu implements Listener {
             player.sendMessage(languageManager.getMessage("editor.input.pending"));
             return;
         }
-        inputManager.requestInput(player, prompt, input -> {
-            updateCrateField(crateId, field, input);
-            player.sendMessage(Component.text("Crate actualizada y guardada en YAML."));
-            openDetail(player, crateId);
-        });
+        inputManager.requestInput(player, prompt, input -> confirmationMenu.open(
+                player,
+                "&8Confirmar cambio",
+                "Actualizar " + field + " de " + crateId,
+                () -> {
+                    updateCrateField(crateId, field, input);
+                    player.sendMessage(Component.text("Crate actualizada y guardada en YAML."));
+                    openDetail(player, crateId);
+                },
+                () -> openDetail(player, crateId)
+        ), () -> openDetail(player, crateId));
     }
 
     private void toggleType(Player player, String crateId) {
