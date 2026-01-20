@@ -70,8 +70,8 @@ public class RouteEditorManager {
             return;
         }
         Location eyeLocation = player.getEyeLocation();
-        Location captureLocation = session.resolveCaptureLocation(eyeLocation);
-        session.addPoint(captureLocation, eyeLocation.getYaw(), eyeLocation.getPitch());
+        Location captureLocation = session.resolveCaptureLocation(eyeLocation, eyeLocation.getYaw(), eyeLocation.getPitch());
+        session.addPoint(captureLocation, captureLocation.getYaw(), captureLocation.getPitch());
     }
 
     public boolean hasNoSession(Player player) {

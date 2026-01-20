@@ -56,6 +56,9 @@ permissions:
   extracrates.crate.edit:
     description: Allows editing crates via command.
     default: op
+  extracrates.crate.create:
+    description: Allows creating crates via command.
+    default: op
   extracrates.crate.delete:
     description: Allows deleting crates via command.
     default: op
@@ -83,3 +86,6 @@ permissions:
   extracrates.reward.claim:
     description: Allows claiming pending rewards.
     default: true
+  extracrates.mass:
+    description: Allows mass-editing crates via command.
+    default: op
