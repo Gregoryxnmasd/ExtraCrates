@@ -5,7 +5,6 @@ import com.extracrates.config.LanguageManager;
 import com.extracrates.cutscene.CutscenePoint;
 import org.bukkit.Location;
 import org.bukkit.Particle;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -20,20 +19,15 @@ public class RouteEditorSession {
     private final String pathId;
     private final Particle previewParticle;
     private final String particleName;
-    private RouteCaptureMode captureMode;
-    private RouteCaptureSource captureSource;
     private final List<CutscenePoint> points = new ArrayList<>();
     private BukkitRunnable previewTask;
-    private ArmorStand marker;
 
     public RouteEditorSession(
             ExtraCratesPlugin plugin,
             Player player,
             String pathId,
             Particle previewParticle,
-            String particleName,
-            RouteCaptureMode captureMode,
-            RouteCaptureSource captureSource
+            String particleName
     ) {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
@@ -41,8 +35,6 @@ public class RouteEditorSession {
         this.pathId = pathId;
         this.previewParticle = previewParticle;
         this.particleName = particleName;
-        this.captureMode = captureMode;
-        this.captureSource = captureSource;
     }
 
     public String getPathId() {
@@ -51,45 +43,6 @@ public class RouteEditorSession {
 
     public String getParticleName() {
         return particleName;
-    }
-
-    public RouteCaptureMode getCaptureMode() {
-        return captureMode;
-    }
-
-    public RouteCaptureSource getCaptureSource() {
-        return captureSource;
-    }
-
-    public void setCaptureMode(RouteCaptureMode captureMode) {
-        this.captureMode = captureMode;
-    }
-
-    public void setCaptureSource(RouteCaptureSource captureSource) {
-        this.captureSource = captureSource;
-    }
-
-    public void ensureMarker(Location location) {
-        if (marker != null && marker.isValid()) {
-            marker.teleport(location);
-            return;
-        }
-        marker = location.getWorld().spawn(location, ArmorStand.class, stand -> {
-            stand.setSmall(true);
-            stand.setBasePlate(false);
-            stand.setArms(false);
-            stand.setCustomName("Route Marker");
-            stand.setCustomNameVisible(true);
-            stand.setInvulnerable(true);
-            stand.setGravity(false);
-        });
-    }
-
-    public void removeMarker() {
-        if (marker != null) {
-            marker.remove();
-            marker = null;
-        }
     }
 
     public List<CutscenePoint> getPoints() {
@@ -115,14 +68,6 @@ public class RouteEditorSession {
 
     public void cleanup() {
         stopPreview();
-        removeMarker();
-    }
-
-    public Location getCaptureLocation() {
-        if (captureSource == RouteCaptureSource.MARKER && marker != null && marker.isValid()) {
-            return marker.getLocation();
-        }
-        return player.getLocation();
     }
 
     public void addPoint(Location location, float yaw, float pitch) {

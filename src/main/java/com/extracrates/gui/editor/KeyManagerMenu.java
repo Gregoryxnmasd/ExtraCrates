@@ -32,7 +32,14 @@ public class KeyManagerMenu implements Listener {
     private static final int SLOT_DETAIL_BACK = 18;
     private static final int SLOT_DETAIL_DELETE = 26;
     private static final int[] LIST_NAV_FILLER_SLOTS = {45, 46, 48, 50, 51, 52};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 22, 23, 24, 25};
+
+    private static final int SLOT_SEARCH_FIND = 2;
+    private static final int SLOT_SEARCH_PLAYER = 4;
+    private static final int SLOT_SEARCH_MANAGE = 6;
+    private static final int SLOT_DETAIL_ADD = 2;
+    private static final int SLOT_DETAIL_STATUS = 4;
+    private static final int SLOT_DETAIL_REMOVE = 6;
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;

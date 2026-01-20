@@ -1,6 +1,7 @@
 package com.extracrates.model;
 
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.Collections;
 import java.util.List;
@@ -12,6 +13,7 @@ public record Reward(
         String displayName,
         String item,
         int amount,
+        ItemStack itemStack,
         String customModel,
         boolean glow,
         Map<String, Integer> enchantments,
@@ -25,6 +27,12 @@ public record Reward(
     public Reward {
         enchantments = enchantments == null ? Map.of() : Map.copyOf(enchantments);
         commands = commands == null ? List.of() : List.copyOf(commands);
+        itemStack = itemStack == null ? null : itemStack.clone();
+    }
+
+    @Override
+    public ItemStack itemStack() {
+        return itemStack == null ? null : itemStack.clone();
     }
 
     public static Reward fromSection(String id, ConfigurationSection section) {
@@ -35,6 +43,7 @@ public record Reward(
         String displayName = section.getString("display-name", id);
         String item = section.getString("item", "STONE");
         int amount = section.getInt("amount", 1);
+        ItemStack itemStack = section.getItemStack("item-stack");
         String customModel = section.getString("custom-model", "");
         boolean glow = section.getBoolean("glow", false);
         ConfigurationSection enchantmentsSection = section.getConfigurationSection("enchantments");
@@ -52,7 +61,7 @@ public record Reward(
         RewardDisplayOverrides rewardDisplayOverrides = RewardDisplayOverrides.fromSection(section.getConfigurationSection("reward-display"));
         String hologram = section.getString("hologram", "");
         String mapImage = section.getString("map-image", "");
-        return new Reward(id, chance, displayName, item, amount, customModel, glow, enchantments, commands, message, effects, rewardDisplayOverrides, hologram, mapImage);
+        return new Reward(id, chance, displayName, item, amount, itemStack, customModel, glow, enchantments, commands, message, effects, rewardDisplayOverrides, hologram, mapImage);
     }
 
     public record RewardMessage(String title, String subtitle) {

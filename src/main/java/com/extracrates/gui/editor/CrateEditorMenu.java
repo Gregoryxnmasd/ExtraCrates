@@ -34,10 +34,23 @@ public class CrateEditorMenu implements Listener {
     // Layout: acciones principales al centro, navegación en fila inferior.
     private static final int SLOT_LIST_CREATE = 45;
     private static final int SLOT_LIST_BACK = 49;
-    private static final int SLOT_DETAIL_BACK = 18;
-    private static final int SLOT_DETAIL_DELETE = 26;
+    private static final int SLOT_DETAIL_BACK = 31;
+    private static final int SLOT_DETAIL_DELETE = 35;
     private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {27, 28, 29, 30, 32, 33, 34};
+
+    private static final int SLOT_DETAIL_DISPLAY_NAME = 0;
+    private static final int SLOT_DETAIL_REWARDS_POOL = 1;
+    private static final int SLOT_DETAIL_TYPE = 2;
+    private static final int SLOT_DETAIL_OPEN_MODE = 3;
+    private static final int SLOT_DETAIL_PATH = 4;
+    private static final int SLOT_DETAIL_REWARD_LOCATION = 5;
+    private static final int SLOT_DETAIL_LOCK_MOVEMENT = 6;
+    private static final int SLOT_DETAIL_LOCK_HUD = 7;
+    private static final int SLOT_DETAIL_MUSIC = 8;
+    private static final int SLOT_DETAIL_MAX_REROLLS = 9;
+    private static final int SLOT_SELECTOR_BACK = 18;
+    private static final int[] SELECTOR_NAV_FILLER_SLOTS = {19, 20, 21, 22, 23, 24, 25, 26};
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -89,7 +102,7 @@ public class CrateEditorMenu implements Listener {
 
     private void openDetail(Player player, String crateId) {
         activeCrate.put(player.getUniqueId(), crateId);
-        Inventory inventory = Bukkit.createInventory(player, 27, detailTitle(crateId));
+        Inventory inventory = Bukkit.createInventory(player, 36, detailTitle(crateId));
         CrateDefinition crate = configLoader.getCrates().get(crateId);
         inventory.setItem(0, buildItem(Material.NAME_TAG, text("editor.crates.detail.display-name.name"), List.of(
                 text("editor.common.current", Map.of("value", crate != null ? crate.displayName() : crateId)),
@@ -329,6 +342,12 @@ public class CrateEditorMenu implements Listener {
         openDetail(player, crateId);
     }
 
+    private void setRewardLocation(Player player, String crateId) {
+        updateCrateLocation(crateId, player.getLocation());
+        player.sendMessage(languageManager.getMessage("editor.crate.success.reward-location-updated"));
+        openDetail(player, crateId);
+    }
+
     private void createCrate(String id) {
         FileConfiguration config = loadConfig();
         String path = "crates." + id;
@@ -378,8 +397,8 @@ public class CrateEditorMenu implements Listener {
                     text("editor.common.click-select")
             )));
         }
-        fillDetailNavigation(inventory);
-        inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
+        fillSelectorNavigation(inventory);
+        inventory.setItem(SLOT_SELECTOR_BACK, buildItem(Material.ARROW,
                 text("editor.crates.detail.back.name"),
                 List.of(text("editor.crates.detail.back.lore"))));
         player.openInventory(inventory);
@@ -427,7 +446,7 @@ public class CrateEditorMenu implements Listener {
     }
 
     private void handleOpenModeSelection(Player player, String crateId, int slot) {
-        if (slot == SLOT_DETAIL_BACK) {
+        if (slot == SLOT_SELECTOR_BACK) {
             openDetail(player, crateId);
             return;
         }
@@ -436,10 +455,10 @@ public class CrateEditorMenu implements Listener {
         }
         int index = slot - 1;
         List<String> modes = List.of("reward-only", "preview-only", "key-required", "economy-required", "full");
-        if (index < 0 || index >= modes.size()) {
+        if (slot < 0 || slot >= modes.size()) {
             return;
         }
-        updateCrateField(crateId, "open-mode", modes.get(index));
+        updateCrateField(crateId, "open-mode", modes.get(slot));
         player.sendMessage(languageManager.getMessage("editor.crate.success.updated"));
         openDetail(player, crateId);
     }
@@ -490,6 +509,16 @@ public class CrateEditorMenu implements Listener {
         saveConfig(config);
     }
 
+    private void updateCrateLocation(String crateId, org.bukkit.Location location) {
+        FileConfiguration config = loadConfig();
+        String basePath = "crates." + crateId + ".locations";
+        config.set(basePath + ".world", location.getWorld().getName());
+        config.set(basePath + ".reward-anchor.x", location.getX());
+        config.set(basePath + ".reward-anchor.y", location.getY());
+        config.set(basePath + ".reward-anchor.z", location.getZ());
+        saveConfig(config);
+    }
+
     private FileConfiguration loadConfig() {
         File file = new File(plugin.getDataFolder(), "crates.yml");
         return YamlConfiguration.loadConfiguration(file);
@@ -526,6 +555,13 @@ public class CrateEditorMenu implements Listener {
     private void fillDetailNavigation(Inventory inventory) {
         ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
         for (int slot : DETAIL_NAV_FILLER_SLOTS) {
+            inventory.setItem(slot, filler);
+        }
+    }
+
+    private void fillSelectorNavigation(Inventory inventory) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        for (int slot : SELECTOR_NAV_FILLER_SLOTS) {
             inventory.setItem(slot, filler);
         }
     }
@@ -569,6 +605,10 @@ public class CrateEditorMenu implements Listener {
 
     private String describeType(CrateType type) {
         return languageManager.getRaw("editor.crates.detail.type.desc." + type.name().toLowerCase(), java.util.Collections.emptyMap());
+    }
+
+    private String formatLocation(org.bukkit.Location location) {
+        return String.format("%.2f, %.2f, %.2f", location.getX(), location.getY(), location.getZ());
     }
 
     private int parseInt(String input) {

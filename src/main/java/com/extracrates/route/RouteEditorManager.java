@@ -45,9 +45,7 @@ public class RouteEditorManager {
                 player,
                 pathId,
                 particle,
-                particleName,
-                RouteCaptureMode.FREE_POSITION,
-                RouteCaptureSource.PLAYER
+                particleName
         );
         sessions.put(player.getUniqueId(), session);
         session.startPreview();
@@ -66,91 +64,17 @@ public class RouteEditorManager {
         return true;
     }
 
-    public void handleClick(Player player, Location clickedBlockLocation) {
-        RouteEditorSession session = sessions.get(player.getUniqueId());
-        if (session == null) {
-            return;
-        }
-        if (session.getCaptureMode() != RouteCaptureMode.BLOCK_CLICK) {
-            return;
-        }
-        session.addPoint(clickedBlockLocation, player.getLocation().getYaw(), player.getLocation().getPitch());
-    }
-
     public void capturePoint(Player player) {
         RouteEditorSession session = sessions.get(player.getUniqueId());
         if (session == null) {
             return;
         }
-        Location captureLocation = session.getCaptureLocation();
         Location playerLocation = player.getLocation();
-        session.addPoint(captureLocation, playerLocation.getYaw(), playerLocation.getPitch());
-    }
-
-    public void toggleCaptureMode(Player player) {
-        RouteEditorSession session = sessions.get(player.getUniqueId());
-        if (session == null) {
-            return;
-        }
-        RouteCaptureMode next = session.getCaptureMode() == RouteCaptureMode.BLOCK_CLICK
-                ? RouteCaptureMode.FREE_POSITION
-                : RouteCaptureMode.BLOCK_CLICK;
-        setCaptureMode(player, next);
-    }
-
-    public void setCaptureMode(Player player, RouteCaptureMode mode) {
-        RouteEditorSession session = sessions.get(player.getUniqueId());
-        if (session == null) {
-            return;
-        }
-        session.setCaptureMode(mode);
-        player.sendMessage(languageManager.getMessage(
-                "route.editor.mode-changed",
-                java.util.Map.of("mode", formatCaptureMode(mode))
-        ));
-    }
-
-    public void setCaptureSource(Player player, RouteCaptureSource source) {
-        RouteEditorSession session = sessions.get(player.getUniqueId());
-        if (session == null) {
-            return;
-        }
-        session.setCaptureSource(source);
-        if (source == RouteCaptureSource.MARKER) {
-            session.ensureMarker(player.getLocation());
-        } else {
-            session.removeMarker();
-        }
-        player.sendMessage(languageManager.getMessage(
-                "route.editor.source-changed",
-                java.util.Map.of("source", formatCaptureSource(source))
-        ));
-    }
-
-    public void moveMarkerToPlayer(Player player) {
-        RouteEditorSession session = sessions.get(player.getUniqueId());
-        if (session == null) {
-            return;
-        }
-        session.ensureMarker(player.getLocation());
-        player.sendMessage(languageManager.getMessage("route.editor.marker-moved"));
-    }
-
-    private String formatCaptureMode(RouteCaptureMode mode) {
-        return mode == RouteCaptureMode.BLOCK_CLICK ? "block-click" : "free-position";
-    }
-
-    private String formatCaptureSource(RouteCaptureSource source) {
-        return source == RouteCaptureSource.MARKER ? "marker" : "player";
+        session.addPoint(playerLocation, playerLocation.getYaw(), playerLocation.getPitch());
     }
 
     public boolean hasNoSession(Player player) {
         return !sessions.containsKey(player.getUniqueId());
-    }
-
-    public boolean isBlockClickCapture(Player player) {
-        RouteEditorSession session = sessions.get(player.getUniqueId());
-        return session != null && session.getCaptureMode() == RouteCaptureMode.BLOCK_CLICK;
     }
 
     private void saveSession(Player player, RouteEditorSession session) {

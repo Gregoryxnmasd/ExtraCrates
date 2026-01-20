@@ -390,7 +390,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         List<String> options = new ArrayList<>();
         String current = args.length > 0 ? args[args.length - 1] : "";
         if (args.length == 1) {
-            options.addAll(List.of("gui", "history", "editor", "open", "preview", "claim", "cutscene", "reroll", "reload", "debug", "sync", "givekey", "route", "migrate"));
+            options.addAll(List.of("gui", "history", "editor", "open", "preview", "claim", "cutscene", "reroll", "reload", "debug", "sync", "givekey", "route", "migrate", "crates", "pools", "rewards"));
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("crates")) {
