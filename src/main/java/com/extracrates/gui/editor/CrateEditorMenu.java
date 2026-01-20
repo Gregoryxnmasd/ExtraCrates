@@ -32,26 +32,27 @@ import java.util.Map;
 import java.util.UUID;
 
 public class CrateEditorMenu implements Listener {
-    // Layout: acciones principales al centro, navegación en fila inferior.
+    // Layout: fila superior vacía, acciones en el centro, separación y footer.
     private static final int SLOT_LIST_CREATE = 45;
     private static final int SLOT_LIST_BACK = 49;
-    private static final int SLOT_DETAIL_BACK = 31;
-    private static final int SLOT_DETAIL_DELETE = 35;
-    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {27, 28, 29, 30, 32, 33, 34};
+    private static final int SLOT_DETAIL_BACK = 40;
+    private static final int SLOT_DETAIL_DELETE = 44;
+    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52, 53};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {36, 37, 38, 39, 41, 42, 43};
 
-    private static final int SLOT_DETAIL_DISPLAY_NAME = 0;
-    private static final int SLOT_DETAIL_REWARDS_POOL = 1;
-    private static final int SLOT_DETAIL_TYPE = 2;
-    private static final int SLOT_DETAIL_OPEN_MODE = 3;
-    private static final int SLOT_DETAIL_PATH = 4;
-    private static final int SLOT_DETAIL_REWARD_LOCATION = 5;
-    private static final int SLOT_DETAIL_LOCK_MOVEMENT = 6;
-    private static final int SLOT_DETAIL_LOCK_HUD = 7;
-    private static final int SLOT_DETAIL_MUSIC = 8;
-    private static final int SLOT_DETAIL_MAX_REROLLS = 9;
-    private static final int SLOT_SELECTOR_BACK = 18;
-    private static final int[] SELECTOR_NAV_FILLER_SLOTS = {19, 20, 21, 22, 23, 24, 25, 26};
+    private static final int SLOT_DETAIL_DISPLAY_NAME = 9;
+    private static final int SLOT_DETAIL_REWARDS_POOL = 10;
+    private static final int SLOT_DETAIL_TYPE = 11;
+    private static final int SLOT_DETAIL_OPEN_MODE = 12;
+    private static final int SLOT_DETAIL_PATH = 13;
+    private static final int SLOT_DETAIL_REWARD_LOCATION = 14;
+    private static final int SLOT_DETAIL_LOCK_MOVEMENT = 15;
+    private static final int SLOT_DETAIL_LOCK_HUD = 16;
+    private static final int SLOT_DETAIL_MUSIC = 17;
+    private static final int SLOT_DETAIL_MAX_REROLLS = 18;
+    private static final int SLOT_SELECTOR_START = 10;
+    private static final int SLOT_SELECTOR_BACK = 31;
+    private static final int[] SELECTOR_NAV_FILLER_SLOTS = {27, 28, 29, 30, 32, 33, 34, 35};
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -84,12 +85,12 @@ public class CrateEditorMenu implements Listener {
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
         crates.sort(Comparator.comparing((CrateDefinition crate) -> resolveCreatedAt(crate.id()))
                 .thenComparing(CrateDefinition::id, String.CASE_INSENSITIVE_ORDER));
-        int slot = 0;
+        int slot = 9;
         for (CrateDefinition crate : crates) {
-            inventory.setItem(slot++, buildCrateItem(crate));
-            if (slot >= 45) {
+            if (slot > 35) {
                 break;
             }
+            inventory.setItem(slot++, buildCrateItem(crate));
         }
         fillListNavigation(inventory);
         inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE,
@@ -104,36 +105,36 @@ public class CrateEditorMenu implements Listener {
 
     private void openDetail(Player player, String crateId) {
         activeCrate.put(player.getUniqueId(), crateId);
-        Inventory inventory = Bukkit.createInventory(player, 36, detailTitle(crateId));
+        Inventory inventory = Bukkit.createInventory(player, 45, detailTitle(crateId));
         CrateDefinition crate = configLoader.getCrates().get(crateId);
-        inventory.setItem(0, buildItem(Material.NAME_TAG, text("editor.crates.detail.display-name.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_DISPLAY_NAME, buildItem(Material.NAME_TAG, text("editor.crates.detail.display-name.name"), List.of(
                 text("editor.common.current", Map.of("value", crate != null ? crate.displayName() : crateId)),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(1, buildItem(Material.CHEST_MINECART, text("editor.crates.detail.rewards-pool.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_REWARDS_POOL, buildItem(Material.CHEST_MINECART, text("editor.crates.detail.rewards-pool.name"), List.of(
                 text("editor.common.current", Map.of("value", crate != null ? crate.rewardsPool() : "")),
                 text("editor.common.click-select")
         )));
         CrateType crateType = crate != null ? crate.type() : CrateType.NORMAL;
-        inventory.setItem(2, buildItem(Material.COMPARATOR, text("editor.crates.detail.type.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_TYPE, buildItem(Material.COMPARATOR, text("editor.crates.detail.type.name"), List.of(
                 text("editor.common.current", Map.of("value", crateType.name())),
                 text("editor.crates.detail.type.description", Map.of("description", describeType(crateType))),
                 text("editor.common.click-toggle")
         )));
-        inventory.setItem(3, buildItem(Material.PAPER, text("editor.crates.detail.open-mode.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_OPEN_MODE, buildItem(Material.PAPER, text("editor.crates.detail.open-mode.name"), List.of(
                 text("editor.common.current", Map.of("value", crate != null ? crate.openMode() : "reward-only")),
                 text("editor.common.click-select")
         )));
-        inventory.setItem(4, buildItem(Material.ENDER_EYE, text("editor.crates.detail.path.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_PATH, buildItem(Material.ENDER_EYE, text("editor.crates.detail.path.name"), List.of(
                 text("editor.common.current", Map.of("value", crate != null ? crate.animation().path() : "")),
                 text("editor.common.click-select")
         )));
-        inventory.setItem(5, buildItem(Material.IRON_BOOTS, text("editor.crates.detail.lock-movement.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_LOCK_MOVEMENT, buildItem(Material.IRON_BOOTS, text("editor.crates.detail.lock-movement.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(crate != null && crate.cutsceneSettings().lockMovement()))),
                 text("editor.crates.detail.lock-movement.desc"),
                 text("editor.common.click-toggle")
         )));
-        inventory.setItem(6, buildItem(Material.PAPER, text("editor.crates.detail.lock-hud.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_LOCK_HUD, buildItem(Material.PAPER, text("editor.crates.detail.lock-hud.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(crate != null && crate.cutsceneSettings().hideHud()))),
                 text("editor.crates.detail.lock-hud.desc"),
                 text("editor.common.click-toggle")
@@ -142,7 +143,7 @@ public class CrateEditorMenu implements Listener {
         if (crate != null && crate.cutsceneSettings().musicSettings() != null) {
             musicSound = crate.cutsceneSettings().musicSettings().sound();
         }
-        inventory.setItem(7, buildItem(Material.MUSIC_DISC_11, text("editor.crates.detail.music.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_MUSIC, buildItem(Material.MUSIC_DISC_11, text("editor.crates.detail.music.name"), List.of(
                 text("editor.common.current", Map.of("value", (musicSound == null || musicSound.isEmpty())
                         ? text("editor.common.none")
                         : musicSound)),
@@ -150,7 +151,7 @@ public class CrateEditorMenu implements Listener {
                 text("editor.common.click-edit")
         )));
         String maxRerolls = crate != null && crate.maxRerolls() != null ? crate.maxRerolls().toString() : text("editor.common.none");
-        inventory.setItem(8, buildItem(Material.ANVIL, text("editor.crates.detail.max-rerolls.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_MAX_REROLLS, buildItem(Material.ANVIL, text("editor.crates.detail.max-rerolls.name"), List.of(
                 text("editor.common.current", Map.of("value", maxRerolls)),
                 text("editor.crates.detail.max-rerolls.desc"),
                 text("editor.common.click-edit")
@@ -210,10 +211,11 @@ public class CrateEditorMenu implements Listener {
         }
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
         crates.sort(Comparator.comparing(CrateDefinition::id));
-        if (slot < 0 || slot >= crates.size() || slot >= 45) {
+        int index = slot - 9;
+        if (slot < 9 || slot > 35 || index < 0 || index >= crates.size()) {
             return;
         }
-        CrateDefinition crate = crates.get(slot);
+        CrateDefinition crate = crates.get(index);
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
@@ -237,17 +239,17 @@ public class CrateEditorMenu implements Listener {
 
     private void handleDetailClick(Player player, String crateId, int slot) {
         switch (slot) {
-            case 0 -> promptField(player, crateId, "display-name", "editor.crate.prompt.display-name");
-            case 1 -> openRewardsPoolSelector(player, crateId);
-            case 2 -> toggleType(player, crateId);
-            case 3 -> openOpenModeSelector(player, crateId);
-            case 4 -> openPathSelector(player, crateId);
-            case 5 -> toggleCutsceneLock(player, crateId, "movement",
+            case SLOT_DETAIL_DISPLAY_NAME -> promptField(player, crateId, "display-name", "editor.crate.prompt.display-name");
+            case SLOT_DETAIL_REWARDS_POOL -> openRewardsPoolSelector(player, crateId);
+            case SLOT_DETAIL_TYPE -> toggleType(player, crateId);
+            case SLOT_DETAIL_OPEN_MODE -> openOpenModeSelector(player, crateId);
+            case SLOT_DETAIL_PATH -> openPathSelector(player, crateId);
+            case SLOT_DETAIL_LOCK_MOVEMENT -> toggleCutsceneLock(player, crateId, "movement",
                     languageManager.getRaw("editor.crate.label.lock-movement", java.util.Collections.emptyMap()));
-            case 6 -> toggleCutsceneLock(player, crateId, "hud",
+            case SLOT_DETAIL_LOCK_HUD -> toggleCutsceneLock(player, crateId, "hud",
                     languageManager.getRaw("editor.crate.label.lock-hud", java.util.Collections.emptyMap()));
-            case 7 -> promptField(player, crateId, "cutscene.music.sound", "editor.crate.prompt.music-sound");
-            case 8 -> promptField(player, crateId, "cutscene.max-rerolls", "editor.crate.prompt.max-rerolls");
+            case SLOT_DETAIL_MUSIC -> promptField(player, crateId, "cutscene.music.sound", "editor.crate.prompt.music-sound");
+            case SLOT_DETAIL_MAX_REROLLS -> promptField(player, crateId, "cutscene.max-rerolls", "editor.crate.prompt.max-rerolls");
             case SLOT_DETAIL_DELETE -> confirmDelete(player, crateId);
             case SLOT_DETAIL_BACK -> open(player);
             default -> {
@@ -375,9 +377,9 @@ public class CrateEditorMenu implements Listener {
         List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
         pools.sort(Comparator.comparing((RewardPool pool) -> resolvePoolCreatedAt(pool.id()))
                 .thenComparing(RewardPool::id, String.CASE_INSENSITIVE_ORDER));
-        int slot = 0;
+        int slot = 9;
         for (RewardPool pool : pools) {
-            if (slot >= 45) {
+            if (slot > 35) {
                 break;
             }
             inventory.setItem(slot++, buildItem(Material.EMERALD, "&a" + pool.id(), List.of(
@@ -393,8 +395,8 @@ public class CrateEditorMenu implements Listener {
     }
 
     private void openOpenModeSelector(Player player, String crateId) {
-        Inventory inventory = Bukkit.createInventory(player, 27, openModeTitle(crateId));
-        int slot = 1;
+        Inventory inventory = Bukkit.createInventory(player, 36, openModeTitle(crateId));
+        int slot = SLOT_SELECTOR_START;
         for (String mode : List.of("reward-only", "preview-only", "key-required", "economy-required", "full")) {
             inventory.setItem(slot++, buildItem(Material.BOOK, text("editor.crates.open-mode.option.name", Map.of("mode", mode)), List.of(
                     text("editor.crates.open-mode.option.desc." + mode),
@@ -414,12 +416,12 @@ public class CrateEditorMenu implements Listener {
         List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
         paths.sort(Comparator.comparing((CutscenePath path) -> resolvePathCreatedAt(path.getId()))
                 .thenComparing(CutscenePath::getId, String.CASE_INSENSITIVE_ORDER));
-        int slot = 0;
+        int slot = 9;
         inventory.setItem(slot++, buildItem(Material.BARRIER, text("editor.common.none"), List.of(
                 text("editor.common.click-select")
         )));
         for (CutscenePath path : paths) {
-            if (slot >= 45) {
+            if (slot > 35) {
                 break;
             }
             inventory.setItem(slot++, buildItem(Material.ENDER_EYE, "&b" + path.getId(), List.of(
@@ -442,10 +444,11 @@ public class CrateEditorMenu implements Listener {
         List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
         pools.sort(Comparator.comparing((RewardPool pool) -> resolvePoolCreatedAt(pool.id()))
                 .thenComparing(RewardPool::id, String.CASE_INSENSITIVE_ORDER));
-        if (slot < 0 || slot >= pools.size() || slot >= 45) {
+        int index = slot - 9;
+        if (slot < 9 || slot > 35 || index < 0 || index >= pools.size()) {
             return;
         }
-        RewardPool pool = pools.get(slot);
+        RewardPool pool = pools.get(index);
         updateCrateField(crateId, "rewards-pool", pool.id());
         player.sendMessage(languageManager.getMessage("editor.crate.success.updated"));
         openDetail(player, crateId);
@@ -456,15 +459,12 @@ public class CrateEditorMenu implements Listener {
             openDetail(player, crateId);
             return;
         }
-        if (slot < 1 || slot > 5) {
-            return;
-        }
-        int index = slot - 1;
+        int index = slot - SLOT_SELECTOR_START;
         List<String> modes = List.of("reward-only", "preview-only", "key-required", "economy-required", "full");
-        if (slot < 0 || slot >= modes.size()) {
+        if (index < 0 || index >= modes.size()) {
             return;
         }
-        updateCrateField(crateId, "open-mode", modes.get(slot));
+        updateCrateField(crateId, "open-mode", modes.get(index));
         player.sendMessage(languageManager.getMessage("editor.crate.success.updated"));
         openDetail(player, crateId);
     }
@@ -474,7 +474,7 @@ public class CrateEditorMenu implements Listener {
             openDetail(player, crateId);
             return;
         }
-        if (slot == 0) {
+        if (slot == 9) {
             updateCrateField(crateId, "animation.path", "");
             player.sendMessage(languageManager.getMessage("editor.crate.success.updated"));
             openDetail(player, crateId);
@@ -483,8 +483,8 @@ public class CrateEditorMenu implements Listener {
         List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
         paths.sort(Comparator.comparing((CutscenePath path) -> resolvePathCreatedAt(path.getId()))
                 .thenComparing(CutscenePath::getId, String.CASE_INSENSITIVE_ORDER));
-        int adjustedSlot = slot - 1;
-        if (adjustedSlot < 0 || adjustedSlot >= paths.size() || adjustedSlot >= 44) {
+        int adjustedSlot = slot - 10;
+        if (slot < 10 || slot > 35 || adjustedSlot < 0 || adjustedSlot >= paths.size()) {
             return;
         }
         CutscenePath path = paths.get(adjustedSlot);

@@ -31,19 +31,24 @@ import java.util.Map;
 import java.util.UUID;
 
 public class RewardEditorMenu implements Listener {
-    // Layout: acciones principales al centro, navegación en fila inferior.
+    // Layout: fila superior vacía, acciones en el centro, separación y footer.
     private static final int SLOT_LIST_CREATE = 45;
     private static final int SLOT_LIST_DELETE = 53;
     private static final int SLOT_LIST_BACK = 49;
-    private static final int SLOT_DETAIL_BACK = 18;
-    private static final int SLOT_DETAIL_DELETE = 26;
-    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 22, 23, 24, 25};
+    private static final int SLOT_DETAIL_BACK = 31;
+    private static final int SLOT_DETAIL_DELETE = 35;
+    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52, 53};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {27, 28, 29, 30, 32, 33, 34};
 
-    private static final int SLOT_DETAIL_DISPLAY_NAME = 0;
-    private static final int SLOT_DETAIL_CHANCE = 1;
-    private static final int SLOT_DETAIL_ITEM_UPLOAD = 2;
-    private static final int SLOT_DETAIL_COMMANDS = 3;
+    private static final int SLOT_DETAIL_DISPLAY_NAME = 9;
+    private static final int SLOT_DETAIL_CHANCE = 10;
+    private static final int SLOT_DETAIL_ITEM = 11;
+    private static final int SLOT_DETAIL_AMOUNT = 12;
+    private static final int SLOT_DETAIL_COMMANDS = 13;
+    private static final int SLOT_DETAIL_ENCHANTMENTS = 14;
+    private static final int SLOT_DETAIL_GLOW = 15;
+    private static final int SLOT_DETAIL_CUSTOM_MODEL = 16;
+    private static final int SLOT_DETAIL_MAP_IMAGE = 17;
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -77,12 +82,12 @@ public class RewardEditorMenu implements Listener {
         List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
         pools.sort(Comparator.comparing((RewardPool pool) -> resolveCreatedAt(pool.id()))
                 .thenComparing(RewardPool::id, String.CASE_INSENSITIVE_ORDER));
-        int slot = 0;
+        int slot = 9;
         for (RewardPool pool : pools) {
-            inventory.setItem(slot++, buildPoolItem(pool));
-            if (slot >= 45) {
+            if (slot > 35) {
                 break;
             }
+            inventory.setItem(slot++, buildPoolItem(pool));
         }
         fillListNavigation(inventory);
         inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE,
@@ -100,9 +105,9 @@ public class RewardEditorMenu implements Listener {
         RewardPool pool = configLoader.getRewardPools().get(poolId);
         Inventory inventory = Bukkit.createInventory(player, 54, TextUtil.colorNoItalic(text("editor.rewards.pool.title", Map.of("pool", poolId))));
         List<Reward> rewards = pool != null ? pool.rewards() : List.of();
-        int slot = 0;
+        int slot = 9;
         for (Reward reward : rewards) {
-            if (slot >= 45) {
+            if (slot > 35) {
                 break;
             }
             inventory.setItem(slot++, buildRewardItem(reward));
@@ -134,40 +139,40 @@ public class RewardEditorMenu implements Listener {
                 }
             }
         }
-        Inventory inventory = Bukkit.createInventory(player, 27, rewardTitle(rewardId));
-        inventory.setItem(0, buildItem(Material.NAME_TAG, text("editor.rewards.reward.detail.display-name.name"), List.of(
+        Inventory inventory = Bukkit.createInventory(player, 36, rewardTitle(rewardId));
+        inventory.setItem(SLOT_DETAIL_DISPLAY_NAME, buildItem(Material.NAME_TAG, text("editor.rewards.reward.detail.display-name.name"), List.of(
                 text("editor.common.current", Map.of("value", reward != null ? reward.displayName() : rewardId)),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(1, buildItem(Material.GOLD_NUGGET, text("editor.rewards.reward.detail.chance.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_CHANCE, buildItem(Material.GOLD_NUGGET, text("editor.rewards.reward.detail.chance.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.chance() : 0))),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(2, buildItem(Material.CHEST, text("editor.rewards.reward.detail.item.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_ITEM, buildItem(Material.CHEST, text("editor.rewards.reward.detail.item.name"), List.of(
                 text("editor.common.current", Map.of("value", reward != null ? reward.item() : "STONE")),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(3, buildItem(Material.PAPER, text("editor.rewards.reward.detail.amount.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_AMOUNT, buildItem(Material.PAPER, text("editor.rewards.reward.detail.amount.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.amount() : 1))),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(4, buildItem(Material.COMMAND_BLOCK, text("editor.rewards.reward.detail.commands.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_COMMANDS, buildItem(Material.COMMAND_BLOCK, text("editor.rewards.reward.detail.commands.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.commands().size() : 0))),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(5, buildItem(Material.ENCHANTED_BOOK, text("editor.rewards.reward.detail.enchantments.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_ENCHANTMENTS, buildItem(Material.ENCHANTED_BOOK, text("editor.rewards.reward.detail.enchantments.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.enchantments().size() : 0))),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(6, buildItem(Material.GLOWSTONE_DUST, text("editor.rewards.reward.detail.glow.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_GLOW, buildItem(Material.GLOWSTONE_DUST, text("editor.rewards.reward.detail.glow.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null && reward.glow()))),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(7, buildItem(Material.SLIME_BALL, text("editor.rewards.reward.detail.custom-model.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_CUSTOM_MODEL, buildItem(Material.SLIME_BALL, text("editor.rewards.reward.detail.custom-model.name"), List.of(
                 text("editor.common.current", Map.of("value", reward != null ? emptyFallback(reward.customModel()) : "")),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(8, buildItem(Material.FILLED_MAP, text("editor.rewards.reward.detail.map-image.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_MAP_IMAGE, buildItem(Material.FILLED_MAP, text("editor.rewards.reward.detail.map-image.name"), List.of(
                 text("editor.common.current", Map.of("value", reward != null ? emptyFallback(reward.mapImage()) : "")),
                 text("editor.common.click-edit")
         )));
@@ -218,10 +223,11 @@ public class RewardEditorMenu implements Listener {
         List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
         pools.sort(Comparator.comparing((RewardPool pool) -> resolveCreatedAt(pool.id()))
                 .thenComparing(RewardPool::id, String.CASE_INSENSITIVE_ORDER));
-        if (slot < 0 || slot >= pools.size() || slot >= 45) {
+        int index = slot - 9;
+        if (slot < 9 || slot > 35 || index < 0 || index >= pools.size()) {
             return;
         }
-        RewardPool pool = pools.get(slot);
+        RewardPool pool = pools.get(index);
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
@@ -261,10 +267,11 @@ public class RewardEditorMenu implements Listener {
             return;
         }
         List<Reward> rewards = pool.rewards();
-        if (slot < 0 || slot >= rewards.size() || slot >= 45) {
+        int index = slot - 9;
+        if (slot < 9 || slot > 35 || index < 0 || index >= rewards.size()) {
             return;
         }
-        Reward reward = rewards.get(slot);
+        Reward reward = rewards.get(index);
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
@@ -288,15 +295,15 @@ public class RewardEditorMenu implements Listener {
 
     private void handleRewardDetailClick(Player player, String poolId, String rewardId, int slot) {
         switch (slot) {
-            case 0 -> promptRewardField(player, poolId, rewardId, "display-name", "editor.reward.prompt.display-name");
-            case 1 -> promptRewardField(player, poolId, rewardId, "chance", "editor.reward.prompt.chance");
-            case 2 -> promptRewardField(player, poolId, rewardId, "item", "editor.reward.prompt.item");
-            case 3 -> promptRewardField(player, poolId, rewardId, "amount", "editor.reward.prompt.amount");
-            case 4 -> promptRewardField(player, poolId, rewardId, "commands", "editor.reward.prompt.commands");
-            case 5 -> promptRewardField(player, poolId, rewardId, "enchantments", "editor.reward.prompt.enchantments");
-            case 6 -> promptRewardField(player, poolId, rewardId, "glow", "editor.reward.prompt.glow");
-            case 7 -> promptRewardField(player, poolId, rewardId, "custom-model", "editor.reward.prompt.custom-model");
-            case 8 -> promptRewardField(player, poolId, rewardId, "map-image", "editor.reward.prompt.map-image");
+            case SLOT_DETAIL_DISPLAY_NAME -> promptRewardField(player, poolId, rewardId, "display-name", "editor.reward.prompt.display-name");
+            case SLOT_DETAIL_CHANCE -> promptRewardField(player, poolId, rewardId, "chance", "editor.reward.prompt.chance");
+            case SLOT_DETAIL_ITEM -> promptRewardField(player, poolId, rewardId, "item", "editor.reward.prompt.item");
+            case SLOT_DETAIL_AMOUNT -> promptRewardField(player, poolId, rewardId, "amount", "editor.reward.prompt.amount");
+            case SLOT_DETAIL_COMMANDS -> promptRewardField(player, poolId, rewardId, "commands", "editor.reward.prompt.commands");
+            case SLOT_DETAIL_ENCHANTMENTS -> promptRewardField(player, poolId, rewardId, "enchantments", "editor.reward.prompt.enchantments");
+            case SLOT_DETAIL_GLOW -> promptRewardField(player, poolId, rewardId, "glow", "editor.reward.prompt.glow");
+            case SLOT_DETAIL_CUSTOM_MODEL -> promptRewardField(player, poolId, rewardId, "custom-model", "editor.reward.prompt.custom-model");
+            case SLOT_DETAIL_MAP_IMAGE -> promptRewardField(player, poolId, rewardId, "map-image", "editor.reward.prompt.map-image");
             case SLOT_DETAIL_DELETE -> confirmDeleteReward(player, poolId, rewardId);
             case SLOT_DETAIL_BACK -> openPoolDetail(player, poolId);
             default -> {

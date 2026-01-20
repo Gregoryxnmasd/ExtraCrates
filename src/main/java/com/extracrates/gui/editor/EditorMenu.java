@@ -21,13 +21,13 @@ import java.util.List;
 
 @SuppressWarnings("unused")
 public class EditorMenu implements Listener {
-    // Layout: acciones principales en la fila superior, fila media vacía, navegación en la fila inferior.
-    private static final int SLOT_ACTION_CRATES = 1;
-    private static final int SLOT_ACTION_REWARDS = 3;
-    private static final int SLOT_ACTION_PATHS = 5;
-    private static final int SLOT_ACTION_KEYS = 7;
-    private static final int SLOT_NAV_CLOSE = 22;
-    private static final int[] NAV_FILLER_SLOTS = {18, 19, 20, 21, 23, 24, 25, 26};
+    // Layout: fila superior vacía, acciones en la fila central, separación y footer.
+    private static final int SLOT_ACTION_CRATES = 10;
+    private static final int SLOT_ACTION_REWARDS = 12;
+    private static final int SLOT_ACTION_PATHS = 14;
+    private static final int SLOT_ACTION_KEYS = 16;
+    private static final int SLOT_NAV_CLOSE = 31;
+    private static final int[] NAV_FILLER_SLOTS = {27, 28, 29, 30, 32, 33, 34, 35};
 
     private final ExtraCratesPlugin plugin;
     private final LanguageManager languageManager;
@@ -55,7 +55,7 @@ public class EditorMenu implements Listener {
     }
 
     public void open(Player player) {
-        Inventory inventory = Bukkit.createInventory(player, 27, title);
+        Inventory inventory = Bukkit.createInventory(player, 36, title);
         inventory.setItem(SLOT_ACTION_CRATES, buildItem(Material.CHEST,
                 languageManager.getRaw("editor.menu.action.crates.name", java.util.Collections.emptyMap()),
                 List.of(languageManager.getRaw("editor.menu.action.crates.lore", java.util.Collections.emptyMap()))));
