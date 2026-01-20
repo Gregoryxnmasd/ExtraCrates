@@ -5,6 +5,7 @@ import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.runtime.core.SessionManager;
+import com.extracrates.gui.MenuSpacer;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -110,6 +111,7 @@ public class KeyManagerMenu implements Listener {
         inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
                 text("editor.keys.nav.back-main.name"),
                 List.of(text("editor.keys.nav.back-main.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -131,6 +133,7 @@ public class KeyManagerMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.keys.nav.back-search.name"),
                 List.of(text("editor.keys.nav.back-search.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -156,6 +159,7 @@ public class KeyManagerMenu implements Listener {
         inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
                 text("editor.keys.nav.back-list.name"),
                 List.of(text("editor.keys.nav.back-list.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -365,6 +369,10 @@ public class KeyManagerMenu implements Listener {
         for (int slot : DETAIL_NAV_FILLER_SLOTS) {
             inventory.setItem(slot, filler);
         }
+    }
+
+    private ItemStack buildSpacerItem() {
+        return buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
     }
 
     private ItemStack buildItem(Material material, String name, List<String> loreLines) {

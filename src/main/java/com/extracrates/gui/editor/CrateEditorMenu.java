@@ -8,6 +8,7 @@ import com.extracrates.model.CrateType;
 import com.extracrates.model.RewardPool;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.util.TextUtil;
+import com.extracrates.gui.MenuSpacer;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -97,6 +98,7 @@ public class CrateEditorMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.crates.list.back.name"),
                 List.of(text("editor.crates.list.back.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -160,6 +162,7 @@ public class CrateEditorMenu implements Listener {
         inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
                 text("editor.crates.detail.back.name"),
                 List.of(text("editor.crates.detail.back.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -385,6 +388,7 @@ public class CrateEditorMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.crates.paths.back.name"),
                 List.of(text("editor.crates.paths.back.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -401,6 +405,7 @@ public class CrateEditorMenu implements Listener {
         inventory.setItem(SLOT_SELECTOR_BACK, buildItem(Material.ARROW,
                 text("editor.crates.detail.back.name"),
                 List.of(text("editor.crates.detail.back.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -425,6 +430,7 @@ public class CrateEditorMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.crates.paths.back.name"),
                 List.of(text("editor.crates.paths.back.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -557,6 +563,10 @@ public class CrateEditorMenu implements Listener {
         for (int slot : DETAIL_NAV_FILLER_SLOTS) {
             inventory.setItem(slot, filler);
         }
+    }
+
+    private ItemStack buildSpacerItem() {
+        return buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
     }
 
     private void fillSelectorNavigation(Inventory inventory) {

@@ -282,6 +282,9 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(languageManager.getMessage("command.givekey-success"));
                 return true;
             }
+            case "clear" -> {
+                return handleClear(sender, args);
+            }
             case "cutscene" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage(languageManager.getMessage("command.only-players"));
@@ -390,7 +393,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         List<String> options = new ArrayList<>();
         String current = args.length > 0 ? args[args.length - 1] : "";
         if (args.length == 1) {
-            options.addAll(List.of("gui", "history", "editor", "open", "preview", "claim", "cutscene", "reroll", "reload", "debug", "sync", "givekey", "route", "migrate", "crates", "pools", "rewards"));
+            options.addAll(List.of("gui", "history", "editor", "open", "preview", "cutscene", "reroll", "reload", "debug", "sync", "givekey", "route", "migrate", "clear", "crates", "pools", "rewards"));
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("crates")) {
@@ -491,8 +494,15 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview") || args[0].equalsIgnoreCase("givekey"))) {
-            configLoader.getCrates().keySet().forEach(options::add);
-            Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
+            if (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview")) {
+                if (sender instanceof Player) {
+                    configLoader.getCrates().keySet().forEach(options::add);
+                } else {
+                    Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
+                }
+            } else {
+                configLoader.getCrates().keySet().forEach(options::add);
+            }
             return filterByPrefix(options, current);
         }
         if (args.length == 3 && (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview"))) {
@@ -507,7 +517,39 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             options.addAll(configLoader.getPaths().keySet());
             return filterByPrefix(options, current);
         }
+        if (args.length == 2 && args[0].equalsIgnoreCase("clear")) {
+            Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
+            return filterByPrefix(options, current);
+        }
         return List.of();
+    }
+
+    private boolean handleClear(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("extracrates.clear")) {
+            sender.sendMessage(languageManager.getMessage("command.no-permission"));
+            return true;
+        }
+        Player target;
+        if (args.length == 1) {
+            if (sender instanceof Player player) {
+                target = player;
+            } else {
+                sender.sendMessage(languageManager.getMessage("command.clear-usage"));
+                return true;
+            }
+        } else {
+            target = Bukkit.getPlayerExact(args[1]);
+            if (target == null) {
+                sender.sendMessage(languageManager.getMessage("command.player-not-found"));
+                return true;
+            }
+        }
+        sessionManager.clearCrateEffects(target);
+        sender.sendMessage(languageManager.getMessage("command.clear-success", java.util.Map.of("player", target.getName())));
+        if (!sender.equals(target)) {
+            target.sendMessage(languageManager.getMessage("command.clear-target"));
+        }
+        return true;
     }
 
     private boolean handleMass(CommandSender sender, String[] args) {

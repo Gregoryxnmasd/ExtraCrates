@@ -1,5 +1,5 @@
 command:
-  usage: "&cUsa /crates gui|editor|open|preview|cutscene|reload|sync|givekey|route|crates|pools|rewards"
+  usage: "&cUsa /crates gui|editor|open|preview|cutscene|reload|sync|givekey|clear|route|crates|pools|rewards"
   only-players: "&cSolo para jugadores."
   no-permission: "&cNo tienes permiso."
   open-usage: "&cUso: /crates %sub% <crate> &7(o) &c/crates %sub% <jugador> <crate>"
@@ -14,6 +14,7 @@ command:
   cutscene-path-not-found: "&cRuta de cutscene no encontrada."
   cutscene-preview-started: "&aPreview iniciada para ruta '%path%'."
   givekey-usage: "&cUso: /crates givekey <id> &7(dar llave)"
+  clear-usage: "&cUso: /crates clear <jugador>"
   crate-not-found: "&cCrate no encontrada."
   crate-already-exists: "&cYa existe una crate con ese ID."
   crate-created: "&aCrate %crate% creada."
@@ -38,6 +39,8 @@ command:
   rewards-delete-usage: "&cUso: /crates rewards delete <pool> <id>"
   rewards-give-usage: "&cUso: /crates rewards give <jugador> <pool> <id>"
   rewards-claim-usage: "&cUso: /crates rewards claim [jugador]"
+  clear-success: "&aEfectos de crate limpiados para %player%."
+  clear-target: "&aTus efectos de crate han sido limpiados."
   reward-already-exists: "&cYa existe una reward con ese ID."
   reward-not-found: "&cReward no encontrada."
   reward-created: "&aReward %reward% creada en %pool%."

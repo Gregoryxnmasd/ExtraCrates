@@ -6,6 +6,7 @@ import com.extracrates.config.LanguageManager;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.util.TextUtil;
+import com.extracrates.gui.MenuSpacer;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -90,6 +91,7 @@ public class RewardEditorMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.rewards.list.back.name"),
                 List.of(text("editor.rewards.list.back.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -115,6 +117,7 @@ public class RewardEditorMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.rewards.pool.back.name"),
                 List.of(text("editor.rewards.pool.back.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -175,6 +178,7 @@ public class RewardEditorMenu implements Listener {
         inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
                 text("editor.rewards.reward.back.name"),
                 List.of(text("editor.rewards.reward.back.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -552,6 +556,10 @@ public class RewardEditorMenu implements Listener {
         for (int slot : DETAIL_NAV_FILLER_SLOTS) {
             inventory.setItem(slot, filler);
         }
+    }
+
+    private ItemStack buildSpacerItem() {
+        return buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
     }
 
     private ItemStack buildRewardItem(Reward reward) {

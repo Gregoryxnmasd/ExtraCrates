@@ -103,6 +103,7 @@ public class OpenHistoryGui implements Listener {
         inventory.setItem(DATE_FILTER_SLOT, buildDateFilterItem(state.dateFilter));
         inventory.setItem(RESET_FILTERS_SLOT, buildStaticItem(Material.BOOK, "&aResetear filtros", List.of("&7Haz click para limpiar filtros.")));
 
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -205,6 +206,10 @@ public class OpenHistoryGui implements Listener {
 
     private ItemStack buildNavItem(Material material, String name) {
         return buildStaticItem(material, name, List.of());
+    }
+
+    private ItemStack buildSpacerItem() {
+        return buildStaticItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
     }
 
     private ItemStack buildCrateFilterItem(List<String> options, int index) {

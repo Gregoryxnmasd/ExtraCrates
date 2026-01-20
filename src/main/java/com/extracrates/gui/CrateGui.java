@@ -111,6 +111,7 @@ public class CrateGui implements Listener {
                     java.util.Collections.emptyMap()
             )));
         }
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -252,6 +253,7 @@ public class CrateGui implements Listener {
                 languageManager.getRaw("gui.crate.action.back.name", java.util.Collections.emptyMap()),
                 List.of(languageManager.getRaw("gui.crate.action.back.lore", java.util.Collections.emptyMap()))
         ));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -298,7 +300,12 @@ public class CrateGui implements Listener {
                     java.util.Collections.emptyMap()
             )));
         }
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
+    }
+
+    private @NotNull ItemStack buildSpacerItem() {
+        return buildNavItem(Material.GRAY_STAINED_GLASS_PANE, " ");
     }
 
     private @NotNull ItemStack buildRewardItem(@NotNull Reward reward, @NotNull List<Reward> allRewards) {
