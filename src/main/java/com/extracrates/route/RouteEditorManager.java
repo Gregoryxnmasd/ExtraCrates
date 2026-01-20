@@ -69,12 +69,21 @@ public class RouteEditorManager {
         if (session == null) {
             return;
         }
-        Location playerLocation = player.getLocation();
-        session.addPoint(playerLocation, playerLocation.getYaw(), playerLocation.getPitch());
+        Location captureLocation = session.resolveCaptureLocation(player.getLocation());
+        session.addPoint(captureLocation, captureLocation.getYaw(), captureLocation.getPitch());
     }
 
     public boolean hasNoSession(Player player) {
         return !sessions.containsKey(player.getUniqueId());
+    }
+
+    public void moveMarkerToPlayer(Player player) {
+        RouteEditorSession session = sessions.get(player.getUniqueId());
+        if (session == null) {
+            return;
+        }
+        session.moveMarker(player.getLocation());
+        player.sendMessage(languageManager.getMessage("route.editor.marker-moved"));
     }
 
     private void saveSession(Player player, RouteEditorSession session) {

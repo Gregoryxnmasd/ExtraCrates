@@ -661,6 +661,13 @@ public class RewardEditorMenu implements Listener {
         return TextUtil.colorNoItalic(text("editor.rewards.reward.title", Map.of("reward", rewardId)));
     }
 
+    private String emptyFallback(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return text("editor.common.none");
+        }
+        return value;
+    }
+
     private String text(String key) {
         return languageManager.getRaw(key, java.util.Collections.emptyMap());
     }
