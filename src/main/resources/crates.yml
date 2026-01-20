@@ -1,83 +1,107 @@
 crates:
   legendary:
-    display-name: "&6Legendaria"
-    type: "keyed"
+    display-name: '&6Legendaria'
+    type: normal
     # open-mode: reward-only | full | preview-only
-    open-mode: "reward-only"
+    open-mode: full
     reroll-enable-ticks: 0
-    ui-mode: "none"
-    actionbar-message: ""
-    key-model: "legendary_key"
-    key-material: "TRIPWIRE_HOOK"
+    ui-mode: none
+    actionbar-message: ''
+    key-model: legendary_key
+    key-material: TRIPWIRE_HOOK
     cooldown-seconds: 120
     cost: 0
     reroll-cost: 0
-    permission: "extracrates.open.legendary"
+    permission: extracrates.open.legendary
     allowed-worlds: []
     blocked-worlds: []
     locations:
-      world: "world"
-      camera-start: { x: 10.5, y: 65.0, z: -20.5, yaw: 0, pitch: 0 }
-      reward-anchor: { x: 12.0, y: 65.5, z: -16.0 }
+      world: world
+      camera-start:
+        x: 10.5
+        y: 65.0
+        z: -20.5
+        yaw: 0
+        pitch: 0
+      reward-anchor:
+        x: 12.0
+        y: 65.5
+        z: -16.0
     allowed-area:
-      world: "world"
-      min: { x: 8.0, y: 64.0, z: -24.0 }
-      max: { x: 16.0, y: 70.0, z: -12.0 }
+      world: world
+      min:
+        x: 8.0
+        y: 64.0
+        z: -24.0
+      max:
+        x: 16.0
+        y: 70.0
+        z: -12.0
     animation:
-      path: "legendary_path"
-      reward-anchor: { x: 0.5, y: 1.2, z: 0.5 }
-      reward-model: "legendary_reward"
-      hologram-format: "&6%reward_name%"
+      path: spawn
+      reward-anchor:
+        x: 0.5
+        y: 1.2
+        z: 0.5
+      reward-model: legendary_reward
+      hologram-format: '&6%reward_name%'
       reward-float:
         height: 0.9
         spin-speed: 4.0
         bobbing: true
       sounds:
-        start: "entity.ender_dragon.growl"
-        end: "ui.toast.challenge_complete"
+        start: entity.ender_dragon.growl
+        end: ui.toast.challenge_complete
     cutscene:
-      overlay-model: "cutscene_mask"
+      overlay-model: cutscene_mask
       commands-enabled: true
       locks:
         movement: true
         hud: true
       music:
-        sound: "music.dragon"
+        sound: music.dragon
         volume: 0.8
         pitch: 1.0
         fade-in-ticks: 40
         fade-out-ticks: 40
-    rewards-pool: "legendary_pool"
+      max-rerolls: 3
+    rewards-pool: legendary_pool
   seasonal:
-    display-name: "&dTemporada"
-    type: "event"
+    display-name: '&dTemporada'
+    type: event
     # open-mode: reward-only | full | preview-only
-    open-mode: "reward-only"
+    open-mode: reward-only
     reroll-enable-ticks: 0
-    ui-mode: "none"
-    actionbar-message: ""
+    ui-mode: none
+    actionbar-message: ''
     cooldown-seconds: 30
     reroll-cost: 0
-    permission: "extracrates.open.seasonal"
+    permission: extracrates.open.seasonal
     allowed-worlds: []
     blocked-worlds: []
     locations:
-      world: "world"
-      reward-anchor: { x: -2.0, y: 64.2, z: 5.5 }
+      world: world
+      reward-anchor:
+        x: -2.0
+        y: 64.2
+        z: 5.5
     animation:
-      path: "seasonal_line"
-      reward-anchor: { x: -0.2, y: 1.0, z: 0.2 }
-      hologram-format: "&d%reward_name%"
+      path: seasonal_line
+      reward-anchor:
+        x: -0.2
+        y: 1.0
+        z: 0.2
+      hologram-format: '&d%reward_name%'
       reward-float:
         height: 0.7
         spin-speed: 2.0
         bobbing: false
     cutscene:
-      overlay-model: "cutscene_mask"
+      overlay-model: cutscene_mask
       commands-enabled: false
       locks:
         movement: true
         hud: false
       music:
-        sound: ""
-    rewards-pool: "seasonal_pool"
+        sound: ''
+    rewards-pool: seasonal_pool

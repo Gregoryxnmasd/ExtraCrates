@@ -1,21 +1,63 @@
 paths:
   legendary_path:
     duration-seconds: 6.0
-    smoothing: "catmull-rom"
+    smoothing: catmull-rom
     constant-speed: true
     step-resolution: 0.12
     points:
-      - { x: 0, y: 2, z: -4, yaw: 0, pitch: -10 }
-      - { x: 1.5, y: 2.2, z: -2, yaw: 10, pitch: -5 }
-      - { x: 0.5, y: 1.8, z: 0.5, yaw: 0, pitch: 0 }
-      - { x: -0.5, y: 1.6, z: 2.5, yaw: -30, pitch: 10 }
-    particle-preview: "end_rod"
+    - x: 0
+      y: 2
+      z: -4
+      yaw: 0
+      pitch: -10
+    - x: 1.5
+      y: 2.2
+      z: -2
+      yaw: 10
+      pitch: -5
+    - x: 0.5
+      y: 1.8
+      z: 0.5
+      yaw: 0
+      pitch: 0
+    - x: -0.5
+      y: 1.6
+      z: 2.5
+      yaw: -30
+      pitch: 10
+    particle-preview: end_rod
   seasonal_line:
     duration-seconds: 4.0
-    smoothing: "linear"
+    smoothing: linear
     constant-speed: true
     step-resolution: 0.16
     points:
-      - { x: 0, y: 1.6, z: -3, yaw: 0, pitch: 0 }
-      - { x: 0, y: 1.6, z: 0, yaw: 0, pitch: 0 }
-    particle-preview: "happy_villager"
+    - x: 0
+      y: 1.6
+      z: -3
+      yaw: 0
+      pitch: 0
+    - x: 0
+      y: 1.6
+      z: 0
+      yaw: 0
+      pitch: 0
+    particle-preview: happy_villager
+  spawn:
+    duration-seconds: 4.0
+    constant-speed: true
+    step-resolution: 0.15
+    smoothing: linear
+    particle-preview: crit
+    points:
+    - x: 71.96034258869804
+      y: 88.42874081065452
+      z: 150.2375857169201
+      yaw: -179.84967
+      pitch: 10.0499935
+    - x: 71.97801462328103
+      y: 87.53893830755926
+      z: 143.4107117005811
+      yaw: -179.84967
+      pitch: 10.0499935
+    created-at: 1768934625286
