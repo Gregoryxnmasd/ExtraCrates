@@ -77,7 +77,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         pendingRewardStore = new PendingRewardStore(this);
         EditorInputManager inputManager = new EditorInputManager(this);
         ConfirmationMenu confirmationMenu = new ConfirmationMenu(this, configLoader);
-        editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu, sessionManager);
+        editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu);
 
         PluginCommand crateCommand = getCommand("crates");
         if (crateCommand != null) {

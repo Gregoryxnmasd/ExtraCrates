@@ -1,19 +1,18 @@
 command:
-  usage: "&cUsa /crates gui|editor|open|preview|cutscene|reload|sync|givekey|clear|route|crates|pools|rewards"
+  usage: "&cUsa /crates gui|editor|open|preview|cutscene|reload|sync|clear|route|crates|pools|rewards"
   only-players: "&cSolo para jugadores."
   no-permission: "&cNo tienes permiso."
   open-usage: "&cUso: /crates %sub% <crate> &7(o) &c/crates %sub% <jugador> <crate>"
-  route-usage: "&cUso: /crates route <path|stop|cancel|add|capture>"
+  route-usage: "&cUso: /crates route <path|save|cancel|add|capture>"
   route-saved: "&aRuta guardada."
   route-no-active-editor: "&cNo tienes una sesión activa del editor de rutas."
   route-canceled: "&eEditor de rutas cancelado."
   route-already-active: "&cYa tienes una sesión activa del editor de rutas."
   route-started: "&aEditor de rutas iniciado para '%path%'."
-  route-instructions: "&7Usa &f/crates route add&7 para capturar tu posición actual. Guarda con &f/crates route stop&7."
+  route-instructions: "&7Usa &f/crates route add&7 para capturar tu posición actual. Guarda con &f/crates route save&7."
   cutscene-usage: "&cUso: /crates cutscene test <id>"
   cutscene-path-not-found: "&cRuta de cutscene no encontrada."
   cutscene-preview-started: "&aPreview iniciada para ruta '%path%'."
-  givekey-usage: "&cUso: /crates givekey <id> &7(dar llave)"
   clear-usage: "&cUso: /crates clear <jugador>"
   crate-not-found: "&cCrate no encontrada."
   crate-already-exists: "&cYa existe una crate con ese ID."
@@ -54,7 +53,6 @@ command:
   reward-qa-mode: "&eModo QA activo: no se entregan recompensas."
   player-not-found: "&cJugador no encontrado."
   reload-success: "&aConfiguración recargada."
-  givekey-success: "&aLlave entregada correctamente."
   unknown-subcommand: "&cSubcomando desconocido."
   key-item-name: "%crate_name% &7(llave)"
   mass-usage: "&cUso: /crates mass set <campo> <valor> [filtro]"
@@ -83,6 +81,16 @@ session:
   reroll.blocked: "&cEspera a que termine la animación."
   reroll.advance: "&eRecompensa seleccionada: &f%reward%"
   reroll.confirmed: "&aRecompensa confirmada: &f%reward%"
+  reroll.bossbar: "&eRerolls restantes: &f%rerolls_left%"
+
+reroll:
+  waiting: "&eSelecciona tu recompensa... (&fShift&7 para confirmar)"
+  ready: "&eClick para cambiar recompensa &7/ &fShift&7 para confirmar"
+  confirmed-bar: "&eRecompensa confirmada"
+  blocked: "&cEspera a que termine la animación."
+  advance: "&eRecompensa seleccionada: &f%reward%"
+  confirmed: "&aRecompensa confirmada: &f%reward%"
+  bossbar: "&eRerolls restantes: &f%rerolls_left%"
 route:
   editor:
     saved: "&aRuta '%path%' guardada con %count% puntos."
@@ -260,7 +268,7 @@ editor:
       edit-points:
         name: "&eEditar puntos"
         free-mode: "&7Usa &f/crates route add&7 para capturar puntos."
-        save: "&7Guarda con &f/crates route stop&7."
+        save: "&7Guarda con &f/crates route save&7."
       duration:
         name: "&eDuración"
         desc: "&7Duración total en segundos."

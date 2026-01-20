@@ -105,7 +105,15 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             @NotNull String[] args
     ) {
         if (args.length == 0) {
-            sender.sendMessage(languageManager.getMessage("command.usage"));
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage(languageManager.getMessage("command.only-players"));
+                return true;
+            }
+            if (!sender.hasPermission("extracrates.editor")) {
+                sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                return true;
+            }
+            editorMenu.open(player);
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -140,6 +148,10 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             case "editor" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage(languageManager.getMessage("command.only-players"));
+                    return true;
+                }
+                if (!sender.hasPermission("extracrates.editor")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
                     return true;
                 }
                 editorMenu.open(player);
@@ -261,25 +273,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             case "givekey" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage(languageManager.getMessage("command.only-players"));
-                    return true;
-                }
-                if (!sender.hasPermission("extracrates.givekey")) {
-                    sender.sendMessage(languageManager.getMessage("command.no-permission", player, null, null, null));
-                    return true;
-                }
-                if (args.length < 2) {
-                    sender.sendMessage(languageManager.getMessage("command.givekey-usage", player, null, null, null));
-                    return true;
-                }
-                CrateDefinition crate = configLoader.getCrates().get(args[1]);
-                if (crate == null) {
-                    sender.sendMessage(languageManager.getMessage("command.crate-not-found", player, null, null, null));
-                    return true;
-                }
-                sessionManager.grantKey(player, crate, 1);
-                sender.sendMessage(languageManager.getMessage("command.givekey-success"));
+                sender.sendMessage(languageManager.getMessage("command.unknown-subcommand"));
                 return true;
             }
             case "clear" -> {
@@ -323,7 +317,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 String action = args[1];
-                if (action.equalsIgnoreCase("stop")) {
+                if (action.equalsIgnoreCase("save")) {
                     if (routeEditorManager.endSession(player, true)) {
                         sender.sendMessage(languageManager.getMessage("command.route-saved"));
                     } else {
@@ -393,7 +387,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         List<String> options = new ArrayList<>();
         String current = args.length > 0 ? args[args.length - 1] : "";
         if (args.length == 1) {
-            options.addAll(List.of("gui", "history", "editor", "open", "preview", "cutscene", "reroll", "reload", "debug", "sync", "givekey", "route", "migrate", "clear", "crates", "pools", "rewards"));
+            options.addAll(List.of("gui", "history", "editor", "open", "preview", "cutscene", "reroll", "reload", "debug", "sync", "route", "migrate", "clear", "crates", "pools", "rewards"));
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("crates")) {
@@ -474,7 +468,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {
-            options.addAll(List.of("stop", "cancel", "add", "capture", "marker"));
+            options.addAll(List.of("save", "cancel", "add", "capture", "marker"));
             options.addAll(configLoader.getPaths().keySet());
             return filterByPrefix(options, current);
         }
@@ -493,15 +487,11 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             options.addAll(syncCommand.tabComplete(args));
             return filterByPrefix(options, current);
         }
-        if (args.length == 2 && (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview") || args[0].equalsIgnoreCase("givekey"))) {
-            if (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview")) {
-                if (sender instanceof Player) {
-                    configLoader.getCrates().keySet().forEach(options::add);
-                } else {
-                    Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
-                }
-            } else {
+        if (args.length == 2 && (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview"))) {
+            if (sender instanceof Player) {
                 configLoader.getCrates().keySet().forEach(options::add);
+            } else {
+                Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
             }
             return filterByPrefix(options, current);
         }

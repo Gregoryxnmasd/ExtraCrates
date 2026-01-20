@@ -69,8 +69,9 @@ public class RouteEditorManager {
         if (session == null) {
             return;
         }
-        Location captureLocation = session.resolveCaptureLocation(player.getLocation());
-        session.addPoint(captureLocation, captureLocation.getYaw(), captureLocation.getPitch());
+        Location eyeLocation = player.getEyeLocation();
+        Location captureLocation = session.resolveCaptureLocation(eyeLocation);
+        session.addPoint(captureLocation, eyeLocation.getYaw(), eyeLocation.getPitch());
     }
 
     public boolean hasNoSession(Player player) {
@@ -82,7 +83,7 @@ public class RouteEditorManager {
         if (session == null) {
             return;
         }
-        session.moveMarker(player.getLocation());
+        session.moveMarker(player.getEyeLocation());
         player.sendMessage(languageManager.getMessage("route.editor.marker-moved"));
     }
 

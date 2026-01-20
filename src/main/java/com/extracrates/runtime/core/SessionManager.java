@@ -127,10 +127,6 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.error.missing-reward-pool"));
             return false;
         }
-        if (!preview && crate.type() == com.extracrates.model.CrateType.KEYED && !hasKey(player, crate)) {
-            player.sendMessage(languageManager.getMessage("session.key-required"));
-            return false;
-        }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
         List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
         if (rewards.isEmpty()) {
@@ -144,18 +140,7 @@ public class SessionManager {
                 return false;
             }
             Instant previousCooldown = getCooldownTimestamp(player, crate.id());
-            boolean keyConsumed = false;
-            if (crate.type() == com.extracrates.model.CrateType.KEYED) {
-                keyConsumed = consumeKey(player, crate);
-                if (!keyConsumed) {
-                    if (storage != null) {
-                        storage.releaseLock(player.getUniqueId(), crate.id());
-                    }
-                    player.sendMessage(Component.text("Necesitas una llave para esta crate."));
-                    return false;
-                }
-            }
-            openState = new OpenState(storage != null, keyConsumed, false, previousCooldown);
+            openState = new OpenState(storage != null, false, false, previousCooldown);
         }
         CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview, openState);
         sessions.put(player.getUniqueId(), session);
