@@ -45,6 +45,7 @@ command:
   reward-created: "&aReward %reward% created in %pool%."
   reward-updated: "&aReward %reward% updated (%field%)."
   reward-deleted: "&aReward %reward% deleted from %pool%."
+  reward-field-disabled: "&cThis reward field is managed via item uploads only."
   reward-given: "&aReward delivered to %player%: %reward%."
   reward-queued: "&e%player% is offline. Reward queued: %reward%."
   reward-claim-none: "&eNo pending rewards."
@@ -385,11 +386,16 @@ editor:
           name: "&eDisplay name"
         chance:
           name: "&eChance"
+        reward-item:
+          name: "&eReward item"
+          desc: "&7Use the item in your hand as the reward (keeps exact NBT)."
+        display-item:
+          name: "&eDisplay item"
+          desc: "&7Use the item in your hand as the display."
         commands:
           name: "&eCommands"
-        item-upload:
-          name: "&eExact item"
-          desc: "&7Use the item in your hand as the reward."
+        map-image:
+          name: "&eMap image"
       item-lore:
         id: "&7ID: &f%id%"
         chance: "&7Chance: &f%chance%"

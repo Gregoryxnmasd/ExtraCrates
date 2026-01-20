@@ -35,9 +35,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
-import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -94,7 +91,15 @@ public class SessionManager {
     }
 
     public void shutdown() {
-        sessions.values().forEach(CrateSession::end);
+        sessions.values().forEach(session -> {
+            if (!session.isPreview() && !session.isRewardDelivered() && session.isWaitingForClaim()) {
+                Reward reward = session.getActiveReward();
+                if (reward != null) {
+                    setPendingReward(session.getPlayer(), session.getCrate(), reward);
+                }
+            }
+            session.end();
+        });
         sessions.clear();
         sessionRandoms.clear();
         cooldownTasks.values().forEach(BukkitRunnable::cancel);
@@ -460,22 +465,8 @@ public class SessionManager {
         }
     }
 
-    public void applySpectator(Player player, NamespacedKey modifierKey, double modifierValue) {
+    public void applySpectator(Player player) {
         player.setGameMode(GameMode.SPECTATOR);
-        AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
-        if (attribute != null) {
-            AttributeModifier modifier = new AttributeModifier(modifierKey.getKey(), modifierValue, AttributeModifier.Operation.ADD_NUMBER);
-            attribute.addModifier(modifier);
-        }
-    }
-
-    public void removeSpectatorModifier(Player player, NamespacedKey modifierKey) {
-        AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
-        if (attribute != null) {
-            attribute.getModifiers().stream()
-                    .filter(mod -> mod.getName().equals(modifierKey.getKey()))
-                    .forEach(attribute::removeModifier);
-        }
     }
 
     public void clearCrateEffects(Player player) {
@@ -483,28 +474,13 @@ public class SessionManager {
             return;
         }
         endSession(player.getUniqueId());
-        NamespacedKey modifierKey = resolveSpeedModifierKey();
-        removeSpectatorModifier(player, modifierKey);
-        player.setSpectatorTarget(null);
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            player.setSpectatorTarget(null);
+        }
         toggleHud(player, false);
         if (player.getGameMode() == GameMode.SPECTATOR) {
             player.setGameMode(GameMode.SURVIVAL);
         }
-        if (player.getWalkSpeed() <= 0.01f) {
-            player.setWalkSpeed(0.2f);
-        }
-        if (player.getFlySpeed() <= 0.01f) {
-            player.setFlySpeed(0.1f);
-        }
-    }
-
-    private NamespacedKey resolveSpeedModifierKey() {
-        String keyText = configLoader.getMainConfig().getString("cutscene.speed-modifier-key");
-        if (keyText == null || keyText.isBlank()) {
-            keyText = configLoader.getMainConfig().getString("cutscene.speed-modifier-uuid", "crate-cutscene");
-        }
-        NamespacedKey parsedKey = NamespacedKey.fromString(keyText.toLowerCase(Locale.ROOT), plugin);
-        return parsedKey != null ? parsedKey : new NamespacedKey(plugin, "crate-cutscene");
     }
 
     private void toggleHud(Player player, boolean hidden) {
@@ -566,6 +542,12 @@ public class SessionManager {
                 openState.markLockReleased();
             }
             return;
+        }
+        if (session.isWaitingForClaim()) {
+            Reward reward = session.getActiveReward();
+            if (reward != null) {
+                setPendingReward(session.getPlayer(), session.getCrate(), reward);
+            }
         }
         if (openState.isCooldownApplied()) {
             restoreCooldown(session.getPlayerId(), session.getCrateId(), openState.getPreviousCooldown());

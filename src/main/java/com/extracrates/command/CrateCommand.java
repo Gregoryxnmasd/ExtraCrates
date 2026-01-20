@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public class CrateCommand implements CommandExecutor, TabCompleter {
     private static final Map<String, FieldType> MASS_FIELDS = new LinkedHashMap<>();
@@ -451,7 +452,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             return filterByPrefix(options, current);
         }
         if (args.length == 5 && args[0].equalsIgnoreCase("rewards") && args[1].equalsIgnoreCase("edit")) {
-            options.addAll(List.of("display-name", "chance", "item", "amount", "custom-model", "glow", "commands", "hologram", "map-image"));
+            options.addAll(List.of("display-name", "chance", "commands", "hologram", "map-image"));
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("history")) {
@@ -931,8 +932,6 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         FileConfiguration config = loadConfig("rewards.yml");
         String path = "pools." + poolId + ".rewards." + rewardId;
         config.set(path + ".chance", 1.0);
-        config.set(path + ".item", "STONE");
-        config.set(path + ".amount", 1);
         config.set(path + ".display-name", rewardId);
         saveConfig(config, "rewards.yml");
         sender.sendMessage(languageManager.getMessage("command.reward-created", Map.of("pool", poolId, "reward", rewardId)));
@@ -964,6 +963,10 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         String field = args[4];
+        if (isRewardFieldBlocked(field)) {
+            sender.sendMessage(languageManager.getMessage("command.reward-field-disabled"));
+            return true;
+        }
         String value = joinArgs(args, 5);
         FileConfiguration config = loadConfig("rewards.yml");
         config.set("pools." + poolId + ".rewards." + rewardId + "." + field, parseValue(value));
@@ -1162,6 +1165,19 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             }
         }
         return trimmed;
+    }
+
+    private boolean isRewardFieldBlocked(String field) {
+        return Set.of(
+                "item",
+                "amount",
+                "custom-model",
+                "glow",
+                "enchantments",
+                "item-stack",
+                "reward-item",
+                "display-item"
+        ).contains(field.toLowerCase(Locale.ROOT));
     }
 
     private ParsedValue parseValue(String field, FieldType fieldType, String rawValue) {

@@ -129,6 +129,10 @@ public class CrateEditorMenu implements Listener {
                 text("editor.common.current", Map.of("value", crate != null ? crate.animation().path() : "")),
                 text("editor.common.click-select")
         )));
+        inventory.setItem(SLOT_DETAIL_REWARD_LOCATION, buildItem(Material.ENDER_PEARL, text("editor.crates.detail.reward-location.name"), List.of(
+                text("editor.crates.detail.reward-location.desc"),
+                text("editor.common.click-set")
+        )));
         inventory.setItem(SLOT_DETAIL_LOCK_MOVEMENT, buildItem(Material.IRON_BOOTS, text("editor.crates.detail.lock-movement.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(crate != null && crate.cutsceneSettings().lockMovement()))),
                 text("editor.crates.detail.lock-movement.desc"),
@@ -244,6 +248,7 @@ public class CrateEditorMenu implements Listener {
             case SLOT_DETAIL_TYPE -> toggleType(player, crateId);
             case SLOT_DETAIL_OPEN_MODE -> openOpenModeSelector(player, crateId);
             case SLOT_DETAIL_PATH -> openPathSelector(player, crateId);
+            case SLOT_DETAIL_REWARD_LOCATION -> setRewardLocation(player, crateId);
             case SLOT_DETAIL_LOCK_MOVEMENT -> toggleCutsceneLock(player, crateId, "movement",
                     languageManager.getRaw("editor.crate.label.lock-movement", java.util.Collections.emptyMap()));
             case SLOT_DETAIL_LOCK_HUD -> toggleCutsceneLock(player, crateId, "hud",

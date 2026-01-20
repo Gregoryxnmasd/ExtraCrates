@@ -2,6 +2,7 @@ package com.extracrates.model;
 
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Collections;
 import java.util.List;
@@ -14,6 +15,7 @@ public record Reward(
         String item,
         int amount,
         ItemStack itemStack,
+        ItemStack displayItemStack,
         String customModel,
         boolean glow,
         Map<String, Integer> enchantments,
@@ -28,6 +30,7 @@ public record Reward(
         enchantments = enchantments == null ? Map.of() : Map.copyOf(enchantments);
         commands = commands == null ? List.of() : List.copyOf(commands);
         itemStack = itemStack == null ? null : itemStack.clone();
+        displayItemStack = displayItemStack == null ? null : displayItemStack.clone();
     }
 
     @Override
@@ -35,15 +38,23 @@ public record Reward(
         return itemStack == null ? null : itemStack.clone();
     }
 
+    public ItemStack displayItemStack() {
+        return displayItemStack == null ? null : displayItemStack.clone();
+    }
+
     public static Reward fromSection(String id, ConfigurationSection section) {
         if (section == null) {
             return null;
         }
         double chance = section.getDouble("chance", 0);
-        String displayName = section.getString("display-name", id);
+        ItemStack displayItemStack = section.getItemStack("display-item");
+        ItemStack rewardItemStack = section.getItemStack("reward-item");
+        if (rewardItemStack == null) {
+            rewardItemStack = section.getItemStack("item-stack");
+        }
+        String displayName = resolveDisplayName(section.getString("display-name", id), displayItemStack);
         String item = section.getString("item", "STONE");
         int amount = section.getInt("amount", 1);
-        ItemStack itemStack = section.getItemStack("item-stack");
         String customModel = section.getString("custom-model", "");
         boolean glow = section.getBoolean("glow", false);
         ConfigurationSection enchantmentsSection = section.getConfigurationSection("enchantments");
@@ -61,7 +72,7 @@ public record Reward(
         RewardDisplayOverrides rewardDisplayOverrides = RewardDisplayOverrides.fromSection(section.getConfigurationSection("reward-display"));
         String hologram = section.getString("hologram", "");
         String mapImage = section.getString("map-image", "");
-        return new Reward(id, chance, displayName, item, amount, itemStack, customModel, glow, enchantments, commands, message, effects, rewardDisplayOverrides, hologram, mapImage);
+        return new Reward(id, chance, displayName, item, amount, rewardItemStack, displayItemStack, customModel, glow, enchantments, commands, message, effects, rewardDisplayOverrides, hologram, mapImage);
     }
 
     public record RewardMessage(String title, String subtitle) {
@@ -82,6 +93,18 @@ public record Reward(
         } catch (NumberFormatException ex) {
             return 0;
         }
+    }
+
+    private static String resolveDisplayName(String fallback, ItemStack displayItemStack) {
+        if (displayItemStack == null) {
+            return fallback;
+        }
+        ItemMeta meta = displayItemStack.getItemMeta();
+        if (meta == null || meta.displayName() == null) {
+            return fallback;
+        }
+        String serialized = com.extracrates.util.TextUtil.serializeLegacy(meta.displayName());
+        return serialized.isBlank() ? fallback : serialized;
     }
 
     public record RewardEffects(String particles, String sound, String animation) {

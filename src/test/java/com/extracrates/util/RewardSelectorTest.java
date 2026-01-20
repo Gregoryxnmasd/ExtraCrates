@@ -67,6 +67,7 @@ class RewardSelectorTest {
                 "STONE",
                 1,
                 null,
+                null,
                 "",
                 false,
                 null,
