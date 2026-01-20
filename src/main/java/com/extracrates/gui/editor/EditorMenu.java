@@ -20,11 +20,11 @@ import java.util.List;
 
 @SuppressWarnings("unused")
 public class EditorMenu implements Listener {
-    // Layout: acciones principales al centro (fila media), navegación en la fila inferior.
-    private static final int SLOT_ACTION_CRATES = 10;
-    private static final int SLOT_ACTION_REWARDS = 12;
-    private static final int SLOT_ACTION_PATHS = 14;
-    private static final int SLOT_ACTION_KEYS = 16;
+    // Layout: acciones principales en la fila superior, fila media vacía, navegación en la fila inferior.
+    private static final int SLOT_ACTION_CRATES = 1;
+    private static final int SLOT_ACTION_REWARDS = 3;
+    private static final int SLOT_ACTION_PATHS = 5;
+    private static final int SLOT_ACTION_KEYS = 7;
     private static final int SLOT_NAV_CLOSE = 22;
     private static final int[] NAV_FILLER_SLOTS = {18, 19, 20, 21, 23, 24, 25, 26};
 

@@ -336,6 +336,18 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     }
                     return true;
                 }
+                if (action.equalsIgnoreCase("marker")) {
+                    if (routeEditorManager.hasNoSession(player)) {
+                        sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
+                        return true;
+                    }
+                    if (args.length < 3 || !args[2].equalsIgnoreCase("move")) {
+                        sender.sendMessage(languageManager.getMessage("command.route-usage"));
+                        return true;
+                    }
+                    routeEditorManager.moveMarkerToPlayer(player);
+                    return true;
+                }
                 if (action.equalsIgnoreCase("add") || action.equalsIgnoreCase("capture")) {
                     if (routeEditorManager.hasNoSession(player)) {
                         sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
@@ -459,9 +471,16 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {
-            options.addAll(List.of("stop", "cancel", "add", "capture"));
+            options.addAll(List.of("stop", "cancel", "add", "capture", "marker"));
             options.addAll(configLoader.getPaths().keySet());
             return filterByPrefix(options, current);
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("route")) {
+            String action = args[1].toLowerCase(Locale.ROOT);
+            if (action.equals("marker")) {
+                options.add("move");
+                return filterByPrefix(options, current);
+            }
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("migrate")) {
             options.addAll(List.of("sql", "local"));
