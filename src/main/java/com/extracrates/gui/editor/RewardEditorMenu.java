@@ -9,8 +9,6 @@ import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -29,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 public class RewardEditorMenu implements Listener {
@@ -40,7 +37,12 @@ public class RewardEditorMenu implements Listener {
     private static final int SLOT_DETAIL_BACK = 18;
     private static final int SLOT_DETAIL_DELETE = 26;
     private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 22, 23, 24, 25};
+
+    private static final int SLOT_DETAIL_DISPLAY_NAME = 0;
+    private static final int SLOT_DETAIL_CHANCE = 1;
+    private static final int SLOT_DETAIL_ITEM_UPLOAD = 2;
+    private static final int SLOT_DETAIL_COMMANDS = 3;
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -130,40 +132,21 @@ public class RewardEditorMenu implements Listener {
             }
         }
         Inventory inventory = Bukkit.createInventory(player, 27, rewardTitle(rewardId));
-        inventory.setItem(9, buildItem(Material.NAME_TAG, text("editor.rewards.reward.detail.display-name.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_DISPLAY_NAME, buildItem(Material.NAME_TAG, text("editor.rewards.reward.detail.display-name.name"), List.of(
                 text("editor.common.current", Map.of("value", reward != null ? reward.displayName() : rewardId)),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(10, buildItem(Material.GOLD_NUGGET, text("editor.rewards.reward.detail.chance.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_CHANCE, buildItem(Material.GOLD_NUGGET, text("editor.rewards.reward.detail.chance.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.chance() : 0))),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(11, buildItem(Material.CHEST, text("editor.rewards.reward.detail.item.name"), List.of(
-                text("editor.common.current", Map.of("value", reward != null ? reward.item() : "STONE")),
-                text("editor.common.click-edit")
+        inventory.setItem(SLOT_DETAIL_ITEM_UPLOAD, buildItem(Material.CHEST, text("editor.rewards.reward.detail.item-upload.name"), List.of(
+                text("editor.common.current", Map.of("value", resolveRewardItemLabel(reward))),
+                text("editor.rewards.reward.detail.item-upload.desc"),
+                text("editor.common.click-set")
         )));
-        inventory.setItem(12, buildItem(Material.PAPER, text("editor.rewards.reward.detail.amount.name"), List.of(
-                text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.amount() : 1))),
-                text("editor.common.click-edit")
-        )));
-        inventory.setItem(13, buildItem(Material.COMMAND_BLOCK, text("editor.rewards.reward.detail.commands.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_COMMANDS, buildItem(Material.COMMAND_BLOCK, text("editor.rewards.reward.detail.commands.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.commands().size() : 0))),
-                text("editor.common.click-edit")
-        )));
-        inventory.setItem(14, buildItem(Material.ENCHANTED_BOOK, text("editor.rewards.reward.detail.enchantments.name"), List.of(
-                text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.enchantments().size() : 0))),
-                text("editor.common.click-edit")
-        )));
-        inventory.setItem(15, buildItem(Material.GLOWSTONE_DUST, text("editor.rewards.reward.detail.glow.name"), List.of(
-                text("editor.common.current", Map.of("value", String.valueOf(reward != null && reward.glow()))),
-                text("editor.common.click-edit")
-        )));
-        inventory.setItem(16, buildItem(Material.SLIME_BALL, text("editor.rewards.reward.detail.custom-model.name"), List.of(
-                text("editor.common.current", Map.of("value", reward != null ? emptyFallback(reward.customModel()) : "")),
-                text("editor.common.click-edit")
-        )));
-        inventory.setItem(17, buildItem(Material.FILLED_MAP, text("editor.rewards.reward.detail.map-image.name"), List.of(
-                text("editor.common.current", Map.of("value", reward != null ? emptyFallback(reward.mapImage()) : "")),
                 text("editor.common.click-edit")
         )));
         fillDetailNavigation(inventory);
@@ -282,16 +265,12 @@ public class RewardEditorMenu implements Listener {
 
     private void handleRewardDetailClick(Player player, String poolId, String rewardId, int slot) {
         switch (slot) {
-            case 10 -> promptRewardField(player, poolId, rewardId, "display-name", "editor.reward.prompt.display-name");
-            case 11 -> promptRewardField(player, poolId, rewardId, "chance", "editor.reward.prompt.chance");
-            case 12 -> promptRewardField(player, poolId, rewardId, "item", "editor.reward.prompt.item");
-            case 13 -> promptRewardField(player, poolId, rewardId, "amount", "editor.reward.prompt.amount");
-            case 14 -> promptRewardField(player, poolId, rewardId, "commands", "editor.reward.prompt.commands");
-            case 15 -> promptRewardField(player, poolId, rewardId, "enchantments", "editor.reward.prompt.enchantments");
-            case 16 -> promptRewardField(player, poolId, rewardId, "glow", "editor.reward.prompt.glow");
-            case 19 -> promptRewardField(player, poolId, rewardId, "custom-model", "editor.reward.prompt.custom-model");
-            case 20 -> promptRewardField(player, poolId, rewardId, "map-image", "editor.reward.prompt.map-image");
-            case 22 -> openPoolDetail(player, poolId);
+            case SLOT_DETAIL_DISPLAY_NAME -> promptRewardField(player, poolId, rewardId, "display-name", "editor.reward.prompt.display-name");
+            case SLOT_DETAIL_CHANCE -> promptRewardField(player, poolId, rewardId, "chance", "editor.reward.prompt.chance");
+            case SLOT_DETAIL_ITEM_UPLOAD -> setRewardItemFromHand(player, poolId, rewardId);
+            case SLOT_DETAIL_COMMANDS -> promptRewardField(player, poolId, rewardId, "commands", "editor.reward.prompt.commands");
+            case SLOT_DETAIL_DELETE -> confirmDeleteReward(player, poolId, rewardId);
+            case SLOT_DETAIL_BACK -> openPoolDetail(player, poolId);
             default -> {
             }
         }
@@ -413,6 +392,17 @@ public class RewardEditorMenu implements Listener {
         }, () -> openRewardDetail(player, poolId, rewardId));
     }
 
+    private void setRewardItemFromHand(Player player, String poolId, String rewardId) {
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (item == null || item.getType() == Material.AIR) {
+            player.sendMessage(languageManager.getMessage("editor.reward.error.missing-hand-item"));
+            return;
+        }
+        updateRewardItemStack(poolId, rewardId, item);
+        player.sendMessage(languageManager.getMessage("editor.reward.success.reward-updated"));
+        openRewardDetail(player, poolId, rewardId);
+    }
+
     private void createPool(String id) {
         FileConfiguration config = loadConfig();
         String path = "pools." + id;
@@ -474,13 +464,22 @@ public class RewardEditorMenu implements Listener {
         String basePath = "pools." + poolId + ".rewards." + rewardId + "." + field;
         if ("commands".equals(field) && value instanceof List<?> listValue) {
             config.set(basePath, listValue.isEmpty() ? null : listValue);
-        } else if ("enchantments".equals(field) && value instanceof Map<?, ?> mapValue) {
-            config.set(basePath, mapValue.isEmpty() ? null : mapValue);
-        } else if (("custom-model".equals(field) || "map-image".equals(field)) && value instanceof String stringValue) {
-            config.set(basePath, stringValue.isBlank() ? null : stringValue);
         } else {
             config.set(basePath, value);
         }
+        saveConfig(config);
+    }
+
+    private void updateRewardItemStack(String poolId, String rewardId, ItemStack itemStack) {
+        FileConfiguration config = loadConfig();
+        String basePath = "pools." + poolId + ".rewards." + rewardId;
+        config.set(basePath + ".item-stack", itemStack.clone());
+        config.set(basePath + ".item", itemStack.getType().name().toLowerCase(Locale.ROOT));
+        config.set(basePath + ".amount", itemStack.getAmount());
+        config.set(basePath + ".custom-model", null);
+        config.set(basePath + ".glow", null);
+        config.set(basePath + ".enchantments", null);
+        config.set(basePath + ".map-image", null);
         saveConfig(config);
     }
 
@@ -510,7 +509,6 @@ public class RewardEditorMenu implements Listener {
     private ItemStack buildPoolItem(RewardPool pool) {
         List<String> lore = new ArrayList<>();
         lore.add(text("editor.rewards.list.item.lore.id", Map.of("id", pool.id())));
-        lore.add(text("editor.rewards.list.item.lore.roll-count", Map.of("roll_count", String.valueOf(pool.rollCount()))));
         lore.add(text("editor.rewards.list.item.lore.rewards", Map.of("rewards", String.valueOf(pool.rewards().size()))));
         lore.add(text("editor.common.action.left-edit"));
         lore.add(text("editor.common.action.right-clone"));
@@ -536,7 +534,7 @@ public class RewardEditorMenu implements Listener {
         List<String> lore = new ArrayList<>();
         lore.add(text("editor.rewards.reward.item-lore.id", Map.of("id", reward.id())));
         lore.add(text("editor.rewards.reward.item-lore.chance", Map.of("chance", String.valueOf(reward.chance()))));
-        lore.add(text("editor.rewards.reward.item-lore.item", Map.of("item", reward.item())));
+        lore.add(text("editor.rewards.reward.item-lore.item", Map.of("item", resolveRewardItemLabel(reward))));
         lore.add(text("editor.common.action.left-edit"));
         lore.add(text("editor.common.action.right-clone"));
         lore.add(text("editor.common.action.shift-right-delete"));
@@ -564,12 +562,7 @@ public class RewardEditorMenu implements Listener {
         return switch (field) {
             case "display-name" -> ValidationResult.valid(trimmed);
             case "chance" -> parseChance(trimmed);
-            case "item" -> validateMaterial(trimmed);
-            case "amount" -> parseAmount(trimmed);
             case "commands" -> parseCommands(trimmed);
-            case "enchantments" -> parseEnchantments(trimmed);
-            case "glow" -> parseGlow(trimmed);
-            case "custom-model", "map-image" -> parseOptionalText(trimmed);
             default -> ValidationResult.valid(trimmed);
         };
     }
@@ -589,39 +582,19 @@ public class RewardEditorMenu implements Listener {
         }
     }
 
-    private ValidationResult parseAmount(String input) {
-        try {
-            int value = Integer.parseInt(input);
-            if (value <= 0) {
-                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-amount-min"));
+    private String resolveRewardItemLabel(Reward reward) {
+        if (reward == null) {
+            return text("editor.common.none");
+        }
+        ItemStack stack = reward.itemStack();
+        if (stack != null) {
+            ItemMeta meta = stack.getItemMeta();
+            if (meta != null && meta.hasDisplayName()) {
+                return TextUtil.serializeLegacy(meta.displayName());
             }
-            return ValidationResult.valid(value);
-        } catch (NumberFormatException ex) {
-            return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-amount-number"));
+            return stack.getType().name().toLowerCase(Locale.ROOT);
         }
-    }
-
-    private ValidationResult validateMaterial(String input) {
-        Material material = Material.matchMaterial(input.toUpperCase(Locale.ROOT));
-        if (material == null) {
-            return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-material", Map.of("material", input)));
-        }
-        return ValidationResult.valid(material.name().toLowerCase(Locale.ROOT));
-    }
-
-    private ValidationResult parseGlow(String input) {
-        Optional<Boolean> value = parseBoolean(input);
-        if (value.isEmpty()) {
-            return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-glow"));
-        }
-        return ValidationResult.valid(value.get());
-    }
-
-    private ValidationResult parseOptionalText(String input) {
-        if (isNoneValue(input)) {
-            return ValidationResult.valid("");
-        }
-        return ValidationResult.valid(input);
+        return reward.item();
     }
 
     private ValidationResult parseCommands(String input) {
@@ -641,62 +614,9 @@ public class RewardEditorMenu implements Listener {
         return ValidationResult.valid(commands);
     }
 
-    private ValidationResult parseEnchantments(String input) {
-        if (isNoneValue(input)) {
-            return ValidationResult.valid(Map.of());
-        }
-        Map<String, Integer> enchantments = new HashMap<>();
-        for (String entry : input.split(",")) {
-            String trimmed = entry.trim();
-            if (trimmed.isEmpty()) {
-                continue;
-            }
-            String[] parts = trimmed.split(":", 2);
-            if (parts.length != 2) {
-                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-enchant-format"));
-            }
-            String key = parts[0].trim().toLowerCase(Locale.ROOT);
-            String levelText = parts[1].trim();
-            if (key.isEmpty() || levelText.isEmpty()) {
-                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-enchant-format"));
-            }
-            Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(key));
-            if (enchantment == null) {
-                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-enchant-key", Map.of("key", key)));
-            }
-            int level;
-            try {
-                level = Integer.parseInt(levelText);
-            } catch (NumberFormatException ex) {
-                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-enchant-level", Map.of("key", key)));
-            }
-            if (level <= 0) {
-                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-enchant-level", Map.of("key", key)));
-            }
-            enchantments.put(key, level);
-        }
-        if (enchantments.isEmpty()) {
-            return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-enchantments"));
-        }
-        return ValidationResult.valid(enchantments);
-    }
-
-    private Optional<Boolean> parseBoolean(String input) {
-        String normalized = input.trim().toLowerCase(Locale.ROOT);
-        return switch (normalized) {
-            case "true", "yes", "si", "on" -> Optional.of(true);
-            case "false", "no", "off" -> Optional.of(false);
-            default -> Optional.empty();
-        };
-    }
-
     private boolean isNoneValue(String input) {
         String normalized = input.trim().toLowerCase(Locale.ROOT);
         return normalized.equals("none") || normalized.equals("null") || normalized.equals("clear");
-    }
-
-    private String emptyFallback(String value) {
-        return value == null || value.isBlank() ? text("editor.common.none") : value;
     }
 
     private record ValidationResult(boolean valid, Object value, Component errorMessage) {

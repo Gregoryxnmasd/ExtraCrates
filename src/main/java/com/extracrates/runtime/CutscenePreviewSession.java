@@ -3,10 +3,12 @@ package com.extracrates.runtime;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.util.CutsceneTimeline;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Particle;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.List;
 
@@ -17,6 +19,10 @@ public class CutscenePreviewSession {
     private final Particle particle;
     private final Runnable onFinish;
     private BukkitRunnable task;
+    private BukkitRunnable finishTask;
+    private Entity cameraEntity;
+    private GameMode originalGameMode;
+    private Location originalLocation;
     private boolean finished;
 
     public CutscenePreviewSession(
@@ -40,27 +46,31 @@ public class CutscenePreviewSession {
             return;
         }
         int totalTicks = (int) Math.max(1, path.getDurationSeconds() * 20);
-        int maxParticlesPerTick = Math.max(1, plugin.getConfig().getInt("cutscene.preview-particles-per-tick", 6));
-        int baseParticlesPerTick = Math.max(1, (int) Math.ceil(timeline.size() / (double) totalTicks));
+        originalGameMode = player.getGameMode();
+        originalLocation = player.getLocation();
+        player.setGameMode(GameMode.SPECTATOR);
+        Location start = timeline.getFirst();
+        boolean armorStandInvisible = plugin.getConfig().getBoolean("cutscene.armorstand-invisible", true);
+        String cameraEntityType = plugin.getConfig().getString("cutscene.camera-entity", "armor_stand");
+        cameraEntity = CameraEntityFactory.spawn(start, cameraEntityType, armorStandInvisible);
         task = new BukkitRunnable() {
             int index = 0;
             int elapsedTicks = 0;
+            final int lastIndex = timeline.size() - 1;
 
             @Override
             public void run() {
-                if (index >= timeline.size()) {
+                if (elapsedTicks >= totalTicks) {
                     cancel();
-                    finish();
+                    scheduleFinishDelay();
                     return;
                 }
-                int ticksRemaining = Math.max(1, totalTicks - elapsedTicks);
-                int pointsRemaining = timeline.size() - index;
-                int desiredPerTick = (int) Math.ceil(pointsRemaining / (double) ticksRemaining);
-                int particlesPerTick = Math.min(maxParticlesPerTick, Math.max(baseParticlesPerTick, desiredPerTick));
-                Location nextPoint = timeline.get(index);
-                int throttledPerTick = applyDistanceThrottle(particlesPerTick, nextPoint);
-                for (int i = 0; i < throttledPerTick && index < timeline.size(); i++) {
-                    Location point = timeline.get(index++);
+                double progress = totalTicks <= 1 ? 1.0 : elapsedTicks / (double) (totalTicks - 1);
+                int targetIndex = lastIndex <= 0 ? 0 : (int) Math.round(progress * lastIndex);
+                Location point = timeline.get(Math.min(lastIndex, Math.max(0, targetIndex)));
+                cameraEntity.teleport(point);
+                player.setSpectatorTarget(cameraEntity);
+                if (particle != null) {
                     player.getWorld().spawnParticle(particle, point, 1, 0, 0, 0, 0);
                 }
                 elapsedTicks++;
@@ -73,6 +83,9 @@ public class CutscenePreviewSession {
         if (task != null) {
             task.cancel();
         }
+        if (finishTask != null) {
+            finishTask.cancel();
+        }
         finish();
     }
 
@@ -81,14 +94,27 @@ public class CutscenePreviewSession {
             return;
         }
         finished = true;
+        if (cameraEntity != null && cameraEntity.isValid()) {
+            cameraEntity.remove();
+        }
+        if (originalGameMode != null) {
+            player.setGameMode(originalGameMode);
+        }
+        if (originalLocation != null) {
+            player.teleport(originalLocation);
+        }
         if (onFinish != null) {
             onFinish.run();
         }
     }
 
-    private int applyDistanceThrottle(int particlesPerTick, Location point) {
-        double distance = player.getLocation().distance(point);
-        double factor = Math.max(1.0, distance / 16.0);
-        return Math.max(1, (int) Math.floor(particlesPerTick / factor));
+    private void scheduleFinishDelay() {
+        finishTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                finish();
+            }
+        };
+        finishTask.runTaskLater(plugin, 40L);
     }
 }

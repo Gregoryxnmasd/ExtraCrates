@@ -3,13 +3,13 @@ command:
   only-players: "&cSolo para jugadores."
   no-permission: "&cNo tienes permiso."
   open-usage: "&cUso: /crates %sub% <crate> &7(o) &c/crates %sub% <jugador> <crate>"
-  route-usage: "&cUso: /crates route <path|stop|cancel|add|capture|source|marker> [valor]"
+  route-usage: "&cUso: /crates route <path|stop|cancel|add|capture>"
   route-saved: "&aRuta guardada."
   route-no-active-editor: "&cNo tienes una sesión activa del editor de rutas."
   route-canceled: "&eEditor de rutas cancelado."
   route-already-active: "&cYa tienes una sesión activa del editor de rutas."
   route-started: "&aEditor de rutas iniciado para '%path%'."
-  route-instructions: "&7Usa &f/crates route add&7 para capturar la posición del jugador o marker. Usa &f/crates route source <player|marker>&7 y guarda con &f/crates route stop&7."
+  route-instructions: "&7Usa &f/crates route add&7 para capturar tu posición actual. Guarda con &f/crates route stop&7."
   cutscene-usage: "&cUso: /crates cutscene test <id>"
   cutscene-path-not-found: "&cRuta de cutscene no encontrada."
   cutscene-preview-started: "&aPreview iniciada para ruta '%path%'."
@@ -98,6 +98,9 @@ editor:
     click-toggle: "&fClick para alternar."
     click-preview: "&fClick para previsualizar."
     click-start-editor: "&fClick para iniciar el editor."
+    click-set: "&fClick para establecer."
+    prev-page: "&ePágina anterior"
+    next-page: "&ePágina siguiente"
     action:
       left-edit: "&fClick izquierdo: editar."
       right-clone: "&fClick derecho: clonar."
@@ -171,6 +174,9 @@ editor:
         name: "&eModo de apertura"
       path:
         name: "&eRuta de cutscene"
+      reward-location:
+        name: "&eUbicación de reward"
+        desc: "&7Define dónde aparecerá el item de reward."
       lock-movement:
         name: "&eBloquear movimiento"
         desc: "&7Evita que el jugador se mueva durante la cutscene."
@@ -230,6 +236,7 @@ editor:
       updated: "&aCrate actualizado."
       type-updated: "&aTipo de crate actualizado."
       lock-updated: "&aBloqueo actualizado."
+      reward-location-updated: "&aUbicación de reward actualizada."
   paths:
     list:
       title: "&8Editor de Paths"
@@ -250,32 +257,43 @@ editor:
       edit-points:
         name: "&eEditar puntos"
         free-mode: "&7Usa &f/crates route add&7 para capturar puntos."
-        source: "&7Fuente: &f/crates route source <player|marker>&7."
         save: "&7Guarda con &f/crates route stop&7."
       duration:
         name: "&eDuración"
-        desc: "&7Tiempo total en segundos."
+        desc: "&7Duración total en segundos."
       smoothing:
         name: "&eSmoothing"
-        desc: "&7Suavizado de la ruta entre puntos."
+        desc: "&7Selecciona el modo de suavizado entre puntos."
       particles:
         name: "&ePartículas"
-        desc: "&7Partícula usada en la preview."
+        desc: "&7Selecciona la partícula usada en la preview."
       constant-speed:
         name: "&eVelocidad constante"
-        desc: "&7Mantiene la velocidad uniforme en toda la ruta."
+        desc: "&7Mantiene la velocidad uniforme sin aceleraciones."
       preview:
         name: "&ePreview"
-        lore: "&7Muestra partículas sobre la ruta."
+        lore: "&7Previsualiza la cutscene y se detiene sola."
       step-resolution:
         name: "&eResolución de paso"
-        desc: "&7Distancia entre puntos generados en la ruta."
+        desc: "&7Distancia en bloques entre puntos generados."
       delete:
         name: "&cBorrar path"
         lore: "&7Eliminar este path."
       back:
         name: "&eVolver"
         lore: "&7Regresar al listado de paths."
+    smoothing:
+      title: "&8Smoothing: %path%"
+      option:
+        name: "&e%mode%"
+        desc:
+          linear: "&7Movimiento directo sin easing."
+          ease-in: "&7Empieza lento y acelera al final."
+          ease-out: "&7Empieza rápido y desacelera al final."
+          ease-in-out: "&7Suavizado completo al inicio y final."
+          smoothstep: "&7Suavizado completo al inicio y final."
+    particles:
+      title: "&8Partículas: %path%"
   path:
     prompt:
       new-id: "Ingresa el ID del path"
@@ -317,7 +335,6 @@ editor:
       item:
         lore:
           id: "&7ID: &f%id%"
-          roll-count: "&7Tiradas: &f%roll_count%"
           rewards: "&7Recompensas: &f%rewards%"
           hint: "&7Click izquierdo para editar. Click derecho para clonar. Shift+click derecho para borrar."
     pool:
@@ -336,7 +353,7 @@ editor:
     reward:
       title: "&8Reward: %reward%"
       current: "&7Actual: &f%value%"
-      click-edit: "&7Click para editar."
+      click-edit: "&fClick para editar."
       delete:
         name: "&cBorrar reward"
         lore: "&7Eliminar esta reward."
@@ -348,20 +365,11 @@ editor:
           name: "&eNombre"
         chance:
           name: "&eChance"
-        item:
-          name: "&eItem"
-        amount:
-          name: "&eCantidad"
         commands:
           name: "&eComandos"
-        enchantments:
-          name: "&eEncantamientos"
-        glow:
-          name: "&eGlow"
-        custom-model:
-          name: "&eCustom model"
-        map-image:
-          name: "&eImagen de mapa"
+        item-upload:
+          name: "&eItem exacto"
+          desc: "&7Usa el item en tu mano como reward."
       item-lore:
         id: "&7ID: &f%id%"
         chance: "&7Chance: &f%chance%"
@@ -375,7 +383,7 @@ editor:
       new-reward-id: "Ingresa el ID de la reward"
       clone-reward-id: "Ingresa el nuevo ID para clonar %id%"
       display-name: "Ingresa el nombre visible"
-      chance: "Ingresa el chance"
+      chance: "Ingresa el chance (%)"
       item: "Ingresa el material"
       amount: "Ingresa la cantidad"
       commands: "Ingresa comandos (separa con ;)"
@@ -403,18 +411,11 @@ editor:
       reward-updated: "&aReward actualizada."
     error:
       invalid-value: "&cPor favor ingresa un valor válido."
+      missing-hand-item: "&cDebes tener un item en la mano."
       invalid-chance-min: "&cEl chance debe ser 0,01 o mayor."
       invalid-chance-max: "&cEl chance debe ser 100 o menor."
       invalid-chance-number: "&cEl chance debe ser un número."
-      invalid-amount-min: "&cLa cantidad debe ser al menos 1."
-      invalid-amount-number: "&cLa cantidad debe ser un número."
-      invalid-material: "&cMaterial inválido: %material%"
-      invalid-glow: "&cGlow debe ser true/false."
       invalid-commands: "&cIngresa al menos un comando."
-      invalid-enchant-format: "&cLos encantamientos deben ser llave:nivel."
-      invalid-enchant-key: "&cEncantamiento desconocido: %key%"
-      invalid-enchant-level: "&cNivel inválido para %key%"
-      invalid-enchantments: "&cIngresa al menos un encantamiento."
   keys:
     title:
       search: "&8Llaves - Buscar"

@@ -49,16 +49,13 @@ resourcepack:
   use-custom-model-data: true
   allow-animated-items: true
   allow-map-images: true
-  pumpkin-overlay-model: "cutscene_mask"
   model-data:
     cutscene_mask: 1001
 cutscene:
-  overlay-model: "cutscene_mask"
   default-speed: 0.35
   constant-speed: true
   smooth-tick: 2
   reroll-enable-ticks: 0
-  pumpkin-model: "cutscene_mask"
   slowdown-modifier: -10.0
   min-teleport-distance: 0.05
   hide-others: true

@@ -455,9 +455,8 @@ public record CrateDefinition(
         }
     }
 
-    public record CutsceneSettings(String overlayModel, boolean lockMovement, boolean hideHud, boolean commandsEnabled, MusicSettings musicSettings) {
+    public record CutsceneSettings(boolean lockMovement, boolean hideHud, boolean commandsEnabled, MusicSettings musicSettings) {
         public static CutsceneSettings fromSections(ConfigurationSection section, ConfigurationSection defaults) {
-            String overlayModel = readString(section, "overlay-model", defaults, "overlay-model", "pumpkin-model", "");
             boolean lockMovement = readBoolean(section, "locks.movement", defaults, "locks.movement", true);
             boolean hideHud = readBoolean(section, "locks.hud", defaults, "locks.hud", true);
             boolean commandsEnabled = readBoolean(section, "commands-enabled", defaults, "commands-enabled", true);
@@ -465,22 +464,7 @@ public record CrateDefinition(
                     section == null ? null : section.getConfigurationSection("music"),
                     defaults == null ? null : defaults.getConfigurationSection("music")
             );
-            return new CutsceneSettings(overlayModel, lockMovement, hideHud, commandsEnabled, musicSettings);
-        }
-
-        private static String readString(ConfigurationSection section, String key, ConfigurationSection defaults, String defaultKey, String fallbackKey, String fallback) {
-            if (section != null && section.isString(key)) {
-                return section.getString(key, fallback);
-            }
-            if (defaults != null) {
-                if (defaults.isString(defaultKey)) {
-                    return defaults.getString(defaultKey, fallback);
-                }
-                if (fallbackKey != null && defaults.isString(fallbackKey)) {
-                    return defaults.getString(fallbackKey, fallback);
-                }
-            }
-            return fallback;
+            return new CutsceneSettings(lockMovement, hideHud, commandsEnabled, musicSettings);
         }
 
         private static boolean readBoolean(ConfigurationSection section, String key, ConfigurationSection defaults, String defaultKey, boolean fallback) {

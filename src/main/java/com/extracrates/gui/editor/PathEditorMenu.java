@@ -23,6 +23,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -38,7 +39,22 @@ public class PathEditorMenu implements Listener {
     private static final int SLOT_DETAIL_BACK = 18;
     private static final int SLOT_DETAIL_DELETE = 26;
     private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 23, 24, 25};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 22, 23, 24, 25};
+
+    private static final int SLOT_DETAIL_EDIT_POINTS = 0;
+    private static final int SLOT_DETAIL_DURATION = 1;
+    private static final int SLOT_DETAIL_SMOOTHING = 2;
+    private static final int SLOT_DETAIL_PARTICLES = 3;
+    private static final int SLOT_DETAIL_CONSTANT_SPEED = 4;
+    private static final int SLOT_DETAIL_PREVIEW = 5;
+    private static final int SLOT_DETAIL_STEP_RESOLUTION = 6;
+    private static final int SLOT_SELECTOR_BACK = 18;
+    private static final int[] SELECTOR_NAV_FILLER_SLOTS = {19, 20, 21, 22, 23, 24, 25, 26};
+    private static final List<String> SMOOTHING_OPTIONS = List.of("linear", "ease-in", "ease-out", "ease-in-out", "smoothstep");
+    private static final int SLOT_PARTICLE_PREV = 45;
+    private static final int SLOT_PARTICLE_BACK = 49;
+    private static final int SLOT_PARTICLE_NEXT = 53;
+    private static final int PARTICLES_PER_PAGE = 45;
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -49,6 +65,7 @@ public class PathEditorMenu implements Listener {
     private final Component title;
     private final Map<UUID, String> activePath = new HashMap<>();
     private final Map<UUID, CutscenePreviewSession> previewSessions = new HashMap<>();
+    private final Map<UUID, Integer> particlePages = new HashMap<>();
 
     public PathEditorMenu(
             ExtraCratesPlugin plugin,
@@ -95,37 +112,35 @@ public class PathEditorMenu implements Listener {
         refreshPathCache();
         CutscenePath path = configLoader.getPaths().get(pathId);
         Inventory inventory = Bukkit.createInventory(player, 27, detailTitle(pathId));
-        inventory.setItem(9, buildItem(Material.MAP, text("editor.paths.detail.edit-points.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_EDIT_POINTS, buildItem(Material.MAP, text("editor.paths.detail.edit-points.name"), List.of(
                 text("editor.common.click-start-editor"),
-                text("editor.paths.detail.edit-points.free-mode"),
-                text("editor.paths.detail.edit-points.source"),
                 text("editor.paths.detail.edit-points.save")
         )));
-        inventory.setItem(10, buildItem(Material.CLOCK, text("editor.paths.detail.duration.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_DURATION, buildItem(Material.CLOCK, text("editor.paths.detail.duration.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(path != null ? path.getDurationSeconds() : 4.0))),
                 text("editor.paths.detail.duration.desc"),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(11, buildItem(Material.PAPER, text("editor.paths.detail.smoothing.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_SMOOTHING, buildItem(Material.PAPER, text("editor.paths.detail.smoothing.name"), List.of(
                 text("editor.common.current", Map.of("value", path != null ? path.getSmoothing() : "linear")),
                 text("editor.paths.detail.smoothing.desc"),
-                text("editor.common.click-edit")
+                text("editor.common.click-select")
         )));
-        inventory.setItem(12, buildItem(Material.FIREWORK_STAR, text("editor.paths.detail.particles.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_PARTICLES, buildItem(Material.FIREWORK_STAR, text("editor.paths.detail.particles.name"), List.of(
                 text("editor.common.current", Map.of("value", path != null ? path.getParticlePreview() : "")),
                 text("editor.paths.detail.particles.desc"),
-                text("editor.common.click-edit")
+                text("editor.common.click-select")
         )));
-        inventory.setItem(13, buildItem(Material.REPEATER, text("editor.paths.detail.constant-speed.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_CONSTANT_SPEED, buildItem(Material.REPEATER, text("editor.paths.detail.constant-speed.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(path != null && path.isConstantSpeed()))),
                 text("editor.paths.detail.constant-speed.desc"),
                 text("editor.common.click-toggle")
         )));
-        inventory.setItem(14, buildItem(Material.ENDER_EYE, text("editor.paths.detail.preview.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_PREVIEW, buildItem(Material.ENDER_EYE, text("editor.paths.detail.preview.name"), List.of(
                 text("editor.common.click-preview"),
                 text("editor.paths.detail.preview.lore")
         )));
-        inventory.setItem(15, buildItem(Material.COMPARATOR, text("editor.paths.detail.step-resolution.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_STEP_RESOLUTION, buildItem(Material.COMPARATOR, text("editor.paths.detail.step-resolution.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(path != null ? path.getStepResolution() : 0.15))),
                 text("editor.paths.detail.step-resolution.desc"),
                 text("editor.common.click-edit")
@@ -155,6 +170,16 @@ public class PathEditorMenu implements Listener {
         if (pathId != null && viewTitle.equals(detailTitle(pathId))) {
             event.setCancelled(true);
             handleDetailClick(player, pathId, event.getSlot());
+            return;
+        }
+        if (pathId != null && viewTitle.equals(smoothingTitle(pathId))) {
+            event.setCancelled(true);
+            handleSmoothingSelection(player, pathId, event.getSlot());
+            return;
+        }
+        if (pathId != null && viewTitle.equals(particleTitle(pathId))) {
+            event.setCancelled(true);
+            handleParticleSelection(player, pathId, event.getSlot());
         }
     }
 
@@ -197,13 +222,13 @@ public class PathEditorMenu implements Listener {
 
     private void handleDetailClick(Player player, String pathId, int slot) {
         switch (slot) {
-            case 9 -> startPointEditing(player, pathId);
-            case 10 -> promptField(player, pathId, "duration-seconds", "editor.path.prompt.duration");
-            case 11 -> promptField(player, pathId, "smoothing", "editor.path.prompt.smoothing");
-            case 12 -> promptField(player, pathId, "particle-preview", "editor.path.prompt.particle-preview");
-            case 13 -> toggleConstantSpeed(player, pathId);
-            case 14 -> togglePreview(player, pathId);
-            case 15 -> promptField(player, pathId, "step-resolution", "editor.path.prompt.step-resolution");
+            case SLOT_DETAIL_EDIT_POINTS -> startPointEditing(player, pathId);
+            case SLOT_DETAIL_DURATION -> promptField(player, pathId, "duration-seconds", "editor.path.prompt.duration");
+            case SLOT_DETAIL_SMOOTHING -> openSmoothingSelector(player, pathId);
+            case SLOT_DETAIL_PARTICLES -> openParticleSelector(player, pathId);
+            case SLOT_DETAIL_CONSTANT_SPEED -> toggleConstantSpeed(player, pathId);
+            case SLOT_DETAIL_PREVIEW -> togglePreview(player, pathId);
+            case SLOT_DETAIL_STEP_RESOLUTION -> promptField(player, pathId, "step-resolution", "editor.path.prompt.step-resolution");
             case SLOT_DETAIL_DELETE -> confirmDelete(player, pathId);
             case SLOT_DETAIL_BACK -> open(player);
             default -> {
@@ -281,6 +306,87 @@ public class PathEditorMenu implements Listener {
         boolean next = path == null || !path.isConstantSpeed();
         updatePathField(pathId, "constant-speed", next);
         player.sendMessage(languageManager.getMessage("editor.path.success.constant-speed-updated"));
+        openDetail(player, pathId);
+    }
+
+    private void openSmoothingSelector(Player player, String pathId) {
+        Inventory inventory = Bukkit.createInventory(player, 27, smoothingTitle(pathId));
+        int slot = 0;
+        for (String option : SMOOTHING_OPTIONS) {
+            inventory.setItem(slot++, buildItem(Material.PAPER, text("editor.paths.smoothing.option.name", Map.of("mode", option)), List.of(
+                    text("editor.paths.smoothing.option.desc." + option),
+                    text("editor.common.click-select")
+            )));
+        }
+        fillSelectorNavigation(inventory);
+        inventory.setItem(SLOT_SELECTOR_BACK, buildItem(Material.ARROW,
+                text("editor.paths.detail.back.name"),
+                List.of(text("editor.paths.detail.back.lore"))));
+        player.openInventory(inventory);
+    }
+
+    private void openParticleSelector(Player player, String pathId) {
+        openParticleSelector(player, pathId, particlePages.getOrDefault(player.getUniqueId(), 0));
+    }
+
+    private void openParticleSelector(Player player, String pathId, int page) {
+        Particle[] particles = Particle.values();
+        Arrays.sort(particles, Comparator.comparing(particle -> particle.name().toLowerCase(Locale.ROOT)));
+        int totalPages = Math.max(1, (int) Math.ceil(particles.length / (double) PARTICLES_PER_PAGE));
+        int safePage = Math.max(0, Math.min(page, totalPages - 1));
+        particlePages.put(player.getUniqueId(), safePage);
+
+        Inventory inventory = Bukkit.createInventory(player, 54, particleTitle(pathId));
+        int startIndex = safePage * PARTICLES_PER_PAGE;
+        int endIndex = Math.min(startIndex + PARTICLES_PER_PAGE, particles.length);
+        int slot = 0;
+        for (int i = startIndex; i < endIndex; i++) {
+            String particleName = particles[i].name().toLowerCase(Locale.ROOT);
+            inventory.setItem(slot++, buildItem(Material.FIREWORK_STAR, "&f" + particleName, List.of(
+                    text("editor.common.click-select")
+            )));
+        }
+        fillParticleNavigation(inventory, safePage, totalPages);
+        inventory.setItem(SLOT_PARTICLE_BACK, buildItem(Material.ARROW,
+                text("editor.paths.detail.back.name"),
+                List.of(text("editor.paths.detail.back.lore"))));
+        player.openInventory(inventory);
+    }
+
+    private void handleSmoothingSelection(Player player, String pathId, int slot) {
+        if (slot == SLOT_SELECTOR_BACK) {
+            openDetail(player, pathId);
+            return;
+        }
+        if (slot < 0 || slot >= SMOOTHING_OPTIONS.size()) {
+            return;
+        }
+        updatePathField(pathId, "smoothing", SMOOTHING_OPTIONS.get(slot));
+        player.sendMessage(languageManager.getMessage("editor.path.success.updated"));
+        openDetail(player, pathId);
+    }
+
+    private void handleParticleSelection(Player player, String pathId, int slot) {
+        if (slot == SLOT_PARTICLE_BACK) {
+            openDetail(player, pathId);
+            return;
+        }
+        if (slot == SLOT_PARTICLE_PREV || slot == SLOT_PARTICLE_NEXT) {
+            int currentPage = particlePages.getOrDefault(player.getUniqueId(), 0);
+            int nextPage = slot == SLOT_PARTICLE_NEXT ? currentPage + 1 : currentPage - 1;
+            openParticleSelector(player, pathId, nextPage);
+            return;
+        }
+        Particle[] particles = Particle.values();
+        Arrays.sort(particles, Comparator.comparing(particle -> particle.name().toLowerCase(Locale.ROOT)));
+        int currentPage = particlePages.getOrDefault(player.getUniqueId(), 0);
+        int index = currentPage * PARTICLES_PER_PAGE + slot;
+        if (slot < 0 || slot >= PARTICLES_PER_PAGE || index >= particles.length) {
+            return;
+        }
+        Particle selected = particles[index];
+        updatePathField(pathId, "particle-preview", selected.name().toLowerCase(Locale.ROOT));
+        player.sendMessage(languageManager.getMessage("editor.path.success.updated"));
         openDetail(player, pathId);
     }
 
@@ -411,6 +517,32 @@ public class PathEditorMenu implements Listener {
         }
     }
 
+    private void fillParticleNavigation(Inventory inventory, int page, int totalPages) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        for (int slot : LIST_NAV_FILLER_SLOTS) {
+            inventory.setItem(slot, filler);
+        }
+        if (totalPages > 1) {
+            if (page > 0) {
+                inventory.setItem(SLOT_PARTICLE_PREV, buildItem(Material.ARROW,
+                        text("editor.common.prev-page"),
+                        List.of(text("editor.common.click-select"))));
+            }
+            if (page < totalPages - 1) {
+                inventory.setItem(SLOT_PARTICLE_NEXT, buildItem(Material.ARROW,
+                        text("editor.common.next-page"),
+                        List.of(text("editor.common.click-select"))));
+            }
+        }
+    }
+
+    private void fillSelectorNavigation(Inventory inventory) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        for (int slot : SELECTOR_NAV_FILLER_SLOTS) {
+            inventory.setItem(slot, filler);
+        }
+    }
+
     private ItemStack buildItem(Material material, String name, List<String> loreLines) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
@@ -434,6 +566,14 @@ public class PathEditorMenu implements Listener {
 
     private Component detailTitle(String pathId) {
         return TextUtil.colorNoItalic(text("editor.paths.detail.title", Map.of("path", pathId)));
+    }
+
+    private Component smoothingTitle(String pathId) {
+        return TextUtil.colorNoItalic(text("editor.paths.smoothing.title", Map.of("path", pathId)));
+    }
+
+    private Component particleTitle(String pathId) {
+        return TextUtil.colorNoItalic(text("editor.paths.particles.title", Map.of("path", pathId)));
     }
 
     private String text(String key) {
