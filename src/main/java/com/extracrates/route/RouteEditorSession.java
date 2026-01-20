@@ -21,6 +21,7 @@ public class RouteEditorSession {
     private final String particleName;
     private final List<CutscenePoint> points = new ArrayList<>();
     private BukkitRunnable previewTask;
+    private Location markerLocation;
 
     public RouteEditorSession(
             ExtraCratesPlugin plugin,
@@ -84,6 +85,14 @@ public class RouteEditorSession {
                 )
         ));
         renderPreview();
+    }
+
+    public void moveMarker(Location location) {
+        markerLocation = location.clone();
+    }
+
+    public Location resolveCaptureLocation(Location fallback) {
+        return markerLocation != null ? markerLocation : fallback;
     }
 
     private void renderPreview() {
