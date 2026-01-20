@@ -34,28 +34,29 @@ import java.util.UUID;
 
 public class PathEditorMenu implements Listener {
     private static final double DEFAULT_DOUBLE_FALLBACK = 0;
-    // Layout: acciones principales al centro, navegación en fila inferior.
+    // Layout: fila superior vacía, acciones en el centro, separación y footer.
     private static final int SLOT_LIST_CREATE = 45;
     private static final int SLOT_LIST_BACK = 49;
-    private static final int SLOT_DETAIL_BACK = 18;
-    private static final int SLOT_DETAIL_DELETE = 26;
-    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 22, 23, 24, 25};
+    private static final int SLOT_DETAIL_BACK = 31;
+    private static final int SLOT_DETAIL_DELETE = 35;
+    private static final int[] LIST_NAV_FILLER_SLOTS = {46, 47, 48, 50, 51, 52, 53};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {27, 28, 29, 30, 32, 33, 34};
 
-    private static final int SLOT_DETAIL_EDIT_POINTS = 0;
-    private static final int SLOT_DETAIL_DURATION = 1;
-    private static final int SLOT_DETAIL_SMOOTHING = 2;
-    private static final int SLOT_DETAIL_PARTICLES = 3;
-    private static final int SLOT_DETAIL_CONSTANT_SPEED = 4;
-    private static final int SLOT_DETAIL_PREVIEW = 5;
-    private static final int SLOT_DETAIL_STEP_RESOLUTION = 6;
-    private static final int SLOT_SELECTOR_BACK = 18;
-    private static final int[] SELECTOR_NAV_FILLER_SLOTS = {19, 20, 21, 22, 23, 24, 25, 26};
+    private static final int SLOT_DETAIL_EDIT_POINTS = 9;
+    private static final int SLOT_DETAIL_DURATION = 10;
+    private static final int SLOT_DETAIL_SMOOTHING = 11;
+    private static final int SLOT_DETAIL_PARTICLES = 12;
+    private static final int SLOT_DETAIL_CONSTANT_SPEED = 13;
+    private static final int SLOT_DETAIL_PREVIEW = 14;
+    private static final int SLOT_DETAIL_STEP_RESOLUTION = 15;
+    private static final int SLOT_SELECTOR_START = 10;
+    private static final int SLOT_SELECTOR_BACK = 31;
+    private static final int[] SELECTOR_NAV_FILLER_SLOTS = {27, 28, 29, 30, 32, 33, 34, 35};
     private static final List<String> SMOOTHING_OPTIONS = List.of("linear", "ease-in", "ease-out", "ease-in-out", "smoothstep");
-    private static final int SLOT_PARTICLE_PREV = 45;
+    private static final int SLOT_PARTICLE_PREV = 47;
     private static final int SLOT_PARTICLE_BACK = 49;
-    private static final int SLOT_PARTICLE_NEXT = 53;
-    private static final int PARTICLES_PER_PAGE = 45;
+    private static final int SLOT_PARTICLE_NEXT = 51;
+    private static final int PARTICLES_PER_PAGE = 27;
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -91,12 +92,12 @@ public class PathEditorMenu implements Listener {
         List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
         paths.sort(Comparator.comparing((CutscenePath path) -> resolveCreatedAt(path.getId()))
                 .thenComparing(CutscenePath::getId, String.CASE_INSENSITIVE_ORDER));
-        int slot = 0;
+        int slot = 9;
         for (CutscenePath path : paths) {
-            inventory.setItem(slot++, buildPathItem(path));
-            if (slot >= 45) {
+            if (slot > 35) {
                 break;
             }
+            inventory.setItem(slot++, buildPathItem(path));
         }
         fillListNavigation(inventory);
         inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE,
@@ -113,37 +114,37 @@ public class PathEditorMenu implements Listener {
         activePath.put(player.getUniqueId(), pathId);
         refreshPathCache();
         CutscenePath path = configLoader.getPaths().get(pathId);
-        Inventory inventory = Bukkit.createInventory(player, 27, detailTitle(pathId));
-        inventory.setItem(0, buildItem(Material.MAP, text("editor.paths.detail.edit-points.name"), List.of(
+        Inventory inventory = Bukkit.createInventory(player, 36, detailTitle(pathId));
+        inventory.setItem(SLOT_DETAIL_EDIT_POINTS, buildItem(Material.MAP, text("editor.paths.detail.edit-points.name"), List.of(
                 text("editor.common.click-start-editor"),
                 text("editor.paths.detail.edit-points.free-mode"),
                 text("editor.paths.detail.edit-points.save")
         )));
-        inventory.setItem(1, buildItem(Material.CLOCK, text("editor.paths.detail.duration.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_DURATION, buildItem(Material.CLOCK, text("editor.paths.detail.duration.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(path != null ? path.getDurationSeconds() : 4.0))),
                 text("editor.paths.detail.duration.desc"),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(2, buildItem(Material.PAPER, text("editor.paths.detail.smoothing.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_SMOOTHING, buildItem(Material.PAPER, text("editor.paths.detail.smoothing.name"), List.of(
                 text("editor.common.current", Map.of("value", path != null ? path.getSmoothing() : "linear")),
                 text("editor.paths.detail.smoothing.desc"),
                 text("editor.common.click-select")
         )));
-        inventory.setItem(3, buildItem(Material.FIREWORK_STAR, text("editor.paths.detail.particles.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_PARTICLES, buildItem(Material.FIREWORK_STAR, text("editor.paths.detail.particles.name"), List.of(
                 text("editor.common.current", Map.of("value", path != null ? path.getParticlePreview() : "")),
                 text("editor.paths.detail.particles.desc"),
                 text("editor.common.click-select")
         )));
-        inventory.setItem(4, buildItem(Material.REPEATER, text("editor.paths.detail.constant-speed.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_CONSTANT_SPEED, buildItem(Material.REPEATER, text("editor.paths.detail.constant-speed.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(path != null && path.isConstantSpeed()))),
                 text("editor.paths.detail.constant-speed.desc"),
                 text("editor.common.click-toggle")
         )));
-        inventory.setItem(5, buildItem(Material.ENDER_EYE, text("editor.paths.detail.preview.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_PREVIEW, buildItem(Material.ENDER_EYE, text("editor.paths.detail.preview.name"), List.of(
                 text("editor.common.click-preview"),
                 text("editor.paths.detail.preview.lore")
         )));
-        inventory.setItem(6, buildItem(Material.COMPARATOR, text("editor.paths.detail.step-resolution.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_STEP_RESOLUTION, buildItem(Material.COMPARATOR, text("editor.paths.detail.step-resolution.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(path != null ? path.getStepResolution() : 0.15))),
                 text("editor.paths.detail.step-resolution.desc"),
                 text("editor.common.click-edit")
@@ -199,10 +200,11 @@ public class PathEditorMenu implements Listener {
         List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
         paths.sort(Comparator.comparing((CutscenePath path) -> resolveCreatedAt(path.getId()))
                 .thenComparing(CutscenePath::getId, String.CASE_INSENSITIVE_ORDER));
-        if (slot < 0 || slot >= paths.size() || slot >= 45) {
+        int index = slot - 9;
+        if (slot < 9 || slot > 35 || index < 0 || index >= paths.size()) {
             return;
         }
-        CutscenePath path = paths.get(slot);
+        CutscenePath path = paths.get(index);
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
@@ -226,13 +228,13 @@ public class PathEditorMenu implements Listener {
 
     private void handleDetailClick(Player player, String pathId, int slot) {
         switch (slot) {
-            case 0 -> startPointEditing(player, pathId);
-            case 1 -> promptField(player, pathId, "duration-seconds", "editor.path.prompt.duration");
-            case 2 -> promptField(player, pathId, "smoothing", "editor.path.prompt.smoothing");
-            case 3 -> promptField(player, pathId, "particle-preview", "editor.path.prompt.particle-preview");
-            case 4 -> toggleConstantSpeed(player, pathId);
-            case 5 -> togglePreview(player, pathId);
-            case 6 -> promptField(player, pathId, "step-resolution", "editor.path.prompt.step-resolution");
+            case SLOT_DETAIL_EDIT_POINTS -> startPointEditing(player, pathId);
+            case SLOT_DETAIL_DURATION -> promptField(player, pathId, "duration-seconds", "editor.path.prompt.duration");
+            case SLOT_DETAIL_SMOOTHING -> promptField(player, pathId, "smoothing", "editor.path.prompt.smoothing");
+            case SLOT_DETAIL_PARTICLES -> promptField(player, pathId, "particle-preview", "editor.path.prompt.particle-preview");
+            case SLOT_DETAIL_CONSTANT_SPEED -> toggleConstantSpeed(player, pathId);
+            case SLOT_DETAIL_PREVIEW -> togglePreview(player, pathId);
+            case SLOT_DETAIL_STEP_RESOLUTION -> promptField(player, pathId, "step-resolution", "editor.path.prompt.step-resolution");
             case SLOT_DETAIL_DELETE -> confirmDelete(player, pathId);
             case SLOT_DETAIL_BACK -> open(player);
             default -> {
@@ -314,8 +316,8 @@ public class PathEditorMenu implements Listener {
     }
 
     private void openSmoothingSelector(Player player, String pathId) {
-        Inventory inventory = Bukkit.createInventory(player, 27, smoothingTitle(pathId));
-        int slot = 0;
+        Inventory inventory = Bukkit.createInventory(player, 36, smoothingTitle(pathId));
+        int slot = SLOT_SELECTOR_START;
         for (String option : SMOOTHING_OPTIONS) {
             inventory.setItem(slot++, buildItem(Material.PAPER, text("editor.paths.smoothing.option.name", Map.of("mode", option)), List.of(
                     text("editor.paths.smoothing.option.desc." + option),
@@ -344,7 +346,7 @@ public class PathEditorMenu implements Listener {
         Inventory inventory = Bukkit.createInventory(player, 54, particleTitle(pathId));
         int startIndex = safePage * PARTICLES_PER_PAGE;
         int endIndex = Math.min(startIndex + PARTICLES_PER_PAGE, particles.length);
-        int slot = 0;
+        int slot = 9;
         for (int i = startIndex; i < endIndex; i++) {
             String particleName = particles[i].name().toLowerCase(Locale.ROOT);
             inventory.setItem(slot++, buildItem(Material.FIREWORK_STAR, "&f" + particleName, List.of(
@@ -364,10 +366,11 @@ public class PathEditorMenu implements Listener {
             openDetail(player, pathId);
             return;
         }
-        if (slot < 0 || slot >= SMOOTHING_OPTIONS.size()) {
+        int optionIndex = slot - SLOT_SELECTOR_START;
+        if (optionIndex < 0 || optionIndex >= SMOOTHING_OPTIONS.size()) {
             return;
         }
-        updatePathField(pathId, "smoothing", SMOOTHING_OPTIONS.get(slot));
+        updatePathField(pathId, "smoothing", SMOOTHING_OPTIONS.get(optionIndex));
         player.sendMessage(languageManager.getMessage("editor.path.success.updated"));
         openDetail(player, pathId);
     }
@@ -386,8 +389,8 @@ public class PathEditorMenu implements Listener {
         Particle[] particles = Particle.values();
         Arrays.sort(particles, Comparator.comparing(particle -> particle.name().toLowerCase(Locale.ROOT)));
         int currentPage = particlePages.getOrDefault(player.getUniqueId(), 0);
-        int index = currentPage * PARTICLES_PER_PAGE + slot;
-        if (slot < 0 || slot >= PARTICLES_PER_PAGE || index >= particles.length) {
+        int index = currentPage * PARTICLES_PER_PAGE + (slot - 9);
+        if (slot < 9 || slot > 35 || index < 0 || index >= particles.length) {
             return;
         }
         Particle selected = particles[index];

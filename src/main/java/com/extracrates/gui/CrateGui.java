@@ -32,19 +32,19 @@ import java.util.Locale;
 @SuppressWarnings("unused")
 public class CrateGui implements Listener {
     private static final int PAGE_SIZE = 27;
-    private static final int INVENTORY_SIZE = 36;
-    private static final int PREVIOUS_PAGE_SLOT = 30;
-    private static final int NEXT_PAGE_SLOT = 32;
-    private static final int ACTION_MENU_SIZE = 27;
+    private static final int INVENTORY_SIZE = 54;
+    private static final int PREVIOUS_PAGE_SLOT = 47;
+    private static final int NEXT_PAGE_SLOT = 51;
+    private static final int ACTION_MENU_SIZE = 36;
     private static final int ACTION_OPEN_SLOT = 11;
     private static final int ACTION_PREVIEW_SLOT = 15;
-    private static final int ACTION_BACK_SLOT = 22;
+    private static final int ACTION_BACK_SLOT = 31;
     private static final int REWARD_INVENTORY_SIZE = 54;
-    private static final int REWARD_PAGE_SIZE = 45;
-    private static final int REWARD_PREVIOUS_PAGE_SLOT = 45;
+    private static final int REWARD_PAGE_SIZE = 27;
+    private static final int REWARD_PREVIOUS_PAGE_SLOT = 47;
     private static final int REWARD_NEXT_PAGE_SLOT = 53;
-    private static final int REWARD_FILTER_SLOT = 49;
-    private static final int REWARD_BACK_SLOT = 48;
+    private static final int REWARD_FILTER_SLOT = 51;
+    private static final int REWARD_BACK_SLOT = 49;
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final SessionManager sessionManager;
@@ -74,7 +74,7 @@ public class CrateGui implements Listener {
         holder.setInventory(inventory);
         int startIndex = safePageIndex * PAGE_SIZE;
         int endIndex = Math.min(startIndex + PAGE_SIZE, crates.size());
-        int slot = 0;
+        int slot = 9;
         for (int i = startIndex; i < endIndex; i++) {
             CrateDefinition crate = crates.get(i);
             ItemStack item = new ItemStack(Material.CHEST);
@@ -153,7 +153,10 @@ public class CrateGui implements Listener {
             return;
         }
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
-        int crateIndex = holder.pageIndex() * PAGE_SIZE + slot;
+        int crateIndex = holder.pageIndex() * PAGE_SIZE + (slot - 9);
+        if (slot < 9 || slot > 35) {
+            return;
+        }
         if (crateIndex < 0 || crateIndex >= crates.size()) {
             return;
         }
@@ -277,7 +280,7 @@ public class CrateGui implements Listener {
         holder.setInventory(inventory);
         int startIndex = safeRewardPage * REWARD_PAGE_SIZE;
         int endIndex = Math.min(startIndex + REWARD_PAGE_SIZE, filtered.size());
-        int slot = 0;
+        int slot = 9;
         for (int i = startIndex; i < endIndex; i++) {
             Reward reward = filtered.get(i);
             inventory.setItem(slot++, buildRewardItem(reward, rewards));

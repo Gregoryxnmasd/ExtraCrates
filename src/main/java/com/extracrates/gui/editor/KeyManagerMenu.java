@@ -27,20 +27,20 @@ import java.util.UUID;
 
 public class KeyManagerMenu implements Listener {
     private static final int LIST_SIZE = 54;
-    // Layout: acciones principales al centro, navegación en fila inferior.
+    // Layout: fila superior vacía, acciones en el centro, separación y footer.
     private static final int SLOT_LIST_DELETE = 53;
     private static final int SLOT_LIST_BACK = 49;
-    private static final int SLOT_DETAIL_BACK = 18;
-    private static final int SLOT_DETAIL_DELETE = 26;
-    private static final int[] LIST_NAV_FILLER_SLOTS = {45, 46, 48, 50, 51, 52};
-    private static final int[] DETAIL_NAV_FILLER_SLOTS = {19, 20, 21, 22, 23, 24, 25};
+    private static final int SLOT_DETAIL_BACK = 31;
+    private static final int SLOT_DETAIL_DELETE = 35;
+    private static final int[] LIST_NAV_FILLER_SLOTS = {45, 46, 47, 48, 50, 51, 52};
+    private static final int[] DETAIL_NAV_FILLER_SLOTS = {27, 28, 29, 30, 32, 33, 34};
 
-    private static final int SLOT_SEARCH_FIND = 2;
-    private static final int SLOT_SEARCH_PLAYER = 4;
-    private static final int SLOT_SEARCH_MANAGE = 6;
-    private static final int SLOT_DETAIL_ADD = 2;
-    private static final int SLOT_DETAIL_STATUS = 4;
-    private static final int SLOT_DETAIL_REMOVE = 6;
+    private static final int SLOT_SEARCH_FIND = 10;
+    private static final int SLOT_SEARCH_PLAYER = 12;
+    private static final int SLOT_SEARCH_MANAGE = 14;
+    private static final int SLOT_DETAIL_ADD = 10;
+    private static final int SLOT_DETAIL_STATUS = 12;
+    private static final int SLOT_DETAIL_REMOVE = 14;
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -74,31 +74,31 @@ public class KeyManagerMenu implements Listener {
     }
 
     private void openSearch(Player player) {
-        Inventory inventory = Bukkit.createInventory(player, 27, searchTitle);
-        inventory.setItem(1, buildItem(
+        Inventory inventory = Bukkit.createInventory(player, 36, searchTitle);
+        inventory.setItem(SLOT_SEARCH_FIND, buildItem(
                 Material.COMPASS,
                 text("editor.keys.search.find.name"),
                 List.of(text("editor.keys.search.find.lore"))
         ));
         TargetSelection target = activeTargets.get(player.getUniqueId());
         if (target != null) {
-            inventory.setItem(3, buildItem(
+            inventory.setItem(SLOT_SEARCH_PLAYER, buildItem(
                     Material.NAME_TAG,
                     text("editor.keys.search.player.name"),
                     List.of(text("editor.keys.search.player.lore", Map.of("player", target.name())))
             ));
-            inventory.setItem(5, buildItem(
+            inventory.setItem(SLOT_SEARCH_MANAGE, buildItem(
                     Material.TRIPWIRE_HOOK,
                     text("editor.keys.search.manage.name"),
                     List.of(text("editor.keys.search.manage.lore"))
             ));
         } else {
-            inventory.setItem(3, buildItem(
+            inventory.setItem(SLOT_SEARCH_PLAYER, buildItem(
                     Material.BARRIER,
                     text("editor.keys.search.none.name"),
                     List.of(text("editor.keys.search.none.lore"))
             ));
-            inventory.setItem(5, buildItem(
+            inventory.setItem(SLOT_SEARCH_MANAGE, buildItem(
                     Material.GRAY_STAINED_GLASS_PANE,
                     text("editor.keys.search.manage-disabled.name"),
                     List.of(text("editor.keys.search.manage-disabled.lore"))
@@ -119,9 +119,9 @@ public class KeyManagerMenu implements Listener {
         Inventory inventory = Bukkit.createInventory(player, LIST_SIZE, listTitle(target));
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
         crates.sort(Comparator.comparing(CrateDefinition::id));
-        int slot = 0;
+        int slot = 9;
         for (CrateDefinition crate : crates) {
-            if (slot >= 45) {
+            if (slot > 35) {
                 break;
             }
             inventory.setItem(slot++, buildCrateItem(target, crate));
@@ -139,17 +139,17 @@ public class KeyManagerMenu implements Listener {
 
     private void openCrateDetail(Player player, TargetSelection target, String crateId) {
         activeCrates.put(player.getUniqueId(), crateId);
-        Inventory inventory = Bukkit.createInventory(player, 27, detailTitle(target, crateId));
+        Inventory inventory = Bukkit.createInventory(player, 36, detailTitle(target, crateId));
         CrateDefinition crate = configLoader.getCrates().get(crateId);
         int count = crate != null ? getKeyCount(target, crate) : 0;
-        inventory.setItem(1, buildItem(Material.LIME_CONCRETE,
+        inventory.setItem(SLOT_DETAIL_ADD, buildItem(Material.LIME_CONCRETE,
                 text("editor.keys.detail.add.name"),
                 List.of(text("editor.keys.detail.add.lore"))));
-        inventory.setItem(3, buildItem(Material.TRIPWIRE_HOOK, text("editor.keys.detail.status.name"), List.of(
+        inventory.setItem(SLOT_DETAIL_STATUS, buildItem(Material.TRIPWIRE_HOOK, text("editor.keys.detail.status.name"), List.of(
                 text("editor.keys.detail.status.crate", Map.of("crate", crateId)),
                 text("editor.keys.detail.status.count", Map.of("count", String.valueOf(count)))
         )));
-        inventory.setItem(5, buildItem(Material.RED_CONCRETE,
+        inventory.setItem(SLOT_DETAIL_REMOVE, buildItem(Material.RED_CONCRETE,
                 text("editor.keys.detail.remove.name"),
                 List.of(text("editor.keys.detail.remove.lore"))));
         fillDetailNavigation(inventory);
@@ -191,11 +191,11 @@ public class KeyManagerMenu implements Listener {
     }
 
     private void handleSearchClick(Player player, int slot) {
-        if (slot == 1) {
+        if (slot == SLOT_SEARCH_FIND) {
             promptTarget(player);
             return;
         }
-        if (slot == 5) {
+        if (slot == SLOT_SEARCH_MANAGE) {
             TargetSelection target = activeTargets.get(player.getUniqueId());
             if (target != null) {
                 openCrateList(player, target);
@@ -223,10 +223,11 @@ public class KeyManagerMenu implements Listener {
         }
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
         crates.sort(Comparator.comparing(CrateDefinition::id));
-        if (slot < 0 || slot >= crates.size() || slot >= 45) {
+        int index = slot - 9;
+        if (slot < 9 || slot > 35 || index < 0 || index >= crates.size()) {
             return;
         }
-        openCrateDetail(player, target, crates.get(slot).id());
+        openCrateDetail(player, target, crates.get(index).id());
     }
 
     private void handleDetailClick(Player player, TargetSelection target, String crateId, int slot) {
@@ -236,8 +237,8 @@ public class KeyManagerMenu implements Listener {
             return;
         }
         switch (slot) {
-            case 1 -> adjustKeys(player, target, crate, 1);
-            case 5 -> adjustKeys(player, target, crate, -1);
+            case SLOT_DETAIL_ADD -> adjustKeys(player, target, crate, 1);
+            case SLOT_DETAIL_REMOVE -> adjustKeys(player, target, crate, -1);
             case SLOT_DETAIL_DELETE -> clearTarget(player);
             case SLOT_DETAIL_BACK -> openCrateList(player, target);
             default -> {
