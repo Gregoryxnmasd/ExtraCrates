@@ -1,5 +1,5 @@
 command:
-  usage: "&cUse /crates gui|editor|open|preview|cutscene|reload|sync|givekey|route|crates|pools|rewards"
+  usage: "&cUse /crates gui|editor|open|preview|cutscene|reload|sync|givekey|clear|route|crates|pools|rewards"
   only-players: "&cPlayers only."
   no-permission: "&cYou don't have permission."
   open-usage: "&cUsage: /crate %sub% <id>"
@@ -14,6 +14,7 @@ command:
   cutscene-path-not-found: "&cCutscene path not found."
   cutscene-preview-started: "&aPreview started for route '%path%'."
   givekey-usage: "&cUsage: /crates givekey <id> &7(give key)"
+  clear-usage: "&cUsage: /crates clear <player>"
   crate-not-found: "&cCrate not found."
   crate-already-exists: "&cA crate with that ID already exists."
   crate-created: "&aCrate %crate% created."
@@ -38,6 +39,8 @@ command:
   rewards-delete-usage: "&cUsage: /crates rewards delete <pool> <id>"
   rewards-give-usage: "&cUsage: /crates rewards give <player> <pool> <id>"
   rewards-claim-usage: "&cUsage: /crates rewards claim [player]"
+  clear-success: "&aCrate effects cleared for %player%."
+  clear-target: "&aYour crate effects have been cleared."
   reward-already-exists: "&cA reward with that ID already exists."
   reward-not-found: "&cReward not found."
   reward-created: "&aReward %reward% created in %pool%."

@@ -8,7 +8,7 @@ softdepend: [ProtocolLib]
 commands:
   crates:
     description: Manage crates and their main options.
-    usage: /<command> <gui|open|preview|cutscene|reload|givekey|route|sync|migrate>
+    usage: /<command> <gui|open|preview|cutscene|reload|givekey|clear|route|sync|migrate>
     aliases: [crate, extracrates]
 permissions:
   extracrates.gui:
@@ -31,6 +31,9 @@ permissions:
     default: op
   extracrates.givekey:
     description: Allows giving crate keys.
+    default: op
+  extracrates.clear:
+    description: Allows clearing crate effects for players.
     default: op
   extracrates.route.editor:
     description: Allows editing cutscene paths for crates.

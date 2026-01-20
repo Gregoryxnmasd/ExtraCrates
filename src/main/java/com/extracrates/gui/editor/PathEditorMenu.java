@@ -6,6 +6,7 @@ import com.extracrates.config.LanguageManager;
 import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.runtime.CutscenePreviewSession;
 import com.extracrates.util.TextUtil;
+import com.extracrates.gui.MenuSpacer;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -104,6 +105,7 @@ public class PathEditorMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.paths.list.back.name"),
                 List.of(text("editor.paths.list.back.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -153,6 +155,7 @@ public class PathEditorMenu implements Listener {
         inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
                 text("editor.paths.detail.back.name"),
                 List.of(text("editor.paths.detail.back.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -323,6 +326,7 @@ public class PathEditorMenu implements Listener {
         inventory.setItem(SLOT_SELECTOR_BACK, buildItem(Material.ARROW,
                 text("editor.paths.detail.back.name"),
                 List.of(text("editor.paths.detail.back.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -351,6 +355,7 @@ public class PathEditorMenu implements Listener {
         inventory.setItem(SLOT_PARTICLE_BACK, buildItem(Material.ARROW,
                 text("editor.paths.detail.back.name"),
                 List.of(text("editor.paths.detail.back.lore"))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -516,6 +521,10 @@ public class PathEditorMenu implements Listener {
         for (int slot : DETAIL_NAV_FILLER_SLOTS) {
             inventory.setItem(slot, filler);
         }
+    }
+
+    private ItemStack buildSpacerItem() {
+        return buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
     }
 
     private void fillParticleNavigation(Inventory inventory, int page, int totalPages) {

@@ -4,6 +4,7 @@ import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.runtime.core.SessionManager;
+import com.extracrates.gui.MenuSpacer;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -71,6 +72,7 @@ public class EditorMenu implements Listener {
         inventory.setItem(SLOT_NAV_CLOSE, buildItem(Material.BARRIER,
                 languageManager.getRaw("editor.menu.nav.close.name", java.util.Collections.emptyMap()),
                 List.of(languageManager.getRaw("editor.menu.nav.close.lore", java.util.Collections.emptyMap()))));
+        MenuSpacer.apply(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -99,6 +101,10 @@ public class EditorMenu implements Listener {
         for (int slot : NAV_FILLER_SLOTS) {
             inventory.setItem(slot, filler);
         }
+    }
+
+    private ItemStack buildSpacerItem() {
+        return buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
     }
 
     private ItemStack buildItem(Material material, String name, List<String> loreLines) {

@@ -131,10 +131,6 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.key-required"));
             return false;
         }
-        if (!preview && isOnCooldown(player, crate)) {
-            player.sendMessage(languageManager.getMessage("session.cooldown"));
-            return false;
-        }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
         List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
         if (rewards.isEmpty()) {
@@ -159,11 +155,7 @@ public class SessionManager {
                     return false;
                 }
             }
-            boolean cooldownApplied = crate.cooldownSeconds() > 0;
-            if (cooldownApplied) {
-                applyCooldown(player, crate);
-            }
-            openState = new OpenState(storage != null, keyConsumed, cooldownApplied, previousCooldown);
+            openState = new OpenState(storage != null, keyConsumed, false, previousCooldown);
         }
         CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview, openState);
         sessions.put(player.getUniqueId(), session);
@@ -479,6 +471,44 @@ public class SessionManager {
             attribute.getModifiers().stream()
                     .filter(mod -> mod.getName().equals(modifierKey.getKey()))
                     .forEach(attribute::removeModifier);
+        }
+    }
+
+    public void clearCrateEffects(Player player) {
+        if (player == null) {
+            return;
+        }
+        endSession(player.getUniqueId());
+        NamespacedKey modifierKey = resolveSpeedModifierKey();
+        removeSpectatorModifier(player, modifierKey);
+        player.setSpectatorTarget(null);
+        toggleHud(player, false);
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            player.setGameMode(GameMode.SURVIVAL);
+        }
+        if (player.getWalkSpeed() <= 0.01f) {
+            player.setWalkSpeed(0.2f);
+        }
+        if (player.getFlySpeed() <= 0.01f) {
+            player.setFlySpeed(0.1f);
+        }
+    }
+
+    private NamespacedKey resolveSpeedModifierKey() {
+        String keyText = configLoader.getMainConfig().getString("cutscene.speed-modifier-key");
+        if (keyText == null || keyText.isBlank()) {
+            keyText = configLoader.getMainConfig().getString("cutscene.speed-modifier-uuid", "crate-cutscene");
+        }
+        NamespacedKey parsedKey = NamespacedKey.fromString(keyText.toLowerCase(Locale.ROOT), plugin);
+        return parsedKey != null ? parsedKey : new NamespacedKey(plugin, "crate-cutscene");
+    }
+
+    private void toggleHud(Player player, boolean hidden) {
+        try {
+            String methodName = hidden ? "hideHud" : "showHud";
+            java.lang.reflect.Method method = player.getClass().getMethod(methodName);
+            method.invoke(player);
+        } catch (ReflectiveOperationException ignored) {
         }
     }
 
