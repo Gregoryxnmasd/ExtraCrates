@@ -937,10 +937,8 @@ public class CrateSession {
         if (speedModifierKey != null) {
             sessionManager.removeSpectatorModifier(player, speedModifierKey);
         }
-        if (crate.cutsceneSettings().lockMovement()) {
-            player.setWalkSpeed(previousWalkSpeed);
-            player.setFlySpeed(previousFlySpeed);
-        }
+        player.setWalkSpeed(previousWalkSpeed);
+        player.setFlySpeed(previousFlySpeed);
         if (hudHiddenApplied) {
             toggleHud(false);
         }
@@ -955,6 +953,10 @@ public class CrateSession {
     }
 
     public void handleRerollInput(boolean confirm) {
+        if (!player.hasPermission("extracrates.reroll")) {
+            player.sendMessage(languageManager.getMessage("command.no-permission"));
+            return;
+        }
         if (confirm) {
             confirmReward(true);
             return;
@@ -1204,7 +1206,10 @@ public class CrateSession {
     }
 
     private void updateRerollDisplay() {
-        if (rewards == null || rewards.size() <= 1) {
+        if (rewards == null || rewards.isEmpty()) {
+            return;
+        }
+        if (maxRerolls == 0 && rewards.size() <= 1) {
             return;
         }
         String rerollsLeft = maxRerolls > 0
@@ -1245,7 +1250,7 @@ public class CrateSession {
     }
 
     private void clearRerollDisplay() {
-        if (rewards == null || rewards.size() <= 1) {
+        if (rewards == null || rewards.isEmpty()) {
             return;
         }
         player.sendActionBar(Component.empty());

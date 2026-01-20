@@ -317,7 +317,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 String action = args[1];
-                if (action.equalsIgnoreCase("save") || action.equalsIgnoreCase("stop")) {
+                if (action.equalsIgnoreCase("save")) {
                     if (routeEditorManager.endSession(player, true)) {
                         sender.sendMessage(languageManager.getMessage("command.route-saved"));
                     } else {

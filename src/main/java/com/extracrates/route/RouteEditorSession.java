@@ -91,8 +91,11 @@ public class RouteEditorSession {
         markerLocation = location.clone();
     }
 
-    public Location resolveCaptureLocation(Location fallback) {
-        return markerLocation != null ? markerLocation : fallback;
+    public Location resolveCaptureLocation(Location fallback, float yaw, float pitch) {
+        Location base = markerLocation != null ? markerLocation.clone() : fallback.clone();
+        base.setYaw(yaw);
+        base.setPitch(pitch);
+        return base;
     }
 
     private void renderPreview() {

@@ -28,7 +28,6 @@ public class ConfigValidator {
     private static final Set<String> OPEN_MODES = Set.of(
             "reward-only",
             "preview-only",
-            "key-required",
             "economy-required",
             "full"
     );
