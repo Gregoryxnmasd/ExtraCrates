@@ -83,10 +83,8 @@ public class CrateSession {
 
     private GameMode previousGameMode;
     private Entity previousSpectatorTarget;
-    private NamespacedKey speedModifierKey;
+    private NamespacedKey pumpkinSpeedKey;
     private ItemStack previousHelmet;
-    private float previousWalkSpeed;
-    private float previousFlySpeed;
     private boolean rewardDelivered;
     private Boolean bossBarSupported;
     private boolean hudHiddenApplied;
@@ -95,6 +93,7 @@ public class CrateSession {
     private ItemStack previousOffHand;
     private Location previousLocation;
     private BossBar rerollBossBar;
+    private BossBar rerollHintBossBar;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -142,12 +141,11 @@ public class CrateSession {
         selectedRewardIndex = -1;
         Location start = resolveCameraStart();
         previousGameMode = player.getGameMode();
-        previousWalkSpeed = player.getWalkSpeed();
-        previousFlySpeed = player.getFlySpeed();
         spawnCamera(start);
         applySpectatorMode();
         spawnRewardDisplay();
         setupRerollHud();
+        executeConfiguredCommands("cutscene.on-start", getCurrentReward());
         startMusic();
         scheduleTimeout();
         startCutscene();
@@ -185,28 +183,38 @@ public class CrateSession {
 
     private void applySpectatorMode() {
         FileConfiguration config = configLoader.getMainConfig();
-        String keyText = config.getString("cutscene.speed-modifier-key");
-        if (keyText == null || keyText.isBlank()) {
-            keyText = config.getString("cutscene.speed-modifier-uuid", "crate-cutscene");
-        }
-        NamespacedKey parsedKey = NamespacedKey.fromString(keyText.toLowerCase(Locale.ROOT), plugin);
-        speedModifierKey = parsedKey != null ? parsedKey : new NamespacedKey(plugin, "crate-cutscene");
-        double modifierValue = config.getDouble("cutscene.slowdown-modifier", -10.0);
-        sessionManager.applySpectator(player, speedModifierKey, modifierValue);
+        sessionManager.applySpectator(player);
         player.setSpectatorTarget(cameraEntity);
 
-        previousHelmet = player.getInventory().getHelmet();
-        ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
-        player.sendEquipmentChange(player, EquipmentSlot.HEAD, pumpkin);
+        if (config.getBoolean("cutscene.fake-equip", true)) {
+            previousHelmet = player.getInventory().getHelmet();
+            ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
+            player.sendEquipmentChange(player, EquipmentSlot.HEAD, pumpkin);
+            applyPumpkinSpeedModifier(config);
+        }
 
         if (crate.cutsceneSettings().hideHud()) {
             hudHiddenApplied = toggleHud(true);
         }
-        if (crate.cutsceneSettings().lockMovement()) {
-            player.setWalkSpeed(0.0f);
-            player.setFlySpeed(0.0f);
+        logVerbose("Spectator aplicado: hud=%s lockMovement=%s", crate.cutsceneSettings().hideHud(), crate.cutsceneSettings().lockMovement());
+    }
+
+    private void applyPumpkinSpeedModifier(FileConfiguration config) {
+        double speedValue = config.getDouble("cutscene.fake-helmet-movement-speed", 10.0);
+        pumpkinSpeedKey = new NamespacedKey(plugin, "crate-pumpkin-speed");
+        org.bukkit.attribute.AttributeInstance attribute = player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED);
+        if (attribute == null) {
+            return;
         }
-        logVerbose("Spectator aplicado: key=%s hud=%s lockMovement=%s", speedModifierKey.getKey(), crate.cutsceneSettings().hideHud(), crate.cutsceneSettings().lockMovement());
+        attribute.getModifiers().stream()
+                .filter(mod -> mod.getName().equals(pumpkinSpeedKey.getKey()))
+                .forEach(attribute::removeModifier);
+        org.bukkit.attribute.AttributeModifier modifier = new org.bukkit.attribute.AttributeModifier(
+                pumpkinSpeedKey.getKey(),
+                speedValue,
+                org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER
+        );
+        attribute.addModifier(modifier);
     }
 
     private void spawnRewardDisplay() {
@@ -618,10 +626,10 @@ public class CrateSession {
 
     private void deliverReward(Reward reward) {
         if (isQaMode()) {
-            player.sendMessage(Component.text("Modo QA activo: no se entregan items ni se ejecutan comandos."));
+            player.sendMessage(languageManager.getMessage("command.reward-qa-mode"));
             return;
         }
-        player.sendMessage(Component.text("Has recibido: ").append(TextUtil.color(reward.displayName())));
+        player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.displayName())));
         ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
         player.getInventory().addItem(item);
 
@@ -693,6 +701,48 @@ public class CrateSession {
             return;
         }
         player.sendActionBar(TextUtil.color(text));
+    }
+
+    private void executeConfiguredCommands(String path, Reward reward) {
+        List<String> commands = configLoader.getMainConfig().getStringList(path);
+        if (commands == null || commands.isEmpty()) {
+            return;
+        }
+        Map<String, String> placeholders = buildCommandPlaceholders(reward);
+        for (String command : commands) {
+            String parsed = applyPlaceholders(command, placeholders);
+            if (parsed == null || parsed.isBlank() || parsed.equalsIgnoreCase("none")) {
+                continue;
+            }
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        }
+    }
+
+    private Map<String, String> buildCommandPlaceholders(Reward reward) {
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("player", player.getName());
+        placeholders.put("crate_id", crate.id());
+        placeholders.put("crate_name", crate.displayName());
+        if (reward != null) {
+            placeholders.put("reward_id", reward.id());
+            placeholders.put("reward_name", reward.displayName());
+        } else {
+            placeholders.put("reward_id", "none");
+            placeholders.put("reward_name", "none");
+        }
+        String rerollsLeft = maxRerolls > 0
+                ? Integer.toString(Math.max(0, maxRerolls - rerollsUsed))
+                : "∞";
+        placeholders.put("rerolls_left", rerollsLeft);
+        placeholders.put("rerolls_used", Integer.toString(rerollsUsed));
+        placeholders.put("extracrates_reward_id", placeholders.get("reward_id"));
+        placeholders.put("extracrates_reward_name", placeholders.get("reward_name"));
+        placeholders.put("extracrates_crate_id", crate.id());
+        placeholders.put("extracrates_crate_name", crate.displayName());
+        placeholders.put("extracrates_rerolls_remained", rerollsLeft);
+        placeholders.put("extracrates_rerolls_used", Integer.toString(rerollsUsed));
+        placeholders.put("extracrates_opening", Boolean.toString(true));
+        return placeholders;
     }
 
     private boolean isBossBarSupported() {
@@ -826,9 +876,11 @@ public class CrateSession {
             }
             return cached.clone();
         }
-        ItemStack item = ItemUtil.buildItem(reward, world, configLoader, plugin.getMapImageCache());
+        ItemStack item = reward.displayItemStack() != null
+                ? reward.displayItemStack().clone()
+                : ItemUtil.buildItem(reward, world, configLoader, plugin.getMapImageCache());
         String rewardModel = crate.animation().rewardModel();
-        if (rewardModel == null || rewardModel.isEmpty()) {
+        if (reward.displayItemStack() != null || rewardModel == null || rewardModel.isEmpty()) {
             REWARD_DISPLAY_CACHE.put(cacheKey, item.clone());
             if (debugTimings) {
                 logTiming(cacheKey, false, start);
@@ -907,6 +959,7 @@ public class CrateSession {
             watchdogTask.cancel();
         }
         stopMusic();
+        executeConfiguredCommands("cutscene.on-end", getCurrentReward());
         untrackEntity(cameraEntity);
         untrackEntity(rewardDisplay);
         untrackEntity(hologram);
@@ -934,11 +987,7 @@ public class CrateSession {
             player.teleport(previousLocation);
         }
         restorePlayerState();
-        if (speedModifierKey != null) {
-            sessionManager.removeSpectatorModifier(player, speedModifierKey);
-        }
-        player.setWalkSpeed(previousWalkSpeed);
-        player.setFlySpeed(previousFlySpeed);
+        removePumpkinSpeedModifier();
         if (hudHiddenApplied) {
             toggleHud(false);
         }
@@ -952,9 +1001,25 @@ public class CrateSession {
         logVerbose("Sesion limpiada: jugador=%s crate=%s", player.getName(), crate.id());
     }
 
+    private void removePumpkinSpeedModifier() {
+        if (pumpkinSpeedKey == null) {
+            return;
+        }
+        org.bukkit.attribute.AttributeInstance attribute = player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED);
+        if (attribute == null) {
+            return;
+        }
+        attribute.getModifiers().stream()
+                .filter(mod -> mod.getName().equals(pumpkinSpeedKey.getKey()))
+                .forEach(attribute::removeModifier);
+    }
+
     public void handleRerollInput(boolean confirm) {
         if (!player.hasPermission("extracrates.reroll")) {
             player.sendMessage(languageManager.getMessage("command.no-permission"));
+            return;
+        }
+        if (rewards == null || rewards.size() <= 1) {
             return;
         }
         if (confirm) {
@@ -1014,8 +1079,6 @@ public class CrateSession {
     private void capturePlayerState() {
         previousGameMode = player.getGameMode();
         previousSpectatorTarget = player.getSpectatorTarget();
-        previousWalkSpeed = player.getWalkSpeed();
-        previousFlySpeed = player.getFlySpeed();
         previousLocation = player.getLocation().clone();
         previousHelmet = cloneItemStack(player.getInventory().getHelmet());
         previousInventoryContents = cloneItemStackArray(player.getInventory().getContents());
@@ -1089,6 +1152,10 @@ public class CrateSession {
 
     public boolean isRewardDelivered() {
         return rewardDelivered;
+    }
+
+    public boolean isWaitingForClaim() {
+        return waitingForClaim;
     }
 
     public OpenState getOpenState() {
@@ -1215,18 +1282,11 @@ public class CrateSession {
         String rerollsLeft = maxRerolls > 0
                 ? Integer.toString(Math.max(0, maxRerolls - rerollsUsed))
                 : "∞";
-        Map<String, String> placeholders = Map.of(
-                "rerolls_left", rerollsLeft,
-                "rerolls_used", Integer.toString(rerollsUsed)
-        );
-        if (rerollBossBar == null && isBossBarSupported()) {
-            rerollBossBar = languageManager.createBossBar(
-                    "reroll.bossbar",
-                    1.0f,
-                    BossBar.Color.YELLOW,
-                    BossBar.Overlay.PROGRESS,
-                    placeholders
-            );
+        Map<String, String> placeholders = buildRerollPlaceholders(rerollsLeft);
+        String mainText = resolveConfigMessage("cutscene.reroll-bossbar.main-text", placeholders);
+        String hintText = resolveConfigMessage("cutscene.reroll-bossbar.hint-text", placeholders);
+        if (rerollBossBar == null && !mainText.isBlank() && isBossBarSupported()) {
+            rerollBossBar = BossBar.bossBar(TextUtil.color(mainText), 1.0f, BossBar.Color.YELLOW, BossBar.Overlay.PROGRESS);
             try {
                 player.showBossBar(rerollBossBar);
             } catch (RuntimeException | NoSuchMethodError ex) {
@@ -1237,15 +1297,20 @@ public class CrateSession {
             float progress = maxRerolls > 0
                     ? Math.max(0.0f, Math.min(1.0f, (maxRerolls - rerollsUsed) / (float) maxRerolls))
                     : 1.0f;
-            rerollBossBar.name(languageManager.getMessage("reroll.bossbar", placeholders));
+            rerollBossBar.name(TextUtil.color(mainText));
             rerollBossBar.progress(progress);
         }
-        if (rerollLocked) {
-            player.sendActionBar(languageManager.getMessage("reroll.confirmed-bar", placeholders));
-        } else if (elapsedTicks >= rerollEnabledAtTick) {
-            player.sendActionBar(languageManager.getMessage("reroll.ready", placeholders));
-        } else {
-            player.sendActionBar(languageManager.getMessage("reroll.waiting", placeholders));
+        if (rerollHintBossBar == null && !hintText.isBlank() && isBossBarSupported()) {
+            rerollHintBossBar = BossBar.bossBar(TextUtil.color(hintText), 1.0f, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
+            try {
+                player.showBossBar(rerollHintBossBar);
+            } catch (RuntimeException | NoSuchMethodError ex) {
+                rerollHintBossBar = null;
+            }
+        }
+        if (rerollHintBossBar != null) {
+            rerollHintBossBar.name(TextUtil.color(hintText));
+            rerollHintBossBar.progress(1.0f);
         }
     }
 
@@ -1253,7 +1318,6 @@ public class CrateSession {
         if (rewards == null || rewards.isEmpty()) {
             return;
         }
-        player.sendActionBar(Component.empty());
         if (rerollBossBar != null) {
             try {
                 player.hideBossBar(rerollBossBar);
@@ -1261,6 +1325,42 @@ public class CrateSession {
             }
             rerollBossBar = null;
         }
+        if (rerollHintBossBar != null) {
+            try {
+                player.hideBossBar(rerollHintBossBar);
+            } catch (RuntimeException | NoSuchMethodError ignored) {
+            }
+            rerollHintBossBar = null;
+        }
+    }
+
+    private Map<String, String> buildRerollPlaceholders(String rerollsLeft) {
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("rerolls_left", rerollsLeft);
+        placeholders.put("rerolls_used", Integer.toString(rerollsUsed));
+        placeholders.put("rerolls_remained", rerollsLeft);
+        placeholders.put("extracrates_rerolls_remained", rerollsLeft);
+        placeholders.put("extracrates_rerolls_used", Integer.toString(rerollsUsed));
+        return placeholders;
+    }
+
+    private String resolveConfigMessage(String path, Map<String, String> placeholders) {
+        String value = configLoader.getMainConfig().getString(path, "");
+        if (value == null || value.isBlank() || value.equalsIgnoreCase("none")) {
+            return "";
+        }
+        return applyPlaceholders(value, placeholders);
+    }
+
+    private String applyPlaceholders(String message, Map<String, String> placeholders) {
+        if (message == null || placeholders == null || placeholders.isEmpty()) {
+            return message == null ? "" : message;
+        }
+        String result = message;
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            result = result.replace("%" + entry.getKey() + "%", entry.getValue());
+        }
+        return result;
     }
 
     private Location resolveCameraStart() {

@@ -87,6 +87,9 @@ public class LanguageManager {
             return key;
         }
         String value = messages.getString(key, key);
+        if (isSuppressed(value)) {
+            return "";
+        }
         return applyPlaceholders(value, placeholders);
     }
 
@@ -99,6 +102,9 @@ public class LanguageManager {
         }
         List<String> result = new ArrayList<>();
         for (String line : messages.getStringList(key)) {
+            if (isSuppressed(line)) {
+                continue;
+            }
             result.add(applyPlaceholders(line, placeholders));
         }
         return result;
@@ -116,6 +122,9 @@ public class LanguageManager {
             return key;
         }
         String value = messages.getString(key, key);
+        if (isSuppressed(value)) {
+            return "";
+        }
         return applyPlaceholders(value, buildPlaceholders(player, crate, reward, cooldownSeconds, placeholders));
     }
 
@@ -139,10 +148,29 @@ public class LanguageManager {
         }
         if (reward != null) {
             merged.putIfAbsent("reward", reward.displayName());
+            merged.putIfAbsent("reward_id", reward.id());
+            merged.putIfAbsent("reward_name", reward.displayName());
+            merged.putIfAbsent("extracrates_reward_id", reward.id());
+            merged.putIfAbsent("extracrates_reward_name", reward.displayName());
+        } else {
+            merged.putIfAbsent("reward_id", "none");
+            merged.putIfAbsent("reward_name", "none");
+            merged.putIfAbsent("extracrates_reward_id", "none");
+            merged.putIfAbsent("extracrates_reward_name", "none");
         }
         if (cooldownSeconds != null) {
             merged.putIfAbsent("cooldown", Long.toString(cooldownSeconds));
         }
+        if (crate != null) {
+            merged.putIfAbsent("extracrates_crate_id", crate.id());
+            merged.putIfAbsent("extracrates_crate_name", crate.displayName());
+        }
+        if (player != null) {
+            merged.putIfAbsent("extracrates_player", player.getName());
+        }
+        merged.putIfAbsent("extracrates_opening", "false");
+        merged.putIfAbsent("extracrates_rerolls_remained", "0");
+        merged.putIfAbsent("extracrates_rerolls_used", "0");
         return merged;
     }
 
@@ -155,5 +183,12 @@ public class LanguageManager {
             result = result.replace("%" + entry.getKey() + "%", entry.getValue());
         }
         return result;
+    }
+
+    private boolean isSuppressed(String value) {
+        if (value == null) {
+            return true;
+        }
+        return value.trim().equalsIgnoreCase("none");
     }
 }

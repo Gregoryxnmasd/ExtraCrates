@@ -56,8 +56,11 @@ cutscene:
   constant-speed: true
   smooth-tick: 2
   reroll-enable-ticks: 0
-  auto-confirm-ticks: 60
-  slowdown-modifier: -10.0
+  auto-confirm-ticks: 0
+  fake-helmet-movement-speed: 10.0
+  reroll-bossbar:
+    main-text: "&eYou have %extracrates_rerolls_remained% rerolls remained."
+    hint-text: "&fPunch to reroll &7| &fSneak to claim"
   min-teleport-distance: 0.05
   hide-others: true
   spectator-lock: true

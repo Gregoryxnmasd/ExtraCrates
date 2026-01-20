@@ -45,6 +45,7 @@ command:
   reward-created: "&aReward %reward% creada en %pool%."
   reward-updated: "&aReward %reward% actualizada (%field%)."
   reward-deleted: "&aReward %reward% eliminada de %pool%."
+  reward-field-disabled: "&cEste campo de reward se gestiona solo con items subidos."
   reward-given: "&aReward entregada a %player%: %reward%."
   reward-queued: "&e%player% está offline. Reward encolada: %reward%."
   reward-claim-none: "&eNo hay recompensas pendientes."
@@ -376,11 +377,16 @@ editor:
           name: "&eNombre"
         chance:
           name: "&eChance"
+        reward-item:
+          name: "&eItem de recompensa"
+          desc: "&7Usa el item en tu mano como recompensa (mantiene NBT exacto)."
+        display-item:
+          name: "&eItem de display"
+          desc: "&7Usa el item en tu mano para mostrarlo."
         commands:
           name: "&eComandos"
-        item-upload:
-          name: "&eItem exacto"
-          desc: "&7Usa el item en tu mano como reward."
+        map-image:
+          name: "&eImagen de mapa"
       item-lore:
         id: "&7ID: &f%id%"
         chance: "&7Chance: &f%chance%"

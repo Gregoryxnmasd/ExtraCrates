@@ -11,8 +11,12 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerAnimationEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 
 @SuppressWarnings("unused")
 public class SessionListener implements Listener {
@@ -72,12 +76,63 @@ public class SessionListener implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
+    public void onRerollAnimation(PlayerAnimationEvent event) {
+        CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session == null) {
+            return;
+        }
+        session.handleRerollInput(false);
+    }
+
+    @EventHandler(ignoreCancelled = true)
     public void onRerollSneak(PlayerToggleSneakEvent event) {
         CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
         if (session == null || !event.isSneaking()) {
             return;
         }
         session.handleRerollInput(true);
+        event.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+        CrateSession session = sessionManager.getSession(player.getUniqueId());
+        if (session == null) {
+            return;
+        }
+        event.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+        CrateSession session = sessionManager.getSession(player.getUniqueId());
+        if (session == null) {
+            return;
+        }
+        event.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onItemDrop(PlayerDropItemEvent event) {
+        CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session == null) {
+            return;
+        }
+        event.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onSwapHandItems(PlayerSwapHandItemsEvent event) {
+        CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session == null) {
+            return;
+        }
         event.setCancelled(true);
     }
 }

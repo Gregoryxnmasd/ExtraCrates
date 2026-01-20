@@ -64,7 +64,7 @@ public class EditorMenu implements Listener {
         inventory.setItem(SLOT_NAV_CLOSE, buildItem(Material.BARRIER,
                 languageManager.getRaw("editor.menu.nav.close.name", java.util.Collections.emptyMap()),
                 List.of(languageManager.getRaw("editor.menu.nav.close.lore", java.util.Collections.emptyMap()))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.apply(inventory, buildSpacerItem(), false);
         player.openInventory(inventory);
     }
 

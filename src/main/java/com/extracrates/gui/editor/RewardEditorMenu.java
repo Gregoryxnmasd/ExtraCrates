@@ -42,13 +42,10 @@ public class RewardEditorMenu implements Listener {
 
     private static final int SLOT_DETAIL_DISPLAY_NAME = 9;
     private static final int SLOT_DETAIL_CHANCE = 10;
-    private static final int SLOT_DETAIL_ITEM = 11;
-    private static final int SLOT_DETAIL_AMOUNT = 12;
+    private static final int SLOT_DETAIL_REWARD_ITEM = 11;
+    private static final int SLOT_DETAIL_DISPLAY_ITEM = 12;
     private static final int SLOT_DETAIL_COMMANDS = 13;
-    private static final int SLOT_DETAIL_ENCHANTMENTS = 14;
-    private static final int SLOT_DETAIL_GLOW = 15;
-    private static final int SLOT_DETAIL_CUSTOM_MODEL = 16;
-    private static final int SLOT_DETAIL_MAP_IMAGE = 17;
+    private static final int SLOT_DETAIL_MAP_IMAGE = 14;
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -148,28 +145,16 @@ public class RewardEditorMenu implements Listener {
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.chance() : 0))),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(SLOT_DETAIL_ITEM, buildItem(Material.CHEST, text("editor.rewards.reward.detail.item.name"), List.of(
-                text("editor.common.current", Map.of("value", reward != null ? reward.item() : "STONE")),
-                text("editor.common.click-edit")
+        inventory.setItem(SLOT_DETAIL_REWARD_ITEM, buildItem(Material.CHEST, text("editor.rewards.reward.detail.reward-item.name"), List.of(
+                text("editor.common.current", Map.of("value", reward != null ? resolveRewardItemLabel(reward) : text("editor.common.none"))),
+                text("editor.rewards.reward.detail.reward-item.desc")
         )));
-        inventory.setItem(SLOT_DETAIL_AMOUNT, buildItem(Material.PAPER, text("editor.rewards.reward.detail.amount.name"), List.of(
-                text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.amount() : 1))),
-                text("editor.common.click-edit")
+        inventory.setItem(SLOT_DETAIL_DISPLAY_ITEM, buildItem(Material.ITEM_FRAME, text("editor.rewards.reward.detail.display-item.name"), List.of(
+                text("editor.common.current", Map.of("value", reward != null ? resolveDisplayItemLabel(reward) : text("editor.common.none"))),
+                text("editor.rewards.reward.detail.display-item.desc")
         )));
         inventory.setItem(SLOT_DETAIL_COMMANDS, buildItem(Material.COMMAND_BLOCK, text("editor.rewards.reward.detail.commands.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.commands().size() : 0))),
-                text("editor.common.click-edit")
-        )));
-        inventory.setItem(SLOT_DETAIL_ENCHANTMENTS, buildItem(Material.ENCHANTED_BOOK, text("editor.rewards.reward.detail.enchantments.name"), List.of(
-                text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.enchantments().size() : 0))),
-                text("editor.common.click-edit")
-        )));
-        inventory.setItem(SLOT_DETAIL_GLOW, buildItem(Material.GLOWSTONE_DUST, text("editor.rewards.reward.detail.glow.name"), List.of(
-                text("editor.common.current", Map.of("value", String.valueOf(reward != null && reward.glow()))),
-                text("editor.common.click-edit")
-        )));
-        inventory.setItem(SLOT_DETAIL_CUSTOM_MODEL, buildItem(Material.SLIME_BALL, text("editor.rewards.reward.detail.custom-model.name"), List.of(
-                text("editor.common.current", Map.of("value", reward != null ? emptyFallback(reward.customModel()) : "")),
                 text("editor.common.click-edit")
         )));
         inventory.setItem(SLOT_DETAIL_MAP_IMAGE, buildItem(Material.FILLED_MAP, text("editor.rewards.reward.detail.map-image.name"), List.of(
@@ -297,12 +282,9 @@ public class RewardEditorMenu implements Listener {
         switch (slot) {
             case SLOT_DETAIL_DISPLAY_NAME -> promptRewardField(player, poolId, rewardId, "display-name", "editor.reward.prompt.display-name");
             case SLOT_DETAIL_CHANCE -> promptRewardField(player, poolId, rewardId, "chance", "editor.reward.prompt.chance");
-            case SLOT_DETAIL_ITEM -> promptRewardField(player, poolId, rewardId, "item", "editor.reward.prompt.item");
-            case SLOT_DETAIL_AMOUNT -> promptRewardField(player, poolId, rewardId, "amount", "editor.reward.prompt.amount");
+            case SLOT_DETAIL_REWARD_ITEM -> setRewardItemFromHand(player, poolId, rewardId);
+            case SLOT_DETAIL_DISPLAY_ITEM -> setDisplayItemFromHand(player, poolId, rewardId);
             case SLOT_DETAIL_COMMANDS -> promptRewardField(player, poolId, rewardId, "commands", "editor.reward.prompt.commands");
-            case SLOT_DETAIL_ENCHANTMENTS -> promptRewardField(player, poolId, rewardId, "enchantments", "editor.reward.prompt.enchantments");
-            case SLOT_DETAIL_GLOW -> promptRewardField(player, poolId, rewardId, "glow", "editor.reward.prompt.glow");
-            case SLOT_DETAIL_CUSTOM_MODEL -> promptRewardField(player, poolId, rewardId, "custom-model", "editor.reward.prompt.custom-model");
             case SLOT_DETAIL_MAP_IMAGE -> promptRewardField(player, poolId, rewardId, "map-image", "editor.reward.prompt.map-image");
             case SLOT_DETAIL_DELETE -> confirmDeleteReward(player, poolId, rewardId);
             case SLOT_DETAIL_BACK -> openPoolDetail(player, poolId);
@@ -438,6 +420,17 @@ public class RewardEditorMenu implements Listener {
         openRewardDetail(player, poolId, rewardId);
     }
 
+    private void setDisplayItemFromHand(Player player, String poolId, String rewardId) {
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (item == null || item.getType() == Material.AIR) {
+            player.sendMessage(languageManager.getMessage("editor.reward.error.missing-hand-item"));
+            return;
+        }
+        updateDisplayItemStack(poolId, rewardId, item);
+        player.sendMessage(languageManager.getMessage("editor.reward.success.reward-updated"));
+        openRewardDetail(player, poolId, rewardId);
+    }
+
     private void createPool(String id) {
         FileConfiguration config = loadConfig();
         String path = "pools." + id;
@@ -473,8 +466,6 @@ public class RewardEditorMenu implements Listener {
         FileConfiguration config = loadConfig();
         String path = "pools." + poolId + ".rewards." + rewardId;
         config.set(path + ".chance", 1.0);
-        config.set(path + ".item", "STONE");
-        config.set(path + ".amount", 1);
         config.set(path + ".display-name", rewardId);
         saveConfig(config);
     }
@@ -508,13 +499,20 @@ public class RewardEditorMenu implements Listener {
     private void updateRewardItemStack(String poolId, String rewardId, ItemStack itemStack) {
         FileConfiguration config = loadConfig();
         String basePath = "pools." + poolId + ".rewards." + rewardId;
-        config.set(basePath + ".item-stack", itemStack.clone());
-        config.set(basePath + ".item", itemStack.getType().name().toLowerCase(Locale.ROOT));
-        config.set(basePath + ".amount", itemStack.getAmount());
+        config.set(basePath + ".reward-item", itemStack.clone());
+        config.set(basePath + ".item-stack", null);
+        config.set(basePath + ".item", null);
+        config.set(basePath + ".amount", null);
         config.set(basePath + ".custom-model", null);
         config.set(basePath + ".glow", null);
         config.set(basePath + ".enchantments", null);
-        config.set(basePath + ".map-image", null);
+        saveConfig(config);
+    }
+
+    private void updateDisplayItemStack(String poolId, String rewardId, ItemStack itemStack) {
+        FileConfiguration config = loadConfig();
+        String basePath = "pools." + poolId + ".rewards." + rewardId;
+        config.set(basePath + ".display-item", itemStack.clone());
         saveConfig(config);
     }
 
@@ -634,6 +632,21 @@ public class RewardEditorMenu implements Listener {
             return stack.getType().name().toLowerCase(Locale.ROOT);
         }
         return reward.item();
+    }
+
+    private String resolveDisplayItemLabel(Reward reward) {
+        if (reward == null) {
+            return text("editor.common.none");
+        }
+        ItemStack stack = reward.displayItemStack();
+        if (stack != null) {
+            ItemMeta meta = stack.getItemMeta();
+            if (meta != null && meta.hasDisplayName()) {
+                return TextUtil.serializeLegacy(meta.displayName());
+            }
+            return stack.getType().name().toLowerCase(Locale.ROOT);
+        }
+        return text("editor.common.none");
     }
 
     private ValidationResult parseCommands(String input) {
