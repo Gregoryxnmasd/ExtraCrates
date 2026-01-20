@@ -67,30 +67,30 @@ public class KeyManagerMenu implements Listener {
 
     private void openSearch(Player player) {
         Inventory inventory = Bukkit.createInventory(player, 27, searchTitle);
-        inventory.setItem(11, buildItem(
+        inventory.setItem(1, buildItem(
                 Material.COMPASS,
                 text("editor.keys.search.find.name"),
                 List.of(text("editor.keys.search.find.lore"))
         ));
         TargetSelection target = activeTargets.get(player.getUniqueId());
         if (target != null) {
-            inventory.setItem(13, buildItem(
+            inventory.setItem(3, buildItem(
                     Material.NAME_TAG,
                     text("editor.keys.search.player.name"),
                     List.of(text("editor.keys.search.player.lore", Map.of("player", target.name())))
             ));
-            inventory.setItem(15, buildItem(
+            inventory.setItem(5, buildItem(
                     Material.TRIPWIRE_HOOK,
                     text("editor.keys.search.manage.name"),
                     List.of(text("editor.keys.search.manage.lore"))
             ));
         } else {
-            inventory.setItem(13, buildItem(
+            inventory.setItem(3, buildItem(
                     Material.BARRIER,
                     text("editor.keys.search.none.name"),
                     List.of(text("editor.keys.search.none.lore"))
             ));
-            inventory.setItem(15, buildItem(
+            inventory.setItem(5, buildItem(
                     Material.GRAY_STAINED_GLASS_PANE,
                     text("editor.keys.search.manage-disabled.name"),
                     List.of(text("editor.keys.search.manage-disabled.lore"))
@@ -132,14 +132,14 @@ public class KeyManagerMenu implements Listener {
         Inventory inventory = Bukkit.createInventory(player, 27, detailTitle(target, crateId));
         CrateDefinition crate = configLoader.getCrates().get(crateId);
         int count = crate != null ? getKeyCount(target, crate) : 0;
-        inventory.setItem(11, buildItem(Material.LIME_CONCRETE,
+        inventory.setItem(1, buildItem(Material.LIME_CONCRETE,
                 text("editor.keys.detail.add.name"),
                 List.of(text("editor.keys.detail.add.lore"))));
-        inventory.setItem(13, buildItem(Material.TRIPWIRE_HOOK, text("editor.keys.detail.status.name"), List.of(
+        inventory.setItem(3, buildItem(Material.TRIPWIRE_HOOK, text("editor.keys.detail.status.name"), List.of(
                 text("editor.keys.detail.status.crate", Map.of("crate", crateId)),
                 text("editor.keys.detail.status.count", Map.of("count", String.valueOf(count)))
         )));
-        inventory.setItem(15, buildItem(Material.RED_CONCRETE,
+        inventory.setItem(5, buildItem(Material.RED_CONCRETE,
                 text("editor.keys.detail.remove.name"),
                 List.of(text("editor.keys.detail.remove.lore"))));
         fillDetailNavigation(inventory);
@@ -180,11 +180,11 @@ public class KeyManagerMenu implements Listener {
     }
 
     private void handleSearchClick(Player player, int slot) {
-        if (slot == 11) {
+        if (slot == 1) {
             promptTarget(player);
             return;
         }
-        if (slot == 15) {
+        if (slot == 5) {
             TargetSelection target = activeTargets.get(player.getUniqueId());
             if (target != null) {
                 openCrateList(player, target);
@@ -225,8 +225,8 @@ public class KeyManagerMenu implements Listener {
             return;
         }
         switch (slot) {
-            case 11 -> adjustKeys(player, target, crate, 1);
-            case 15 -> adjustKeys(player, target, crate, -1);
+            case 1 -> adjustKeys(player, target, crate, 1);
+            case 5 -> adjustKeys(player, target, crate, -1);
             case SLOT_DETAIL_DELETE -> clearTarget(player);
             case SLOT_DETAIL_BACK -> openCrateList(player, target);
             default -> {

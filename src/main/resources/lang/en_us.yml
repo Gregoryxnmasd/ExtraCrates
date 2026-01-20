@@ -3,13 +3,13 @@ command:
   only-players: "&cPlayers only."
   no-permission: "&cYou don't have permission."
   open-usage: "&cUsage: /crate %sub% <id>"
-  route-editor-usage: "&cUsage: /crate route editor <path|stop|cancel|add|capture|mode|source|marker> [value]"
+  route-usage: "&cUsage: /crates route <path|stop|cancel|add|capture|marker> [value]"
   route-saved: "&aRoute saved."
   route-no-active-editor: "&cYou don't have an active route editor session."
   route-canceled: "&eRoute editor canceled."
   route-already-active: "&cYou already have an active route editor session."
   route-started: "&aRoute editor started for '%path%'."
-  route-instructions: "&7Block mode: click blocks to add points. Free mode: use &f/crate route editor add&7 to capture player/marker position. Use &f/crate route editor mode toggle&7 and &f/crate route editor source <player|marker>&7."
+  route-instructions: "&7Block mode: click blocks to add points. Free mode: use &f/crates route add&7 to capture player/marker position. Save with &f/crates route stop&7."
   cutscene-usage: "&cUsage: /crate cutscene test <id>"
   cutscene-path-not-found: "&cCutscene path not found."
   cutscene-preview-started: "&aPreview started for route '%path%'."
@@ -99,6 +99,10 @@ editor:
     click-toggle: "&7Click to toggle."
     click-preview: "&7Click to preview."
     click-start-editor: "&7Click to start the editor."
+    action:
+      left-edit: "&7Left click to edit."
+      right-clone: "&7Right click to clone."
+      shift-right-delete: "&7Shift + right click to delete."
   input:
     prompt: "&eType in chat: &f%prompt%&e. &7Type &fcancel&7 to abort."
     pending: "&cYou already have a pending input. Type &fcancel&c to abort."
@@ -158,16 +162,31 @@ editor:
         name: "&eRewards pool"
       type:
         name: "&eType"
+        description: "&7%description%"
+        desc:
+          normal: "&7Standard crate with no special behavior."
+          keyed: "&7Requires a key to open."
+          event: "&7Limited-time event crate."
+          seasonal: "&7Seasonal crate with special rewards."
+          mystery: "&7Mystery crate with randomized rewards."
       open-mode:
         name: "&eOpen mode"
+      path:
+        name: "&eCutscene path"
       overlay:
         name: "&eCutscene overlay"
       lock-movement:
         name: "&eLock movement"
+        desc: "&7Freeze player movement during the cutscene."
       lock-hud:
         name: "&eLock HUD"
+        desc: "&7Hide the HUD during the cutscene."
       music:
         name: "&eMusic"
+        desc: "&7Play a sound during the cutscene."
+      max-rerolls:
+        name: "&eMax rerolls"
+        desc: "&7Limit how many rerolls are allowed."
       delete:
         name: "&cDelete crate"
         lore: "&7Delete this crate."
@@ -181,6 +200,16 @@ editor:
       back:
         name: "&eBack"
         lore: "&7Return to the crate details."
+    open-mode:
+      title: "&8Open mode: %crate%"
+      option:
+        name: "&e%mode%"
+        desc:
+          reward-only: "&7Instantly opens without a cutscene."
+          preview-only: "&7Preview-only crate that cannot be opened."
+          key-required: "&7Requires a key to open."
+          economy-required: "&7Requires payment to open."
+          full: "&7Uses the full cutscene and effects."
   crate:
     prompt:
       new-id: "Enter a new crate ID"
@@ -189,6 +218,7 @@ editor:
       open-mode: "Enter the open mode (reward-only, preview-only, cinematic)"
       overlay-model: "Enter the overlay model id"
       music-sound: "Enter the music sound id"
+      max-rerolls: "Enter the max rerolls (0 for unlimited)"
     confirm:
       create: "Create crate %id%?"
       clone: "Clone crate %source% to %target%?"
@@ -226,22 +256,26 @@ editor:
       edit-points:
         name: "&eEdit points"
         block-mode: "&7Block mode: click blocks."
-        free-mode: "&7Free mode: &f/crate route editor add&7."
-        source: "&7Source: &f/crate route editor source <player|marker>&7."
-        save: "&7Save with &f/crate route editor stop&7."
+        free-mode: "&7Free mode: &f/crates route add&7."
+        save: "&7Save with &f/crates route stop&7."
       duration:
         name: "&eDuration"
+        desc: "&7How long the cutscene lasts in seconds."
       smoothing:
         name: "&eSmoothing"
+        desc: "&7Interpolation mode between points."
       particles:
         name: "&eParticles"
+        desc: "&7Particle used for the preview trail."
       constant-speed:
         name: "&eConstant speed"
+        desc: "&7Force constant speed along the path."
       preview:
         name: "&ePreview"
         lore: "&7Shows particles along the route."
       step-resolution:
         name: "&eStep resolution"
+        desc: "&7Distance between preview samples."
       delete:
         name: "&cDelete path"
         lore: "&7Delete this path."

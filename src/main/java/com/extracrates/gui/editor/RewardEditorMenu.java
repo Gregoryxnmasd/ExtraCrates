@@ -130,39 +130,39 @@ public class RewardEditorMenu implements Listener {
             }
         }
         Inventory inventory = Bukkit.createInventory(player, 27, rewardTitle(rewardId));
-        inventory.setItem(9, buildItem(Material.NAME_TAG, text("editor.rewards.reward.detail.display-name.name"), List.of(
+        inventory.setItem(0, buildItem(Material.NAME_TAG, text("editor.rewards.reward.detail.display-name.name"), List.of(
                 text("editor.common.current", Map.of("value", reward != null ? reward.displayName() : rewardId)),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(10, buildItem(Material.GOLD_NUGGET, text("editor.rewards.reward.detail.chance.name"), List.of(
+        inventory.setItem(1, buildItem(Material.GOLD_NUGGET, text("editor.rewards.reward.detail.chance.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.chance() : 0))),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(11, buildItem(Material.CHEST, text("editor.rewards.reward.detail.item.name"), List.of(
+        inventory.setItem(2, buildItem(Material.CHEST, text("editor.rewards.reward.detail.item.name"), List.of(
                 text("editor.common.current", Map.of("value", reward != null ? reward.item() : "STONE")),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(12, buildItem(Material.PAPER, text("editor.rewards.reward.detail.amount.name"), List.of(
+        inventory.setItem(3, buildItem(Material.PAPER, text("editor.rewards.reward.detail.amount.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.amount() : 1))),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(13, buildItem(Material.COMMAND_BLOCK, text("editor.rewards.reward.detail.commands.name"), List.of(
+        inventory.setItem(4, buildItem(Material.COMMAND_BLOCK, text("editor.rewards.reward.detail.commands.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.commands().size() : 0))),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(14, buildItem(Material.ENCHANTED_BOOK, text("editor.rewards.reward.detail.enchantments.name"), List.of(
+        inventory.setItem(5, buildItem(Material.ENCHANTED_BOOK, text("editor.rewards.reward.detail.enchantments.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.enchantments().size() : 0))),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(15, buildItem(Material.GLOWSTONE_DUST, text("editor.rewards.reward.detail.glow.name"), List.of(
+        inventory.setItem(6, buildItem(Material.GLOWSTONE_DUST, text("editor.rewards.reward.detail.glow.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null && reward.glow()))),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(16, buildItem(Material.SLIME_BALL, text("editor.rewards.reward.detail.custom-model.name"), List.of(
+        inventory.setItem(7, buildItem(Material.SLIME_BALL, text("editor.rewards.reward.detail.custom-model.name"), List.of(
                 text("editor.common.current", Map.of("value", reward != null ? emptyFallback(reward.customModel()) : "")),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(17, buildItem(Material.FILLED_MAP, text("editor.rewards.reward.detail.map-image.name"), List.of(
+        inventory.setItem(8, buildItem(Material.FILLED_MAP, text("editor.rewards.reward.detail.map-image.name"), List.of(
                 text("editor.common.current", Map.of("value", reward != null ? emptyFallback(reward.mapImage()) : "")),
                 text("editor.common.click-edit")
         )));
@@ -282,16 +282,17 @@ public class RewardEditorMenu implements Listener {
 
     private void handleRewardDetailClick(Player player, String poolId, String rewardId, int slot) {
         switch (slot) {
-            case 10 -> promptRewardField(player, poolId, rewardId, "display-name", "editor.reward.prompt.display-name");
-            case 11 -> promptRewardField(player, poolId, rewardId, "chance", "editor.reward.prompt.chance");
-            case 12 -> promptRewardField(player, poolId, rewardId, "item", "editor.reward.prompt.item");
-            case 13 -> promptRewardField(player, poolId, rewardId, "amount", "editor.reward.prompt.amount");
-            case 14 -> promptRewardField(player, poolId, rewardId, "commands", "editor.reward.prompt.commands");
-            case 15 -> promptRewardField(player, poolId, rewardId, "enchantments", "editor.reward.prompt.enchantments");
-            case 16 -> promptRewardField(player, poolId, rewardId, "glow", "editor.reward.prompt.glow");
-            case 19 -> promptRewardField(player, poolId, rewardId, "custom-model", "editor.reward.prompt.custom-model");
-            case 20 -> promptRewardField(player, poolId, rewardId, "map-image", "editor.reward.prompt.map-image");
-            case 22 -> openPoolDetail(player, poolId);
+            case 0 -> promptRewardField(player, poolId, rewardId, "display-name", "editor.reward.prompt.display-name");
+            case 1 -> promptRewardField(player, poolId, rewardId, "chance", "editor.reward.prompt.chance");
+            case 2 -> promptRewardField(player, poolId, rewardId, "item", "editor.reward.prompt.item");
+            case 3 -> promptRewardField(player, poolId, rewardId, "amount", "editor.reward.prompt.amount");
+            case 4 -> promptRewardField(player, poolId, rewardId, "commands", "editor.reward.prompt.commands");
+            case 5 -> promptRewardField(player, poolId, rewardId, "enchantments", "editor.reward.prompt.enchantments");
+            case 6 -> promptRewardField(player, poolId, rewardId, "glow", "editor.reward.prompt.glow");
+            case 7 -> promptRewardField(player, poolId, rewardId, "custom-model", "editor.reward.prompt.custom-model");
+            case 8 -> promptRewardField(player, poolId, rewardId, "map-image", "editor.reward.prompt.map-image");
+            case SLOT_DETAIL_DELETE -> confirmDeleteReward(player, poolId, rewardId);
+            case SLOT_DETAIL_BACK -> openPoolDetail(player, poolId);
             default -> {
             }
         }
