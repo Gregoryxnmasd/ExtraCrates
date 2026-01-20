@@ -112,35 +112,36 @@ public class PathEditorMenu implements Listener {
         refreshPathCache();
         CutscenePath path = configLoader.getPaths().get(pathId);
         Inventory inventory = Bukkit.createInventory(player, 27, detailTitle(pathId));
-        inventory.setItem(SLOT_DETAIL_EDIT_POINTS, buildItem(Material.MAP, text("editor.paths.detail.edit-points.name"), List.of(
+        inventory.setItem(0, buildItem(Material.MAP, text("editor.paths.detail.edit-points.name"), List.of(
                 text("editor.common.click-start-editor"),
+                text("editor.paths.detail.edit-points.free-mode"),
                 text("editor.paths.detail.edit-points.save")
         )));
-        inventory.setItem(SLOT_DETAIL_DURATION, buildItem(Material.CLOCK, text("editor.paths.detail.duration.name"), List.of(
+        inventory.setItem(1, buildItem(Material.CLOCK, text("editor.paths.detail.duration.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(path != null ? path.getDurationSeconds() : 4.0))),
                 text("editor.paths.detail.duration.desc"),
                 text("editor.common.click-edit")
         )));
-        inventory.setItem(SLOT_DETAIL_SMOOTHING, buildItem(Material.PAPER, text("editor.paths.detail.smoothing.name"), List.of(
+        inventory.setItem(2, buildItem(Material.PAPER, text("editor.paths.detail.smoothing.name"), List.of(
                 text("editor.common.current", Map.of("value", path != null ? path.getSmoothing() : "linear")),
                 text("editor.paths.detail.smoothing.desc"),
                 text("editor.common.click-select")
         )));
-        inventory.setItem(SLOT_DETAIL_PARTICLES, buildItem(Material.FIREWORK_STAR, text("editor.paths.detail.particles.name"), List.of(
+        inventory.setItem(3, buildItem(Material.FIREWORK_STAR, text("editor.paths.detail.particles.name"), List.of(
                 text("editor.common.current", Map.of("value", path != null ? path.getParticlePreview() : "")),
                 text("editor.paths.detail.particles.desc"),
                 text("editor.common.click-select")
         )));
-        inventory.setItem(SLOT_DETAIL_CONSTANT_SPEED, buildItem(Material.REPEATER, text("editor.paths.detail.constant-speed.name"), List.of(
+        inventory.setItem(4, buildItem(Material.REPEATER, text("editor.paths.detail.constant-speed.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(path != null && path.isConstantSpeed()))),
                 text("editor.paths.detail.constant-speed.desc"),
                 text("editor.common.click-toggle")
         )));
-        inventory.setItem(SLOT_DETAIL_PREVIEW, buildItem(Material.ENDER_EYE, text("editor.paths.detail.preview.name"), List.of(
+        inventory.setItem(5, buildItem(Material.ENDER_EYE, text("editor.paths.detail.preview.name"), List.of(
                 text("editor.common.click-preview"),
                 text("editor.paths.detail.preview.lore")
         )));
-        inventory.setItem(SLOT_DETAIL_STEP_RESOLUTION, buildItem(Material.COMPARATOR, text("editor.paths.detail.step-resolution.name"), List.of(
+        inventory.setItem(6, buildItem(Material.COMPARATOR, text("editor.paths.detail.step-resolution.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(path != null ? path.getStepResolution() : 0.15))),
                 text("editor.paths.detail.step-resolution.desc"),
                 text("editor.common.click-edit")
@@ -222,13 +223,13 @@ public class PathEditorMenu implements Listener {
 
     private void handleDetailClick(Player player, String pathId, int slot) {
         switch (slot) {
-            case SLOT_DETAIL_EDIT_POINTS -> startPointEditing(player, pathId);
-            case SLOT_DETAIL_DURATION -> promptField(player, pathId, "duration-seconds", "editor.path.prompt.duration");
-            case SLOT_DETAIL_SMOOTHING -> openSmoothingSelector(player, pathId);
-            case SLOT_DETAIL_PARTICLES -> openParticleSelector(player, pathId);
-            case SLOT_DETAIL_CONSTANT_SPEED -> toggleConstantSpeed(player, pathId);
-            case SLOT_DETAIL_PREVIEW -> togglePreview(player, pathId);
-            case SLOT_DETAIL_STEP_RESOLUTION -> promptField(player, pathId, "step-resolution", "editor.path.prompt.step-resolution");
+            case 0 -> startPointEditing(player, pathId);
+            case 1 -> promptField(player, pathId, "duration-seconds", "editor.path.prompt.duration");
+            case 2 -> promptField(player, pathId, "smoothing", "editor.path.prompt.smoothing");
+            case 3 -> promptField(player, pathId, "particle-preview", "editor.path.prompt.particle-preview");
+            case 4 -> toggleConstantSpeed(player, pathId);
+            case 5 -> togglePreview(player, pathId);
+            case 6 -> promptField(player, pathId, "step-resolution", "editor.path.prompt.step-resolution");
             case SLOT_DETAIL_DELETE -> confirmDelete(player, pathId);
             case SLOT_DETAIL_BACK -> open(player);
             default -> {
