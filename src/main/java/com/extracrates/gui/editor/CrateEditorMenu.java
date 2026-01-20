@@ -397,7 +397,7 @@ public class CrateEditorMenu implements Listener {
     private void openOpenModeSelector(Player player, String crateId) {
         Inventory inventory = Bukkit.createInventory(player, 36, openModeTitle(crateId));
         int slot = SLOT_SELECTOR_START;
-        for (String mode : List.of("reward-only", "preview-only", "key-required", "economy-required", "full")) {
+        for (String mode : List.of("reward-only", "preview-only", "economy-required", "full")) {
             inventory.setItem(slot++, buildItem(Material.BOOK, text("editor.crates.open-mode.option.name", Map.of("mode", mode)), List.of(
                     text("editor.crates.open-mode.option.desc." + mode),
                     text("editor.common.click-select")
@@ -460,7 +460,7 @@ public class CrateEditorMenu implements Listener {
             return;
         }
         int index = slot - SLOT_SELECTOR_START;
-        List<String> modes = List.of("reward-only", "preview-only", "key-required", "economy-required", "full");
+        List<String> modes = List.of("reward-only", "preview-only", "economy-required", "full");
         if (index < 0 || index >= modes.size()) {
             return;
         }

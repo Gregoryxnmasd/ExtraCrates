@@ -8,9 +8,21 @@ softdepend: [ProtocolLib]
 commands:
   crates:
     description: Manage crates and their main options.
-    usage: /<command> <gui|open|preview|cutscene|reload|givekey|clear|route|sync|migrate>
+    usage: /<command> <gui|open|preview|cutscene|reload|clear|route|sync|migrate>
     aliases: [crate, extracrates]
 permissions:
+  extracrates.editor:
+    description: Allows opening the editor GUI.
+    default: op
+  extracrates.editor.crates:
+    description: Allows managing crates in the editor GUI.
+    default: op
+  extracrates.editor.rewards:
+    description: Allows managing rewards in the editor GUI.
+    default: op
+  extracrates.editor.paths:
+    description: Allows managing paths in the editor GUI.
+    default: op
   extracrates.gui:
     description: Allows opening the crates GUI.
     default: true
@@ -28,9 +40,6 @@ permissions:
     default: true
   extracrates.reload:
     description: Allows reloading crate configuration.
-    default: op
-  extracrates.givekey:
-    description: Allows giving crate keys.
     default: op
   extracrates.clear:
     description: Allows clearing crate effects for players.

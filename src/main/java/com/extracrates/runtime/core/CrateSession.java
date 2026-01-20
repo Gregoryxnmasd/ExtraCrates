@@ -93,6 +93,7 @@ public class CrateSession {
     private ItemStack[] previousArmorContents;
     private ItemStack previousOffHand;
     private Location previousLocation;
+    private BossBar rerollBossBar;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -138,7 +139,7 @@ public class CrateSession {
         rerollEnabledAtTick = rewardSwitchTicks;
         rerollLocked = false;
         selectedRewardIndex = -1;
-        Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
+        Location start = resolveCameraStart();
         previousGameMode = player.getGameMode();
         previousWalkSpeed = player.getWalkSpeed();
         previousFlySpeed = player.getFlySpeed();
@@ -340,12 +341,14 @@ public class CrateSession {
         if (path == null || path.getPoints().isEmpty()) {
             logVerbose("Cutscene finalizada: ruta vacia para crate=%s", crate.id());
             finish();
+            end();
             return;
         }
         List<Location> timeline = buildTimeline(cameraEntity.getWorld(), path);
         if (timeline.isEmpty()) {
             logVerbose("Cutscene finalizada: timeline vacio para crate=%s", crate.id());
             finish();
+            end();
             return;
         }
         double minTeleportDistance = Math.max(0.0, configLoader.getMainConfig().getDouble("cutscene.min-teleport-distance", 0.0));
@@ -402,7 +405,7 @@ public class CrateSession {
         selectedRewardIndex = -1;
         rerollLocked = false;
         nextRewardSwitchTick = rewardSwitchTicks;
-        Location start = crate.cameraStart() != null ? crate.cameraStart() : player.getLocation();
+        Location start = resolveCameraStart();
         if (cameraEntity != null) {
             cameraEntity.teleport(start);
             player.setSpectatorTarget(cameraEntity);
@@ -482,6 +485,11 @@ public class CrateSession {
         List<Location> timeline = new ArrayList<>();
         List<com.extracrates.cutscene.CutscenePoint> points = path.getPoints();
         String smoothing = resolveSmoothing(path);
+        if (points.size() == 1) {
+            com.extracrates.cutscene.CutscenePoint point = points.getFirst();
+            timeline.add(new Location(world, point.x(), point.y(), point.z(), point.yaw(), point.pitch()));
+            return timeline;
+        }
         for (int i = 0; i < points.size() - 1; i++) {
             com.extracrates.cutscene.CutscenePoint start = points.get(i);
             com.extracrates.cutscene.CutscenePoint end = points.get(i + 1);
@@ -542,6 +550,9 @@ public class CrateSession {
     }
 
     private void finish() {
+        if (rewardDelivered) {
+            return;
+        }
         if (rerollLocked && selectedRewardIndex >= 0 && selectedRewardIndex < rewards.size()) {
             rewardIndex = selectedRewardIndex;
         }
@@ -552,6 +563,9 @@ public class CrateSession {
 
     private void executeReward() {
         if (preview) {
+            return;
+        }
+        if (rewardDelivered) {
             return;
         }
         Reward reward = getCurrentReward();
@@ -872,6 +886,7 @@ public class CrateSession {
         ended = true;
         ending = true;
         waitingForClaim = false;
+        clearRerollDisplay();
         if (task != null) {
             task.cancel();
         }
@@ -1167,6 +1182,27 @@ public class CrateSession {
                 "rerolls_left", rerollsLeft,
                 "rerolls_used", Integer.toString(rerollsUsed)
         );
+        if (rerollBossBar == null && isBossBarSupported()) {
+            rerollBossBar = languageManager.createBossBar(
+                    "reroll.bossbar",
+                    1.0f,
+                    BossBar.Color.YELLOW,
+                    BossBar.Overlay.PROGRESS,
+                    placeholders
+            );
+            try {
+                player.showBossBar(rerollBossBar);
+            } catch (RuntimeException | NoSuchMethodError ex) {
+                rerollBossBar = null;
+            }
+        }
+        if (rerollBossBar != null) {
+            float progress = maxRerolls > 0
+                    ? Math.max(0.0f, Math.min(1.0f, (maxRerolls - rerollsUsed) / (float) maxRerolls))
+                    : 1.0f;
+            rerollBossBar.name(languageManager.getMessage("reroll.bossbar", placeholders));
+            rerollBossBar.progress(progress);
+        }
         if (rerollLocked) {
             player.sendActionBar(languageManager.getMessage("reroll.confirmed-bar", placeholders));
         } else if (elapsedTicks >= rerollEnabledAtTick) {
@@ -1181,6 +1217,22 @@ public class CrateSession {
             return;
         }
         player.sendActionBar(Component.empty());
+        if (rerollBossBar != null) {
+            try {
+                player.hideBossBar(rerollBossBar);
+            } catch (RuntimeException | NoSuchMethodError ignored) {
+            }
+            rerollBossBar = null;
+        }
+    }
+
+    private Location resolveCameraStart() {
+        if (path != null && !path.getPoints().isEmpty()) {
+            com.extracrates.cutscene.CutscenePoint point = path.getPoints().getFirst();
+            return new Location(player.getWorld(), point.x(), point.y(), point.z(), point.yaw(), point.pitch());
+        }
+        Location cameraStart = crate.cameraStart();
+        return cameraStart != null ? cameraStart : player.getLocation();
     }
 
     private record RewardDisplayCacheKey(String rewardId, String worldName, String rewardModel) {

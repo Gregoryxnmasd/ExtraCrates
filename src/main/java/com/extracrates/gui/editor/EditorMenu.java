@@ -3,7 +3,6 @@ package com.extracrates.gui.editor;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.config.LanguageManager;
-import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.gui.MenuSpacer;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.text.Component;
@@ -25,7 +24,6 @@ public class EditorMenu implements Listener {
     private static final int SLOT_ACTION_CRATES = 10;
     private static final int SLOT_ACTION_REWARDS = 12;
     private static final int SLOT_ACTION_PATHS = 14;
-    private static final int SLOT_ACTION_KEYS = 16;
     private static final int SLOT_NAV_CLOSE = 31;
     private static final int[] NAV_FILLER_SLOTS = {27, 28, 29, 30, 32, 33, 34, 35};
 
@@ -35,14 +33,12 @@ public class EditorMenu implements Listener {
     private final CrateEditorMenu crateEditorMenu;
     private final RewardEditorMenu rewardEditorMenu;
     private final PathEditorMenu pathEditorMenu;
-    private final KeyManagerMenu keyManagerMenu;
 
     public EditorMenu(
             ExtraCratesPlugin plugin,
             ConfigLoader configLoader,
             EditorInputManager inputManager,
-            ConfirmationMenu confirmationMenu,
-            SessionManager sessionManager
+            ConfirmationMenu confirmationMenu
     ) {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
@@ -50,7 +46,6 @@ public class EditorMenu implements Listener {
         this.crateEditorMenu = new CrateEditorMenu(plugin, configLoader, inputManager, confirmationMenu, this);
         this.rewardEditorMenu = new RewardEditorMenu(plugin, configLoader, inputManager, confirmationMenu, this);
         this.pathEditorMenu = new PathEditorMenu(plugin, configLoader, inputManager, confirmationMenu, this);
-        this.keyManagerMenu = new KeyManagerMenu(plugin, configLoader, sessionManager, inputManager, this);
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -65,9 +60,6 @@ public class EditorMenu implements Listener {
         inventory.setItem(SLOT_ACTION_PATHS, buildItem(Material.ENDER_EYE,
                 languageManager.getRaw("editor.menu.action.paths.name", java.util.Collections.emptyMap()),
                 List.of(languageManager.getRaw("editor.menu.action.paths.lore", java.util.Collections.emptyMap()))));
-        inventory.setItem(SLOT_ACTION_KEYS, buildItem(Material.TRIPWIRE_HOOK,
-                languageManager.getRaw("editor.menu.action.keys.name", java.util.Collections.emptyMap()),
-                List.of(languageManager.getRaw("editor.menu.action.keys.lore", java.util.Collections.emptyMap()))));
         fillNavigation(inventory);
         inventory.setItem(SLOT_NAV_CLOSE, buildItem(Material.BARRIER,
                 languageManager.getRaw("editor.menu.nav.close.name", java.util.Collections.emptyMap()),
@@ -86,10 +78,27 @@ public class EditorMenu implements Listener {
         }
         event.setCancelled(true);
         switch (event.getSlot()) {
-            case SLOT_ACTION_CRATES -> crateEditorMenu.open(player);
-            case SLOT_ACTION_REWARDS -> rewardEditorMenu.openPools(player);
-            case SLOT_ACTION_PATHS -> pathEditorMenu.open(player);
-            case SLOT_ACTION_KEYS -> keyManagerMenu.open(player);
+            case SLOT_ACTION_CRATES -> {
+                if (!player.hasPermission("extracrates.editor.crates")) {
+                    player.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return;
+                }
+                crateEditorMenu.open(player);
+            }
+            case SLOT_ACTION_REWARDS -> {
+                if (!player.hasPermission("extracrates.editor.rewards")) {
+                    player.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return;
+                }
+                rewardEditorMenu.openPools(player);
+            }
+            case SLOT_ACTION_PATHS -> {
+                if (!player.hasPermission("extracrates.editor.paths")) {
+                    player.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return;
+                }
+                pathEditorMenu.open(player);
+            }
             case SLOT_NAV_CLOSE -> player.closeInventory();
             default -> {
             }
