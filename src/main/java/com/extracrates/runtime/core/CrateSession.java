@@ -60,6 +60,7 @@ public class CrateSession {
     private BukkitRunnable task;
     private BukkitRunnable musicTask;
     private BukkitRunnable watchdogTask;
+    private BukkitRunnable autoConfirmTask;
 
     private int rewardIndex;
     private int rerollsUsed;
@@ -393,11 +394,16 @@ public class CrateSession {
         waitingForClaim = true;
         lastTaskTickMillis = System.currentTimeMillis();
         updateRerollHud();
+        scheduleAutoConfirm();
     }
 
     private void resetCutsceneForReroll() {
         if (task != null) {
             task.cancel();
+        }
+        if (autoConfirmTask != null) {
+            autoConfirmTask.cancel();
+            autoConfirmTask = null;
         }
         waitingForClaim = false;
         elapsedTicks = 0;
@@ -887,6 +893,10 @@ public class CrateSession {
         ending = true;
         waitingForClaim = false;
         clearRerollDisplay();
+        if (autoConfirmTask != null) {
+            autoConfirmTask.cancel();
+            autoConfirmTask = null;
+        }
         if (task != null) {
             task.cancel();
         }
@@ -946,17 +956,7 @@ public class CrateSession {
 
     public void handleRerollInput(boolean confirm) {
         if (confirm) {
-            if (!waitingForClaim) {
-                return;
-            }
-            rerollLocked = true;
-            selectedRewardIndex = rewardIndex;
-            Reward reward = getCurrentReward();
-            if (reward != null) {
-                player.sendMessage(languageManager.getMessage("reroll.confirmed", Map.of("reward", reward.displayName())));
-            }
-            finish();
-            end();
+            confirmReward(true);
             return;
         }
         if (!waitingForClaim && elapsedTicks < rerollEnabledAtTick) {
@@ -975,6 +975,38 @@ public class CrateSession {
         if (reward != null) {
             player.sendMessage(languageManager.getMessage("reroll.advance", Map.of("reward", reward.displayName())));
         }
+    }
+
+    private void confirmReward(boolean notify) {
+        if (!waitingForClaim || ended) {
+            return;
+        }
+        rerollLocked = true;
+        selectedRewardIndex = rewardIndex;
+        Reward reward = getCurrentReward();
+        if (notify && reward != null) {
+            player.sendMessage(languageManager.getMessage("reroll.confirmed", Map.of("reward", reward.displayName())));
+        }
+        finish();
+        end();
+    }
+
+    private void scheduleAutoConfirm() {
+        if (autoConfirmTask != null) {
+            autoConfirmTask.cancel();
+            autoConfirmTask = null;
+        }
+        int autoConfirmTicks = configLoader.getMainConfig().getInt("cutscene.auto-confirm-ticks", 0);
+        if (autoConfirmTicks <= 0) {
+            return;
+        }
+        autoConfirmTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                confirmReward(false);
+            }
+        };
+        autoConfirmTask.runTaskLater(plugin, autoConfirmTicks);
     }
 
     private void capturePlayerState() {
