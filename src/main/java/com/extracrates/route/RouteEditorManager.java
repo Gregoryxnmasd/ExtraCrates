@@ -112,7 +112,18 @@ public class RouteEditorManager {
         }
         section.set("particle-preview", session.getParticleName());
         List<Map<String, Object>> points = new ArrayList<>();
-        for (CutscenePoint point : session.getPoints()) {
+        List<CutscenePoint> sessionPoints = session.getPoints();
+        if (sessionPoints.isEmpty()) {
+            Location eyeLocation = player.getEyeLocation();
+            sessionPoints = List.of(new CutscenePoint(
+                    eyeLocation.getX(),
+                    eyeLocation.getY(),
+                    eyeLocation.getZ(),
+                    eyeLocation.getYaw(),
+                    eyeLocation.getPitch()
+            ));
+        }
+        for (CutscenePoint point : sessionPoints) {
             Map<String, Object> values = new LinkedHashMap<>();
             values.put("x", point.x());
             values.put("y", point.y());

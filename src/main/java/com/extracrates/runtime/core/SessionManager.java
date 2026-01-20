@@ -117,6 +117,10 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.already-in-progress"));
             return false;
         }
+        if (!hasCratePermission(player, crate)) {
+            player.sendMessage(languageManager.getMessage("session.no-permission", player, crate, null, null));
+            return false;
+        }
         if (isWorldBlocked(player, crate)) {
             player.sendMessage(languageManager.getMessage("session.world-blocked"));
             return false;
@@ -156,6 +160,21 @@ public class SessionManager {
         }
         session.start();
         return true;
+    }
+
+    public boolean hasCratePermission(Player player, CrateDefinition crate) {
+        if (player == null || crate == null) {
+            return false;
+        }
+        boolean usePerCrate = configLoader.getMainConfig().getBoolean("permissions.use-per-crate", true);
+        if (!usePerCrate) {
+            return true;
+        }
+        String permission = crate.permission();
+        if (permission == null || permission.isBlank()) {
+            return true;
+        }
+        return player.hasPermission(permission);
     }
 
     private boolean isWorldBlocked(Player player, CrateDefinition crate) {
@@ -278,7 +297,7 @@ public class SessionManager {
     }
 
     private CutscenePath buildDefaultPath(Player player) {
-        Location location = player.getLocation();
+        Location location = player.getEyeLocation();
         List<CutscenePoint> points = List.of(
                 new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch()),
                 new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch())
@@ -289,7 +308,7 @@ public class SessionManager {
     private CutscenePath resolveCutscenePath(CrateDefinition crate, Player player) {
         String pathId = crate.animation() != null ? crate.animation().path() : null;
         CutscenePath path = pathId != null ? configLoader.getPaths().get(pathId) : null;
-        if (path == null) {
+        if (path == null || path.getPoints().isEmpty()) {
             return buildDefaultPath(player);
         }
         return path;

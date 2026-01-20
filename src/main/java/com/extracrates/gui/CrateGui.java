@@ -65,6 +65,7 @@ public class CrateGui implements Listener {
     public void open(@NotNull Player player, int pageIndex) {
         String title = configLoader.getMainConfig().getString("gui.title", "&8ExtraCrates");
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
+        crates.removeIf(crate -> !sessionManager.hasCratePermission(player, crate));
         crates.sort(Comparator.comparing((CrateDefinition crate) -> resolveCreatedAt(crate.id()))
                 .thenComparing(CrateDefinition::id, String.CASE_INSENSITIVE_ORDER));
         int totalPages = Math.max(1, (int) Math.ceil(crates.size() / (double) PAGE_SIZE));
