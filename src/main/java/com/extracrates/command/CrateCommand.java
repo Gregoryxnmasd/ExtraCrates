@@ -336,35 +336,6 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     }
                     return true;
                 }
-                if (action.equalsIgnoreCase("source")) {
-                    if (routeEditorManager.hasNoSession(player)) {
-                        sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
-                        return true;
-                    }
-                    if (args.length < 3) {
-                        sender.sendMessage(languageManager.getMessage("command.route-usage"));
-                        return true;
-                    }
-                    String sourceValue = args[2].toLowerCase(Locale.ROOT);
-                    switch (sourceValue) {
-                        case "player" -> routeEditorManager.setCaptureSource(player, com.extracrates.route.RouteCaptureSource.PLAYER);
-                        case "marker" -> routeEditorManager.setCaptureSource(player, com.extracrates.route.RouteCaptureSource.MARKER);
-                        default -> sender.sendMessage(languageManager.getMessage("command.route-usage"));
-                    }
-                    return true;
-                }
-                if (action.equalsIgnoreCase("marker")) {
-                    if (routeEditorManager.hasNoSession(player)) {
-                        sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
-                        return true;
-                    }
-                    if (args.length < 3 || !args[2].equalsIgnoreCase("move")) {
-                        sender.sendMessage(languageManager.getMessage("command.route-usage"));
-                        return true;
-                    }
-                    routeEditorManager.moveMarkerToPlayer(player);
-                    return true;
-                }
                 if (action.equalsIgnoreCase("add") || action.equalsIgnoreCase("capture")) {
                     if (routeEditorManager.hasNoSession(player)) {
                         sender.sendMessage(languageManager.getMessage("command.route-no-active-editor"));
@@ -407,7 +378,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         List<String> options = new ArrayList<>();
         String current = args.length > 0 ? args[args.length - 1] : "";
         if (args.length == 1) {
-            options.addAll(List.of("gui", "history", "editor", "open", "preview", "claim", "cutscene", "reroll", "reload", "debug", "sync", "givekey", "route", "migrate"));
+            options.addAll(List.of("gui", "history", "editor", "open", "preview", "claim", "cutscene", "reroll", "reload", "debug", "sync", "givekey", "route", "migrate", "crates", "pools", "rewards"));
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("crates")) {
@@ -488,20 +459,9 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {
-            options.addAll(List.of("stop", "cancel", "source", "add", "capture", "marker"));
+            options.addAll(List.of("stop", "cancel", "add", "capture"));
             options.addAll(configLoader.getPaths().keySet());
             return filterByPrefix(options, current);
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("route")) {
-            String action = args[1].toLowerCase(Locale.ROOT);
-            if (action.equals("source")) {
-                options.addAll(List.of("player", "marker"));
-                return filterByPrefix(options, current);
-            }
-            if (action.equals("marker")) {
-                options.add("move");
-                return filterByPrefix(options, current);
-            }
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("migrate")) {
             options.addAll(List.of("sql", "local"));

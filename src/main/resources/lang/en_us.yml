@@ -1,43 +1,43 @@
 command:
-  usage: "&cUse /crate gui|editor|open|preview|cutscene|reload|sync|givekey|route|crates|pools|rewards"
+  usage: "&cUse /crates gui|editor|open|preview|cutscene|reload|sync|givekey|route|crates|pools|rewards"
   only-players: "&cPlayers only."
   no-permission: "&cYou don't have permission."
-  open-usage: "&cUsage: /crate %sub% <id>"
-  route-editor-usage: "&cUsage: /crate route editor <path|stop|cancel|add|capture|mode|source|marker> [value]"
+  open-usage: "&cUsage: /crates %sub% <id>"
+  route-usage: "&cUsage: /crates route <path|stop|cancel|add|capture>"
   route-saved: "&aRoute saved."
   route-no-active-editor: "&cYou don't have an active route editor session."
   route-canceled: "&eRoute editor canceled."
   route-already-active: "&cYou already have an active route editor session."
   route-started: "&aRoute editor started for '%path%'."
-  route-instructions: "&7Block mode: click blocks to add points. Free mode: use &f/crate route editor add&7 to capture player/marker position. Use &f/crate route editor mode toggle&7 and &f/crate route editor source <player|marker>&7."
-  cutscene-usage: "&cUsage: /crate cutscene test <id>"
+  route-instructions: "&7Use &f/crates route add&7 to capture your current position. Save with &f/crates route stop&7."
+  cutscene-usage: "&cUsage: /crates cutscene test <id>"
   cutscene-path-not-found: "&cCutscene path not found."
   cutscene-preview-started: "&aPreview started for route '%path%'."
-  givekey-usage: "&cUsage: /crate givekey <id> &7(give key)"
+  givekey-usage: "&cUsage: /crates givekey <id> &7(give key)"
   crate-not-found: "&cCrate not found."
   crate-already-exists: "&cA crate with that ID already exists."
   crate-created: "&aCrate %crate% created."
   crate-updated: "&aCrate %crate% updated (%field%)."
   crate-deleted: "&aCrate %crate% deleted."
-  crates-usage: "&cUsage: /crate crates <create|edit|delete>"
-  crates-create-usage: "&cUsage: /crate crates create <id>"
-  crates-edit-usage: "&cUsage: /crate crates edit <id> <field> <value>"
-  crates-delete-usage: "&cUsage: /crate crates delete <id>"
-  pools-usage: "&cUsage: /crate pools <create|edit|delete>"
-  pools-create-usage: "&cUsage: /crate pools create <id>"
-  pools-edit-usage: "&cUsage: /crate pools edit <id> <field> <value>"
-  pools-delete-usage: "&cUsage: /crate pools delete <id>"
+  crates-usage: "&cUsage: /crates crates <create|edit|delete>"
+  crates-create-usage: "&cUsage: /crates crates create <id>"
+  crates-edit-usage: "&cUsage: /crates crates edit <id> <field> <value>"
+  crates-delete-usage: "&cUsage: /crates crates delete <id>"
+  pools-usage: "&cUsage: /crates pools <create|edit|delete>"
+  pools-create-usage: "&cUsage: /crates pools create <id>"
+  pools-edit-usage: "&cUsage: /crates pools edit <id> <field> <value>"
+  pools-delete-usage: "&cUsage: /crates pools delete <id>"
   pool-already-exists: "&cA pool with that ID already exists."
   pool-not-found: "&cReward pool not found."
   pool-created: "&aPool %pool% created."
   pool-updated: "&aPool %pool% updated (%field%)."
   pool-deleted: "&aPool %pool% deleted."
-  rewards-usage: "&cUsage: /crate rewards <create|edit|delete|give|claim>"
-  rewards-create-usage: "&cUsage: /crate rewards create <pool> <id>"
-  rewards-edit-usage: "&cUsage: /crate rewards edit <pool> <id> <field> <value>"
-  rewards-delete-usage: "&cUsage: /crate rewards delete <pool> <id>"
-  rewards-give-usage: "&cUsage: /crate rewards give <player> <pool> <id>"
-  rewards-claim-usage: "&cUsage: /crate rewards claim [player]"
+  rewards-usage: "&cUsage: /crates rewards <create|edit|delete|give|claim>"
+  rewards-create-usage: "&cUsage: /crates rewards create <pool> <id>"
+  rewards-edit-usage: "&cUsage: /crates rewards edit <pool> <id> <field> <value>"
+  rewards-delete-usage: "&cUsage: /crates rewards delete <pool> <id>"
+  rewards-give-usage: "&cUsage: /crates rewards give <player> <pool> <id>"
+  rewards-claim-usage: "&cUsage: /crates rewards claim [player]"
   reward-already-exists: "&cA reward with that ID already exists."
   reward-not-found: "&cReward not found."
   reward-created: "&aReward %reward% created in %pool%."
@@ -54,7 +54,7 @@ command:
   givekey-success: "&aKey delivered."
   unknown-subcommand: "&cUnknown subcommand."
   key-item-name: "%crate_name% &7(key)"
-  mass-usage: "&cUsage: /crate mass set <field> <value> [filter]"
+  mass-usage: "&cUsage: /crates mass set <field> <value> [filter]"
   mass-invalid-field: "&cInvalid field: %field%"
   mass-invalid-value: "&cInvalid value for %field%: %value%"
   mass-invalid-filter: "&cInvalid filter: %filter%"
@@ -71,7 +71,7 @@ session:
   cooldown-bossbar: "&cAvailable in %seconds%s"
   no-rewards: "&cNo rewards configured."
   open-mode-reward-only: "&7This crate opens instantly without a cutscene."
-  open-mode-preview-only: "&cThis crate is preview-only. Use /crate preview."
+  open-mode-preview-only: "&cThis crate is preview-only. Use /crates preview."
   open-mode-cinematic: "&7This crate opens with a cinematic cutscene."
   preview-reward: "&ePreview reward: %reward%"
   reward-received: "&aYou received: %reward%"
@@ -94,11 +94,18 @@ editor:
   common:
     none: "&7None"
     current: "&7Current: &f%value%"
-    click-edit: "&7Click to edit."
-    click-select: "&7Click to select."
-    click-toggle: "&7Click to toggle."
-    click-preview: "&7Click to preview."
-    click-start-editor: "&7Click to start the editor."
+    click-edit: "&fClick to edit."
+    click-select: "&fClick to select."
+    click-toggle: "&fClick to toggle."
+    click-preview: "&fClick to preview."
+    click-start-editor: "&fClick to start the editor."
+    click-set: "&fClick to set."
+    prev-page: "&ePrevious page"
+    next-page: "&eNext page"
+    action:
+      left-edit: "&fLeft click: edit."
+      right-clone: "&fRight click: clone."
+      shift-right-delete: "&fShift + right click: delete."
   input:
     prompt: "&eType in chat: &f%prompt%&e. &7Type &fcancel&7 to abort."
     pending: "&cYou already have a pending input. Type &fcancel&c to abort."
@@ -158,22 +165,43 @@ editor:
         name: "&eRewards pool"
       type:
         name: "&eType"
+        description: "&7%description%"
+        desc:
+          normal: "&7Standard crate with normal opening."
+          keyed: "&7Requires a physical key to open."
+          event: "&7Designed for temporary events."
+          seasonal: "&7Seasonal rewards with limited availability."
+          mystery: "&7Surprise-focused rewards."
       open-mode:
         name: "&eOpen mode"
-      overlay:
-        name: "&eCutscene overlay"
       lock-movement:
         name: "&eLock movement"
       lock-hud:
         name: "&eLock HUD"
       music:
         name: "&eMusic"
+      reward-location:
+        name: "&eReward location"
+        desc: "&7Sets where the reward item spawns."
+      max-rerolls:
+        name: "&eMax rerolls"
+        desc: "&7Limits how many rerolls a player can use."
       delete:
         name: "&cDelete crate"
         lore: "&7Delete this crate."
       back:
         name: "&eBack"
         lore: "&7Return to the crate list."
+    open-mode:
+      title: "&8Open mode: %crate%"
+      option:
+        name: "&e%mode%"
+        desc:
+          reward-only: "&7Instant reward without a cutscene."
+          preview-only: "&7Preview only, no rewards granted."
+          key-required: "&7Requires a physical key before opening."
+          economy-required: "&7Requires an economy cost."
+          full: "&7Full cutscene with normal opening."
     pools:
       title: "&8Rewards pool: %crate%"
     paths:
@@ -186,9 +214,8 @@ editor:
       new-id: "Enter a new crate ID"
       clone-id: "Enter a new crate ID to clone %id%"
       display-name: "Enter the display name"
-      open-mode: "Enter the open mode (reward-only, preview-only, cinematic)"
-      overlay-model: "Enter the overlay model id"
       music-sound: "Enter the music sound id"
+      max-rerolls: "Enter the max rerolls (0 for unlimited)"
     confirm:
       create: "Create crate %id%?"
       clone: "Clone crate %source% to %target%?"
@@ -206,6 +233,7 @@ editor:
       updated: "&aCrate updated."
       type-updated: "&aCrate type updated."
       lock-updated: "&aCrate lock updated."
+      reward-location-updated: "&aReward location updated."
   paths:
     list:
       title: "&8Path Editor"
@@ -225,29 +253,44 @@ editor:
       title: "&8Path: %path%"
       edit-points:
         name: "&eEdit points"
-        block-mode: "&7Block mode: click blocks."
-        free-mode: "&7Free mode: &f/crate route editor add&7."
-        source: "&7Source: &f/crate route editor source <player|marker>&7."
-        save: "&7Save with &f/crate route editor stop&7."
+        free-mode: "&7Use &f/crates route add&7 to capture points."
+        save: "&7Save with &f/crates route stop&7."
       duration:
         name: "&eDuration"
+        desc: "&7Total duration in seconds."
       smoothing:
         name: "&eSmoothing"
+        desc: "&7Select the smoothing mode between points."
       particles:
         name: "&eParticles"
+        desc: "&7Select the particle used for preview."
       constant-speed:
         name: "&eConstant speed"
+        desc: "&7Keeps speed uniform across the path without acceleration."
       preview:
         name: "&ePreview"
-        lore: "&7Shows particles along the route."
+        lore: "&7Plays the cutscene preview and stops automatically."
       step-resolution:
         name: "&eStep resolution"
+        desc: "&7Block distance between generated points."
       delete:
         name: "&cDelete path"
         lore: "&7Delete this path."
       back:
         name: "&eBack"
         lore: "&7Return to the path list."
+    smoothing:
+      title: "&8Smoothing: %path%"
+      option:
+        name: "&e%mode%"
+        desc:
+          linear: "&7Direct movement without easing."
+          ease-in: "&7Starts slow and accelerates."
+          ease-out: "&7Starts fast and slows down."
+          ease-in-out: "&7Smooth easing at start and end."
+          smoothstep: "&7Smooth easing at start and end."
+    particles:
+      title: "&8Particles: %path%"
   path:
     prompt:
       new-id: "Enter a new path ID"
@@ -289,7 +332,6 @@ editor:
       item:
         lore:
           id: "&7ID: &f%id%"
-          roll-count: "&7Rolls: &f%roll_count%"
           rewards: "&7Rewards: &f%rewards%"
           hint: "&7Left click to edit. Right click to clone. Shift+right click to delete."
     pool:
@@ -308,7 +350,7 @@ editor:
     reward:
       title: "&8Reward: %reward%"
       current: "&7Current: &f%value%"
-      click-edit: "&7Click to edit."
+      click-edit: "&fClick to edit."
       delete:
         name: "&cDelete reward"
         lore: "&7Delete this reward."
@@ -320,20 +362,11 @@ editor:
           name: "&eDisplay name"
         chance:
           name: "&eChance"
-        item:
-          name: "&eItem"
-        amount:
-          name: "&eAmount"
         commands:
           name: "&eCommands"
-        enchantments:
-          name: "&eEnchantments"
-        glow:
-          name: "&eGlow"
-        custom-model:
-          name: "&eCustom model"
-        map-image:
-          name: "&eMap image"
+        item-upload:
+          name: "&eExact item"
+          desc: "&7Use the item in your hand as the reward."
       item-lore:
         id: "&7ID: &f%id%"
         chance: "&7Chance: &f%chance%"
@@ -347,7 +380,7 @@ editor:
       new-reward-id: "Enter a new reward ID"
       clone-reward-id: "Enter a new reward ID to clone %id%"
       display-name: "Enter the reward display name"
-      chance: "Enter the reward chance"
+      chance: "Enter the reward chance (%)"
       item: "Enter the item material"
       amount: "Enter the reward amount"
       commands: "Enter commands (separate with ;)"
@@ -375,17 +408,11 @@ editor:
       reward-updated: "&aReward updated."
     error:
       invalid-value: "&cPlease provide a valid value."
-      invalid-chance-min: "&cChance must be 0 or higher."
+      missing-hand-item: "&cYou must hold an item in your hand."
+      invalid-chance-min: "&cChance must be 0.01 or higher."
+      invalid-chance-max: "&cChance must be 100 or lower."
       invalid-chance-number: "&cChance must be a number."
-      invalid-amount-min: "&cAmount must be at least 1."
-      invalid-amount-number: "&cAmount must be a number."
-      invalid-material: "&cInvalid material: %material%"
-      invalid-glow: "&cGlow must be true/false."
       invalid-commands: "&cEnter at least one command."
-      invalid-enchant-format: "&cEnchantments must be in key:level format."
-      invalid-enchant-key: "&cUnknown enchantment: %key%"
-      invalid-enchant-level: "&cInvalid level for %key%"
-      invalid-enchantments: "&cProvide at least one enchantment."
   keys:
     title:
       search: "&8Keys - Search"

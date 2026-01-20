@@ -38,6 +38,9 @@ public final class ItemUtil {
             }
             return cached.clone();
         }
+        if (reward.itemStack() != null) {
+            return reward.itemStack().clone();
+        }
         Material material = Material.matchMaterial(reward.item().toUpperCase(Locale.ROOT));
         if (material == null) {
             material = Material.STONE;
