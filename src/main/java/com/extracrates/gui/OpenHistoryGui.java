@@ -35,12 +35,12 @@ import java.util.UUID;
 
 public class OpenHistoryGui implements Listener {
     private static final int INVENTORY_SIZE = 54;
-    private static final int PAGE_SIZE = 45;
-    private static final int PREVIOUS_PAGE_SLOT = 45;
+    private static final int PAGE_SIZE = 27;
+    private static final int PREVIOUS_PAGE_SLOT = 47;
     private static final int NEXT_PAGE_SLOT = 53;
-    private static final int CRATE_FILTER_SLOT = 47;
-    private static final int DATE_FILTER_SLOT = 49;
-    private static final int RESET_FILTERS_SLOT = 51;
+    private static final int CRATE_FILTER_SLOT = 49;
+    private static final int DATE_FILTER_SLOT = 51;
+    private static final int RESET_FILTERS_SLOT = 45;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
             .withLocale(new Locale("es", "ES"))
             .withZone(ZoneId.systemDefault());
@@ -81,15 +81,17 @@ public class OpenHistoryGui implements Listener {
         HistoryGuiHolder holder = new HistoryGuiHolder(player.getUniqueId());
         Inventory inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, TextUtil.colorNoItalic(title));
         holder.setInventory(inventory);
-        int slot = 0;
+        int slot = 9;
+        int count = 0;
         if (entries.isEmpty()) {
             inventory.setItem(22, buildStaticItem(Material.BARRIER, "&cSin aperturas", List.of("&7No hay registros para los filtros actuales.")));
         } else {
             for (CrateOpenEntry entry : entries) {
-                if (slot >= PAGE_SIZE) {
+                if (count >= PAGE_SIZE) {
                     break;
                 }
                 inventory.setItem(slot++, buildEntryItem(entry));
+                count++;
             }
         }
 
