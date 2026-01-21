@@ -8,6 +8,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -17,6 +18,7 @@ import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 
 @SuppressWarnings("unused")
 public class SessionListener implements Listener {
@@ -68,10 +70,9 @@ public class SessionListener implements Listener {
         if (session == null) {
             return;
         }
-        if (event.getAction() != Action.LEFT_CLICK_AIR && event.getAction() != Action.LEFT_CLICK_BLOCK) {
-            return;
+        if (event.getAction() == Action.LEFT_CLICK_AIR || event.getAction() == Action.LEFT_CLICK_BLOCK) {
+            session.handleRerollInput(false);
         }
-        session.handleRerollInput(false);
         event.setCancelled(true);
     }
 
@@ -130,6 +131,27 @@ public class SessionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onSwapHandItems(PlayerSwapHandItemsEvent event) {
         CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session == null) {
+            return;
+        }
+        event.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onInteractEntity(PlayerInteractEntityEvent event) {
+        CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
+        if (session == null) {
+            return;
+        }
+        event.setCancelled(true);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPickup(EntityPickupItemEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+        CrateSession session = sessionManager.getSession(player.getUniqueId());
         if (session == null) {
             return;
         }

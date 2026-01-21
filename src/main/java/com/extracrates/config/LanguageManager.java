@@ -86,6 +86,9 @@ public class LanguageManager {
         if (messages == null) {
             return key;
         }
+        if (!messages.contains(key)) {
+            return "";
+        }
         String value = messages.getString(key, key);
         if (isSuppressed(value)) {
             return "";
@@ -96,6 +99,9 @@ public class LanguageManager {
     public List<String> getRawList(String key, Map<String, String> placeholders) {
         if (messages == null) {
             return List.of(key);
+        }
+        if (!messages.contains(key)) {
+            return List.of();
         }
         if (!messages.isList(key)) {
             return List.of(getRaw(key, placeholders));
@@ -120,6 +126,9 @@ public class LanguageManager {
     ) {
         if (messages == null) {
             return key;
+        }
+        if (!messages.contains(key)) {
+            return "";
         }
         String value = messages.getString(key, key);
         if (isSuppressed(value)) {

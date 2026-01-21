@@ -513,6 +513,10 @@ public class RewardEditorMenu implements Listener {
         FileConfiguration config = loadConfig();
         String basePath = "pools." + poolId + ".rewards." + rewardId;
         config.set(basePath + ".display-item", itemStack.clone());
+        ItemMeta meta = itemStack.getItemMeta();
+        if (meta != null && meta.hasDisplayName()) {
+            config.set(basePath + ".display-name", TextUtil.serializeLegacy(meta.displayName()));
+        }
         saveConfig(config);
     }
 
