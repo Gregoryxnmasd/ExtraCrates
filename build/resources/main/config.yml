@@ -1,32 +1,33 @@
 # Opciones globales
-language: es_es
+language: en_us
 accessibility-mode: true
 particles-default: "crit"
 hologram-font: "resourcepack:cutscene_font"
 ui-mode: "bossbar"
 gui:
   title: "&8ExtraCrates"
-  editor-title: "&0Editor de Crates"
-  history-title: "&8Historial de Crates"
+  editor-title: "&0Crate Editor"
+  history-title: "&8Crate History"
   preview-enabled: true
   click-sounds: true
+  editor-confirmations: true
   crates:
     legendary:
       slot: 10
       material: "CHEST"
       icon: 12001
       lore:
-        - "&7Nombre: &f%crate_name%"
+        - "&7Name: &f%crate_name%"
         - "&7Cooldown: &f%cooldown%"
-        - "&7Permiso: &f%permission%"
+        - "&7Permission: &f%permission%"
     seasonal:
       slot: 12
       material: "ENDER_CHEST"
       icon: 12002
       lore:
-        - "&7Nombre: &f%crate_name%"
+        - "&7Name: &f%crate_name%"
         - "&7Cooldown: &f%cooldown%"
-        - "&7Permiso: &f%permission%"
+        - "&7Permission: &f%permission%"
 sounds:
   reroll:
     sound: "ui.button.click"
@@ -48,28 +49,28 @@ resourcepack:
   use-custom-model-data: true
   allow-animated-items: true
   allow-map-images: true
-  pumpkin-overlay-model: "cutscene_mask"
   model-data:
     cutscene_mask: 1001
 cutscene:
-  overlay-model: "cutscene_mask"
   default-speed: 0.35
   constant-speed: true
   smooth-tick: 2
   reroll-enable-ticks: 0
-  pumpkin-model: "cutscene_mask"
-  slowdown-modifier: -10.0
+  auto-confirm-ticks: 0
+  fake-helmet-movement-speed: 10.0
+  reroll-bossbar:
+    main-text: "&eYou have %extracrates_rerolls_remained% rerolls remained."
+    hint-text: "&fPunch to reroll &7| &fSneak to claim"
   min-teleport-distance: 0.05
   hide-others: true
   spectator-lock: true
   fake-equip: true
   armorstand-invisible: true
   camera-entity: "armor_stand"
-  speed-modifier-uuid: "c0c0a1f2-7a89-4a2c-88a7-9f53b0d6f8b1"
   on-start:
-    - "say %player% inició la cutscene de %crate_id%"
+    - "say %player% started the %crate_id% cutscene"
   on-end:
-    - "say %player% terminó la cutscene de %crate_id% y obtuvo %reward_name%"
+    - "say %player% finished the %crate_id% cutscene and got %reward_name%"
   locks:
     movement: true
     hud: true
@@ -88,6 +89,15 @@ permissions:
 rewards:
   normalize-chances: false
   warning-threshold: 0
+placeholders:
+  none: "none"
+  no-session: "none"
+  no-crate: "none"
+  no-reward: "none"
+  no-rerolls: "0"
+  unlimited-rerolls: "∞"
+  opening-true: "true"
+  opening-false: "false"
 storage:
   enabled: false
   type: "mysql"

@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.extracrates.config.ConfigLoaderTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-01-19T19:01:15.262Z" hostname="EXTRALAPTOP" time="0.881">
+<testsuite name="com.extracrates.config.ConfigLoaderTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-01-21T00:46:52.814Z" hostname="EXTRALAPTOP" time="0.762">
   <properties/>
-  <testcase name="loadsCratesAndRewardsFromMockFiles(Path)" classname="com.extracrates.config.ConfigLoaderTest" time="0.881"/>
+  <testcase name="loadsCratesAndRewardsFromMockFiles(Path)" classname="com.extracrates.config.ConfigLoaderTest" time="0.762"/>
   <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[ene 19, 2026 9:01:16 P. M. com.extracrates.config.ConfigLoader loadCrates
-INFO: Validacion crates.yml: ruta=C:\Users\savge\AppData\Local\Temp\junit18103722122809826937\crates.yml, crates=1
-ene 19, 2026 9:01:16 P. M. com.extracrates.config.ConfigLoader loadRewards
-INFO: Validacion rewards.yml: ruta=C:\Users\savge\AppData\Local\Temp\junit18103722122809826937\rewards.yml, pools=1
-ene 19, 2026 9:01:16 P. M. com.extracrates.config.ConfigLoader loadPaths
-INFO: Validacion paths.yml: ruta=C:\Users\savge\AppData\Local\Temp\junit18103722122809826937\paths.yml, paths=0
-ene 19, 2026 9:01:16 P. M. com.extracrates.config.ConfigLoader loadAll
+  <system-err><![CDATA[ene 21, 2026 2:46:53 A. M. com.extracrates.config.ConfigLoader loadCrates
+INFO: Validacion crates.yml: ruta=C:\Users\savge\AppData\Local\Temp\junit15300527347393157159\crates.yml, crates=1
+ene 21, 2026 2:46:53 A. M. com.extracrates.config.ConfigLoader loadRewards
+INFO: Validacion rewards.yml: ruta=C:\Users\savge\AppData\Local\Temp\junit15300527347393157159\rewards.yml, pools=1
+ene 21, 2026 2:46:53 A. M. com.extracrates.config.ConfigLoader loadPaths
+INFO: Validacion paths.yml: ruta=C:\Users\savge\AppData\Local\Temp\junit15300527347393157159\paths.yml, paths=0
+ene 21, 2026 2:46:53 A. M. com.extracrates.config.ConfigLoader loadAll
 INFO: Configuracion cargada: crates=1, pools=1, paths=0
 ]]></system-err>
 </testsuite>

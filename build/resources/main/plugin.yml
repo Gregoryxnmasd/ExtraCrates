@@ -4,69 +4,88 @@ version: ${project.version}
 description: Base scaffolding for a complex crates plugin.
 author: Savaduki
 api-version: '1.21'
-softdepend: [ProtocolLib]
+softdepend: [ProtocolLib, PlaceholderAPI]
 commands:
-  crate:
-    description: Gestiona crates y sus opciones principales.
-    usage: /<command> <gui|open|preview|cutscene|reload|givekey|route|sync|migrate>
+  crates:
+    description: Manage crates and their main options.
+    usage: /<command> <gui|open|preview|cutscene|reload|clear|route|sync|migrate>
+    aliases: [crate, extracrates]
 permissions:
+  extracrates.editor:
+    description: Allows opening the editor GUI.
+    default: op
+  extracrates.editor.crates:
+    description: Allows managing crates in the editor GUI.
+    default: op
+  extracrates.editor.rewards:
+    description: Allows managing rewards in the editor GUI.
+    default: op
+  extracrates.editor.paths:
+    description: Allows managing paths in the editor GUI.
+    default: op
   extracrates.gui:
-    description: Permite abrir el GUI de crates.
+    description: Allows opening the crates GUI.
     default: true
   extracrates.history:
-    description: Permite ver el historial de aperturas.
+    description: Allows viewing open history.
     default: true
   extracrates.open:
-    description: Permite abrir crates.
+    description: Allows opening crates.
     default: true
   extracrates.preview:
-    description: Permite previsualizar crates.
+    description: Allows previewing crates.
     default: true
   extracrates.reroll:
-    description: Permite rerollear recompensas de crates.
+    description: Allows rerolling crate rewards.
     default: true
   extracrates.reload:
-    description: Permite recargar la configuración de crates.
+    description: Allows reloading crate configuration.
     default: op
-  extracrates.givekey:
-    description: Permite otorgar llaves de crates.
+  extracrates.clear:
+    description: Allows clearing crate effects for players.
     default: op
   extracrates.route.editor:
-    description: Permite editar rutas de cutscene para crates.
+    description: Allows editing cutscene paths for crates.
     default: op
   extracrates.sync:
-    description: Permite gestionar la sincronización de crates.
+    description: Allows managing crate synchronization.
     default: op
   extracrates.migrate:
-    description: Permite migrar datos entre storages.
+    description: Allows migrating data between storages.
     default: op
   extracrates.crate.edit:
-    description: Permite editar crates desde comando.
+    description: Allows editing crates via command.
+    default: op
+  extracrates.crate.create:
+    description: Allows creating crates via command.
     default: op
   extracrates.crate.delete:
-    description: Permite borrar crates desde comando.
+    description: Allows deleting crates via command.
     default: op
   extracrates.pool.create:
-    description: Permite crear pools desde comando.
+    description: Allows creating pools via command.
     default: op
   extracrates.pool.edit:
-    description: Permite editar pools desde comando.
+    description: Allows editing pools via command.
     default: op
   extracrates.pool.delete:
-    description: Permite borrar pools desde comando.
+    description: Allows deleting pools via command.
     default: op
   extracrates.reward.create:
-    description: Permite crear rewards desde comando.
+    description: Allows creating rewards via command.
     default: op
   extracrates.reward.edit:
-    description: Permite editar rewards desde comando.
+    description: Allows editing rewards via command.
     default: op
   extracrates.reward.delete:
-    description: Permite borrar rewards desde comando.
+    description: Allows deleting rewards via command.
     default: op
   extracrates.reward.give:
-    description: Permite entregar rewards manualmente.
+    description: Allows manually giving rewards.
     default: op
   extracrates.reward.claim:
-    description: Permite reclamar rewards pendientes.
+    description: Allows claiming pending rewards.
     default: true
+  extracrates.mass:
+    description: Allows mass-editing crates via command.
+    default: op

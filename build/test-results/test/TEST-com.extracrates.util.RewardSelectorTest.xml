@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.extracrates.util.RewardSelectorTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-01-19T19:01:16.149Z" hostname="EXTRALAPTOP" time="0.04">
+<testsuite name="com.extracrates.util.RewardSelectorTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-01-21T00:46:53.583Z" hostname="EXTRALAPTOP" time="0.035">
   <properties/>
-  <testcase name="weightedRollsRespectChanceDistribution()" classname="com.extracrates.util.RewardSelectorTest" time="0.009"/>
-  <testcase name="rollCountDefaultsToAtLeastOne()" classname="com.extracrates.util.RewardSelectorTest" time="0.002"/>
-  <testcase name="zeroTotalFallsBackToIndexSelectionAndLogs()" classname="com.extracrates.util.RewardSelectorTest" time="0.027"/>
+  <testcase name="weightedRollsRespectChanceDistribution()" classname="com.extracrates.util.RewardSelectorTest" time="0.008"/>
+  <testcase name="rollCountDefaultsToAtLeastOne()" classname="com.extracrates.util.RewardSelectorTest" time="0.001"/>
+  <testcase name="zeroTotalFallsBackToIndexSelectionAndLogs()" classname="com.extracrates.util.RewardSelectorTest" time="0.023"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
