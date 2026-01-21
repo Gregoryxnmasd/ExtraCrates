@@ -106,7 +106,7 @@ public class PathEditorMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.paths.list.back.name"),
                 List.of(text("editor.paths.list.back.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -156,7 +156,7 @@ public class PathEditorMenu implements Listener {
         inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
                 text("editor.paths.detail.back.name"),
                 List.of(text("editor.paths.detail.back.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -328,7 +328,7 @@ public class PathEditorMenu implements Listener {
         inventory.setItem(SLOT_SELECTOR_BACK, buildItem(Material.ARROW,
                 text("editor.paths.detail.back.name"),
                 List.of(text("editor.paths.detail.back.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -357,7 +357,7 @@ public class PathEditorMenu implements Listener {
         inventory.setItem(SLOT_PARTICLE_BACK, buildItem(Material.ARROW,
                 text("editor.paths.detail.back.name"),
                 List.of(text("editor.paths.detail.back.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 

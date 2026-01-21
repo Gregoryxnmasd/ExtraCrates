@@ -7,6 +7,18 @@ public final class MenuSpacer {
     private MenuSpacer() {
     }
 
+    public static void applyTopRow(Inventory inventory, ItemStack spacer) {
+        if (inventory == null || spacer == null) {
+            return;
+        }
+        int size = Math.min(9, inventory.getSize());
+        for (int slot = 0; slot < size; slot++) {
+            if (inventory.getItem(slot) == null) {
+                inventory.setItem(slot, spacer);
+            }
+        }
+    }
+
     public static void apply(Inventory inventory, ItemStack spacer) {
         apply(inventory, spacer, true);
     }

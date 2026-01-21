@@ -93,7 +93,7 @@ public class RewardEditorMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.rewards.list.back.name"),
                 List.of(text("editor.rewards.list.back.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -119,7 +119,7 @@ public class RewardEditorMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.rewards.pool.back.name"),
                 List.of(text("editor.rewards.pool.back.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -168,7 +168,7 @@ public class RewardEditorMenu implements Listener {
         inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
                 text("editor.rewards.reward.back.name"),
                 List.of(text("editor.rewards.reward.back.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 

@@ -185,6 +185,9 @@ editor:
         name: "&eOpen mode"
       path:
         name: "&eCutscene path"
+      reward-location:
+        name: "&eReward location"
+        desc: "&7Set where the reward item appears."
       overlay:
         name: "&eCutscene overlay"
       lock-movement:

@@ -99,7 +99,7 @@ public class CrateEditorMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.crates.list.back.name"),
                 List.of(text("editor.crates.list.back.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -167,7 +167,7 @@ public class CrateEditorMenu implements Listener {
         inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
                 text("editor.crates.detail.back.name"),
                 List.of(text("editor.crates.detail.back.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -395,7 +395,7 @@ public class CrateEditorMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.crates.paths.back.name"),
                 List.of(text("editor.crates.paths.back.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -412,7 +412,7 @@ public class CrateEditorMenu implements Listener {
         inventory.setItem(SLOT_SELECTOR_BACK, buildItem(Material.ARROW,
                 text("editor.crates.detail.back.name"),
                 List.of(text("editor.crates.detail.back.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -437,7 +437,7 @@ public class CrateEditorMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.crates.paths.back.name"),
                 List.of(text("editor.crates.paths.back.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
