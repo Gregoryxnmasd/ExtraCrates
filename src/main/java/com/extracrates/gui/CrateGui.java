@@ -112,7 +112,7 @@ public class CrateGui implements Listener {
                     java.util.Collections.emptyMap()
             )));
         }
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -257,7 +257,7 @@ public class CrateGui implements Listener {
                 languageManager.getRaw("gui.crate.action.back.name", java.util.Collections.emptyMap()),
                 List.of(languageManager.getRaw("gui.crate.action.back.lore", java.util.Collections.emptyMap()))
         ));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -304,7 +304,7 @@ public class CrateGui implements Listener {
                     java.util.Collections.emptyMap()
             )));
         }
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 

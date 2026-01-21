@@ -111,7 +111,7 @@ public class KeyManagerMenu implements Listener {
         inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
                 text("editor.keys.nav.back-main.name"),
                 List.of(text("editor.keys.nav.back-main.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -133,7 +133,7 @@ public class KeyManagerMenu implements Listener {
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.keys.nav.back-search.name"),
                 List.of(text("editor.keys.nav.back-search.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
@@ -159,7 +159,7 @@ public class KeyManagerMenu implements Listener {
         inventory.setItem(SLOT_DETAIL_BACK, buildItem(Material.ARROW,
                 text("editor.keys.nav.back-list.name"),
                 List.of(text("editor.keys.nav.back-list.lore"))));
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 

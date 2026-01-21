@@ -105,7 +105,7 @@ public class OpenHistoryGui implements Listener {
         inventory.setItem(DATE_FILTER_SLOT, buildDateFilterItem(state.dateFilter));
         inventory.setItem(RESET_FILTERS_SLOT, buildStaticItem(Material.BOOK, "&aResetear filtros", List.of("&7Haz click para limpiar filtros.")));
 
-        MenuSpacer.apply(inventory, buildSpacerItem());
+        MenuSpacer.applyTopRow(inventory, buildSpacerItem());
         player.openInventory(inventory);
     }
 
