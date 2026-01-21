@@ -64,7 +64,7 @@ public class SessionListener implements Listener {
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler
     public void onRerollInteract(PlayerInteractEvent event) {
         CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
         if (session == null) {
@@ -76,7 +76,7 @@ public class SessionListener implements Listener {
         event.setCancelled(true);
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler
     public void onRerollAnimation(PlayerAnimationEvent event) {
         CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
         if (session == null) {
@@ -85,7 +85,7 @@ public class SessionListener implements Listener {
         session.handleRerollInput(false);
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler
     public void onRerollSneak(PlayerToggleSneakEvent event) {
         CrateSession session = sessionManager.getSession(event.getPlayer().getUniqueId());
         if (session == null || !event.isSneaking()) {

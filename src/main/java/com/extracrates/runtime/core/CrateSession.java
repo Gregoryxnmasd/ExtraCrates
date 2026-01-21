@@ -1017,15 +1017,15 @@ public class CrateSession {
     }
 
     public void handleRerollInput(boolean confirm) {
-        if (!player.hasPermission("extracrates.reroll")) {
-            player.sendMessage(languageManager.getMessage("command.no-permission"));
-            return;
-        }
         if (rewards == null || rewards.size() <= 1) {
             return;
         }
         if (confirm) {
             confirmReward(true);
+            return;
+        }
+        if (!player.hasPermission("extracrates.reroll")) {
+            player.sendMessage(languageManager.getMessage("command.no-permission"));
             return;
         }
         if (!waitingForClaim && elapsedTicks < rerollEnabledAtTick) {
