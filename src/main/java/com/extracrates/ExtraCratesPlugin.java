@@ -11,6 +11,7 @@ import com.extracrates.gui.OpenHistoryGui;
 import com.extracrates.gui.editor.ConfirmationMenu;
 import com.extracrates.gui.editor.EditorInputManager;
 import com.extracrates.gui.editor.EditorMenu;
+import com.extracrates.placeholder.ExtraCratesPlaceholderExpansion;
 import com.extracrates.route.RouteEditorListener;
 import com.extracrates.route.RouteEditorManager;
 import com.extracrates.runtime.ProtocolEntityHider;
@@ -78,6 +79,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         EditorInputManager inputManager = new EditorInputManager(this);
         ConfirmationMenu confirmationMenu = new ConfirmationMenu(this, configLoader);
         editorMenu = new EditorMenu(this, configLoader, inputManager, confirmationMenu);
+        registerPlaceholderExpansion();
 
         PluginCommand crateCommand = getCommand("crates");
         if (crateCommand != null) {
@@ -154,5 +156,17 @@ public final class ExtraCratesPlugin extends JavaPlugin {
 
     public PendingRewardStore getPendingRewardStore() {
         return pendingRewardStore;
+    }
+
+    private void registerPlaceholderExpansion() {
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") == null) {
+            return;
+        }
+        try {
+            new ExtraCratesPlaceholderExpansion(configLoader, sessionManager).register();
+            getLogger().info("PlaceholderAPI expansion registered.");
+        } catch (NoClassDefFoundError ex) {
+            getLogger().warning("PlaceholderAPI not found. Skipping expansion registration.");
+        }
     }
 }

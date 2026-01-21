@@ -543,11 +543,9 @@ public class SessionManager {
             }
             return;
         }
-        if (session.isWaitingForClaim()) {
-            Reward reward = session.getActiveReward();
-            if (reward != null) {
-                setPendingReward(session.getPlayer(), session.getCrate(), reward);
-            }
+        Reward reward = session.getActiveReward();
+        if (reward != null) {
+            setPendingReward(session.getPlayer(), session.getCrate(), reward);
         }
         if (openState.isCooldownApplied()) {
             restoreCooldown(session.getPlayerId(), session.getCrateId(), openState.getPreviousCooldown());

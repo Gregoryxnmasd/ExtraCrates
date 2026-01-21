@@ -1,23 +1,12 @@
 package com.extracrates.util;
 
 import com.extracrates.config.ConfigLoader;
-import com.extracrates.config.SettingsSnapshot;
 import com.extracrates.model.Reward;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
 import org.bukkit.World;
-import org.bukkit.enchantments.Enchantment;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.MapMeta;
-import org.bukkit.map.MapView;
 
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -39,39 +28,23 @@ public final class ItemUtil {
             return cached.clone();
         }
         if (reward.itemStack() != null) {
-            return reward.itemStack().clone();
-        }
-        Material material = Material.matchMaterial(reward.item().toUpperCase(Locale.ROOT));
-        if (material == null) {
-            material = Material.STONE;
-        }
-        ItemStack item = new ItemStack(material, Math.max(1, reward.amount()));
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            SettingsSnapshot settings = configLoader != null ? configLoader.getSettings() : null;
-            meta.displayName(TextUtil.color(reward.displayName()));
-            applyResourcepackModel(reward, meta, settings, configLoader);
-            for (Map.Entry<String, Integer> entry : reward.enchantments().entrySet()) {
-                Enchantment enchantment = Enchantment.getByKey(org.bukkit.NamespacedKey.minecraft(entry.getKey().toLowerCase(Locale.ROOT)));
-                if (enchantment != null) {
-                    meta.addEnchant(enchantment, entry.getValue(), true);
-                }
+            ItemStack item = reward.itemStack().clone();
+            ITEM_CACHE.put(cacheKey, item.clone());
+            if (debugTimings) {
+                logTiming("ItemUtil.buildItem", cacheKey, false, start);
             }
-            if (reward.glow()) {
-                Enchantment glowEnchant = Enchantment.getByKey(NamespacedKey.minecraft("luck_of_the_sea"));
-                if (glowEnchant != null) {
-                    meta.addEnchant(glowEnchant, 1, true);
-                }
-                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            }
-            applyMapImage(reward, meta, material, settings, world, mapImageCache);
-            item.setItemMeta(meta);
+            return item;
         }
-        ITEM_CACHE.put(cacheKey, item.clone());
+        Bukkit.getLogger().warning(String.format(
+                "Reward %s has no reward-item configured. Skipping delivery to keep NBT intact.",
+                reward.id()
+        ));
+        ItemStack fallback = new ItemStack(Material.AIR);
+        ITEM_CACHE.put(cacheKey, fallback.clone());
         if (debugTimings) {
             logTiming("ItemUtil.buildItem", cacheKey, false, start);
         }
-        return item;
+        return fallback;
     }
 
     public static void clearItemCache() {
@@ -93,76 +66,6 @@ public final class ItemUtil {
                 cacheHit ? "hit" : "miss",
                 ms
         ));
-    }
-
-    private static void applyMapImage(
-            Reward reward,
-            ItemMeta meta,
-            Material material,
-            SettingsSnapshot settings,
-            World world,
-            MapImageCache mapImageCache
-    ) {
-        if (!(meta instanceof MapMeta mapMeta)) {
-            return;
-        }
-        if (material != Material.FILLED_MAP) {
-            return;
-        }
-        String mapImage = reward.mapImage();
-        if (mapImage == null || mapImage.isBlank()) {
-            return;
-        }
-        if (settings == null || !settings.getResourcepack().allowMapImages()) {
-            return;
-        }
-        World resolvedWorld = world != null ? world : Bukkit.getWorlds().stream().findFirst().orElse(null);
-        if (resolvedWorld == null) {
-            return;
-        }
-        Optional<java.awt.image.BufferedImage> image = mapImageCache.getImage(mapImage);
-        if (image.isEmpty()) {
-            return;
-        }
-        MapView mapView = Bukkit.createMap(resolvedWorld);
-        mapView.getRenderers().forEach(mapView::removeRenderer);
-        mapView.addRenderer(new MapImageRenderer(image.get()));
-        mapMeta.setMapView(mapView);
-    }
-
-    private static void applyResourcepackModel(
-            Reward reward,
-            ItemMeta meta,
-            SettingsSnapshot settings,
-            ConfigLoader configLoader
-    ) {
-        if (settings == null || !settings.getResourcepack().useCustomModelData()) {
-            return;
-        }
-        String customModel = reward.customModel();
-        if (customModel == null || customModel.isBlank()) {
-            return;
-        }
-        Integer modelData = resolveModelData(customModel, settings, configLoader);
-        if (modelData != null) {
-            meta.setCustomModelData(modelData);
-        }
-    }
-
-    private static Integer resolveModelData(
-            String customModel,
-            SettingsSnapshot settings,
-            ConfigLoader configLoader
-    ) {
-        String trimmedModel = customModel.trim();
-        if (settings.getResourcepack().allowAnimatedItems() && configLoader != null) {
-            return configLoader.resolveModelData(trimmedModel);
-        }
-        try {
-            return Integer.parseInt(trimmedModel);
-        } catch (NumberFormatException ignored) {
-            return null;
-        }
     }
 
     private record CacheKey(String rewardId, String world, String model) {

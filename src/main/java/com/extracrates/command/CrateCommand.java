@@ -23,6 +23,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -1107,7 +1108,11 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             return false;
         }
         ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-        player.getInventory().addItem(item);
+        if (item.getType() != Material.AIR) {
+            player.getInventory().addItem(item);
+        } else {
+            plugin.getLogger().warning("Reward item missing for " + reward.id() + ". Skipping item delivery.");
+        }
         for (String command : reward.commands()) {
             String parsed = command.replace("%player%", player.getName());
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);

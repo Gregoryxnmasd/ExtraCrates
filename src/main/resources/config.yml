@@ -67,7 +67,6 @@ cutscene:
   fake-equip: true
   armorstand-invisible: true
   camera-entity: "armor_stand"
-  speed-modifier-uuid: "c0c0a1f2-7a89-4a2c-88a7-9f53b0d6f8b1"
   on-start:
     - "say %player% started the %crate_id% cutscene"
   on-end:
@@ -90,6 +89,15 @@ permissions:
 rewards:
   normalize-chances: false
   warning-threshold: 0
+placeholders:
+  none: "none"
+  no-session: "none"
+  no-crate: "none"
+  no-reward: "none"
+  no-rerolls: "0"
+  unlimited-rerolls: "∞"
+  opening-true: "true"
+  opening-false: "false"
 storage:
   enabled: false
   type: "mysql"

@@ -3,7 +3,6 @@ package com.extracrates.runtime.core;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.cutscene.CutscenePath;
-import com.extracrates.event.CrateRewardEvent;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.runtime.CameraEntityFactory;
@@ -12,7 +11,6 @@ import com.extracrates.runtime.UiMode;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
-import com.extracrates.util.SoundUtil;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -52,6 +50,7 @@ public class CrateSession {
     private final SessionManager sessionManager;
     private final boolean preview;
     private final OpenState openState;
+    private final com.extracrates.runtime.RewardAnimationService rewardAnimationService = new com.extracrates.runtime.RewardAnimationService();
 
     private Entity cameraEntity;
     private ItemDisplay rewardDisplay;
@@ -61,6 +60,7 @@ public class CrateSession {
     private BukkitRunnable musicTask;
     private BukkitRunnable watchdogTask;
     private BukkitRunnable autoConfirmTask;
+    private BukkitRunnable rewardAnimationTask;
 
     private int rewardIndex;
     private int rerollsUsed;
@@ -80,10 +80,11 @@ public class CrateSession {
     private int selectedRewardIndex;
     private int maxRerolls;
     private boolean waitingForClaim;
+    private int rewardAnimationTick;
+    private String rewardAnimationName;
 
     private GameMode previousGameMode;
     private Entity previousSpectatorTarget;
-    private NamespacedKey pumpkinSpeedKey;
     private ItemStack previousHelmet;
     private boolean rewardDelivered;
     private Boolean bossBarSupported;
@@ -144,7 +145,14 @@ public class CrateSession {
         spawnCamera(start);
         applySpectatorMode();
         spawnRewardDisplay();
+        startRewardAnimation();
         setupRerollHud();
+        if (!preview) {
+            Reward currentReward = getCurrentReward();
+            if (currentReward != null) {
+                sessionManager.updatePendingReward(player, crate, currentReward);
+            }
+        }
         executeConfiguredCommands("cutscene.on-start", getCurrentReward());
         startMusic();
         scheduleTimeout();
@@ -188,9 +196,8 @@ public class CrateSession {
 
         if (config.getBoolean("cutscene.fake-equip", true)) {
             previousHelmet = player.getInventory().getHelmet();
-            ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
+            ItemStack pumpkin = buildFakePumpkin(config);
             player.sendEquipmentChange(player, EquipmentSlot.HEAD, pumpkin);
-            applyPumpkinSpeedModifier(config);
         }
 
         if (crate.cutsceneSettings().hideHud()) {
@@ -199,22 +206,23 @@ public class CrateSession {
         logVerbose("Spectator aplicado: hud=%s lockMovement=%s", crate.cutsceneSettings().hideHud(), crate.cutsceneSettings().lockMovement());
     }
 
-    private void applyPumpkinSpeedModifier(FileConfiguration config) {
-        double speedValue = config.getDouble("cutscene.fake-helmet-movement-speed", 10.0);
-        pumpkinSpeedKey = new NamespacedKey(plugin, "crate-pumpkin-speed");
-        org.bukkit.attribute.AttributeInstance attribute = player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED);
-        if (attribute == null) {
-            return;
+    private ItemStack buildFakePumpkin(FileConfiguration config) {
+        ItemStack pumpkin = new ItemStack(Material.CARVED_PUMPKIN);
+        ItemMeta meta = pumpkin.getItemMeta();
+        if (meta == null) {
+            return pumpkin;
         }
-        attribute.getModifiers().stream()
-                .filter(mod -> mod.getName().equals(pumpkinSpeedKey.getKey()))
-                .forEach(attribute::removeModifier);
+        double speedValue = config.getDouble("cutscene.fake-helmet-movement-speed", 10.0);
         org.bukkit.attribute.AttributeModifier modifier = new org.bukkit.attribute.AttributeModifier(
-                pumpkinSpeedKey.getKey(),
+                UUID.randomUUID(),
+                "extracrates_fake_pumpkin_speed",
                 speedValue,
-                org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER
+                org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER,
+                EquipmentSlot.HEAD
         );
-        attribute.addModifier(modifier);
+        meta.addAttributeModifier(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED, modifier);
+        pumpkin.setItemMeta(meta);
+        return pumpkin;
     }
 
     private void spawnRewardDisplay() {
@@ -238,6 +246,7 @@ public class CrateSession {
         rewardBaseLocation = rewardDisplay.getLocation().clone();
         hologramBaseLocation = hologram.getLocation().clone();
         rewardBaseTransform = rewardDisplay.getTransformation();
+        rewardAnimationName = resolveRewardAnimation(reward);
         logVerbose("Reward display creado: reward=%s", reward.id());
     }
 
@@ -414,6 +423,7 @@ public class CrateSession {
             autoConfirmTask = null;
         }
         waitingForClaim = false;
+        rewardAnimationTick = 0;
         elapsedTicks = 0;
         rewardIndex = 0;
         selectedRewardIndex = -1;
@@ -476,7 +486,7 @@ public class CrateSession {
                 if (maxDurationTicks > 0) {
                     long elapsedRealTicks = (now - sessionStartMillis) / 50L;
                     if (elapsedRealTicks > maxDurationTicks) {
-                        finish();
+                        end();
                         return;
                     }
                 }
@@ -631,7 +641,11 @@ public class CrateSession {
         }
         player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.displayName())));
         ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
-        player.getInventory().addItem(item);
+        if (item.getType() != Material.AIR) {
+            player.getInventory().addItem(item);
+        } else {
+            plugin.getLogger().warning("Reward item missing for " + reward.id() + ". Skipping item delivery.");
+        }
 
         for (String command : reward.commands()) {
             String parsed = command.replace("%player%", player.getName());
@@ -730,9 +744,7 @@ public class CrateSession {
             placeholders.put("reward_id", "none");
             placeholders.put("reward_name", "none");
         }
-        String rerollsLeft = maxRerolls > 0
-                ? Integer.toString(Math.max(0, maxRerolls - rerollsUsed))
-                : "∞";
+        String rerollsLeft = resolveRerollsLeft();
         placeholders.put("rerolls_left", rerollsLeft);
         placeholders.put("rerolls_used", Integer.toString(rerollsUsed));
         placeholders.put("extracrates_reward_id", placeholders.get("reward_id"));
@@ -797,6 +809,7 @@ public class CrateSession {
         } else {
             rewardDisplay.setItemStack(buildRewardDisplayItem(reward, rewardDisplay.getWorld()));
         }
+        rewardAnimationName = resolveRewardAnimation(reward);
         hideFromOthers(rewardDisplay);
 
         Location hologramLocation = resolveHologramLocation(displayLocation);
@@ -958,6 +971,9 @@ public class CrateSession {
         if (watchdogTask != null) {
             watchdogTask.cancel();
         }
+        if (rewardAnimationTask != null) {
+            rewardAnimationTask.cancel();
+        }
         stopMusic();
         executeConfiguredCommands("cutscene.on-end", getCurrentReward());
         untrackEntity(cameraEntity);
@@ -987,7 +1003,6 @@ public class CrateSession {
             player.teleport(previousLocation);
         }
         restorePlayerState();
-        removePumpkinSpeedModifier();
         if (hudHiddenApplied) {
             toggleHud(false);
         }
@@ -999,19 +1014,6 @@ public class CrateSession {
         sessionManager.handleSessionEnd(this);
         sessionManager.removeSession(player.getUniqueId());
         logVerbose("Sesion limpiada: jugador=%s crate=%s", player.getName(), crate.id());
-    }
-
-    private void removePumpkinSpeedModifier() {
-        if (pumpkinSpeedKey == null) {
-            return;
-        }
-        org.bukkit.attribute.AttributeInstance attribute = player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED);
-        if (attribute == null) {
-            return;
-        }
-        attribute.getModifiers().stream()
-                .filter(mod -> mod.getName().equals(pumpkinSpeedKey.getKey()))
-                .forEach(attribute::removeModifier);
     }
 
     public void handleRerollInput(boolean confirm) {
@@ -1027,11 +1029,11 @@ public class CrateSession {
             return;
         }
         if (!waitingForClaim && elapsedTicks < rerollEnabledAtTick) {
-            player.sendMessage(languageManager.getMessage("reroll.blocked"));
+            sendRerollMessage("reroll.blocked", Map.of());
             return;
         }
         if (maxRerolls > 0 && rerollsUsed >= maxRerolls) {
-            player.sendMessage(languageManager.getMessage("reroll.blocked"));
+            sendRerollMessage("reroll.blocked", Map.of());
             return;
         }
         if (!sessionManager.rerollSession(player)) {
@@ -1040,7 +1042,7 @@ public class CrateSession {
         rerollsUsed++;
         Reward reward = getCurrentReward();
         if (reward != null) {
-            player.sendMessage(languageManager.getMessage("reroll.advance", Map.of("reward", reward.displayName())));
+            sendRerollMessage("reroll.advance", Map.of("reward", reward.displayName()));
         }
     }
 
@@ -1052,7 +1054,7 @@ public class CrateSession {
         selectedRewardIndex = rewardIndex;
         Reward reward = getCurrentReward();
         if (notify && reward != null) {
-            player.sendMessage(languageManager.getMessage("reroll.confirmed", Map.of("reward", reward.displayName())));
+            sendRerollMessage("reroll.confirmed", Map.of("reward", reward.displayName()));
         }
         finish();
         end();
@@ -1160,6 +1162,14 @@ public class CrateSession {
 
     public OpenState getOpenState() {
         return openState;
+    }
+
+    public int getRerollsUsed() {
+        return rerollsUsed;
+    }
+
+    public int getMaxRerolls() {
+        return maxRerolls;
     }
 
     public UUID getPlayerId() {
@@ -1279,12 +1289,17 @@ public class CrateSession {
         if (maxRerolls == 0 && rewards.size() <= 1) {
             return;
         }
-        String rerollsLeft = maxRerolls > 0
-                ? Integer.toString(Math.max(0, maxRerolls - rerollsUsed))
-                : "∞";
+        String rerollsLeft = resolveRerollsLeft();
         Map<String, String> placeholders = buildRerollPlaceholders(rerollsLeft);
         String mainText = resolveConfigMessage("cutscene.reroll-bossbar.main-text", placeholders);
         String hintText = resolveConfigMessage("cutscene.reroll-bossbar.hint-text", placeholders);
+        if (rerollBossBar != null && mainText.isBlank()) {
+            try {
+                player.hideBossBar(rerollBossBar);
+            } catch (RuntimeException | NoSuchMethodError ignored) {
+            }
+            rerollBossBar = null;
+        }
         if (rerollBossBar == null && !mainText.isBlank() && isBossBarSupported()) {
             rerollBossBar = BossBar.bossBar(TextUtil.color(mainText), 1.0f, BossBar.Color.YELLOW, BossBar.Overlay.PROGRESS);
             try {
@@ -1299,6 +1314,13 @@ public class CrateSession {
                     : 1.0f;
             rerollBossBar.name(TextUtil.color(mainText));
             rerollBossBar.progress(progress);
+        }
+        if (rerollHintBossBar != null && hintText.isBlank()) {
+            try {
+                player.hideBossBar(rerollHintBossBar);
+            } catch (RuntimeException | NoSuchMethodError ignored) {
+            }
+            rerollHintBossBar = null;
         }
         if (rerollHintBossBar == null && !hintText.isBlank() && isBossBarSupported()) {
             rerollHintBossBar = BossBar.bossBar(TextUtil.color(hintText), 1.0f, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
@@ -1344,6 +1366,13 @@ public class CrateSession {
         return placeholders;
     }
 
+    private String resolveRerollsLeft() {
+        if (maxRerolls > 0) {
+            return Integer.toString(Math.max(0, maxRerolls - rerollsUsed));
+        }
+        return configLoader.getMainConfig().getString("placeholders.unlimited-rerolls", "∞");
+    }
+
     private String resolveConfigMessage(String path, Map<String, String> placeholders) {
         String value = configLoader.getMainConfig().getString(path, "");
         if (value == null || value.isBlank() || value.equalsIgnoreCase("none")) {
@@ -1370,6 +1399,58 @@ public class CrateSession {
         }
         Location cameraStart = crate.cameraStart();
         return cameraStart != null ? cameraStart : player.getLocation();
+    }
+
+    private void startRewardAnimation() {
+        if (rewardAnimationTask != null) {
+            rewardAnimationTask.cancel();
+        }
+        rewardAnimationTick = 0;
+        rewardAnimationTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (ended || rewardDisplay == null || rewardBaseLocation == null) {
+                    cancel();
+                    return;
+                }
+                rewardAnimationTick++;
+                String animation = rewardAnimationName != null ? rewardAnimationName : "float";
+                rewardAnimationService.applyAnimation(
+                        animation,
+                        rewardDisplay,
+                        hologram,
+                        rewardBaseLocation,
+                        hologramBaseLocation != null ? hologramBaseLocation : rewardBaseLocation,
+                        rewardBaseTransform,
+                        rewardAnimationTick,
+                        crate.animation().rewardFloatSettings()
+                );
+            }
+        };
+        rewardAnimationTask.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    private String resolveRewardAnimation(Reward reward) {
+        if (reward == null || reward.effects() == null) {
+            return "float";
+        }
+        String animation = reward.effects().animation();
+        if (animation == null || animation.isBlank()) {
+            return "float";
+        }
+        String normalized = animation.trim().toLowerCase(Locale.ROOT).replace('_', '-');
+        if (normalized.equals("reward-spin")) {
+            return "spin";
+        }
+        return normalized;
+    }
+
+    private void sendRerollMessage(String key, Map<String, String> placeholders) {
+        String raw = languageManager.getRaw(key, placeholders == null ? Map.of() : placeholders);
+        if (raw == null || raw.isBlank() || raw.equalsIgnoreCase(key)) {
+            return;
+        }
+        player.sendMessage(TextUtil.color(raw));
     }
 
     private record RewardDisplayCacheKey(String rewardId, String worldName, String rewardModel) {
