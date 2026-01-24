@@ -61,7 +61,7 @@ public class RewardAnimationService {
         double bob = floatSettings.bobbing() ? Math.sin(tick / 6.0) * 0.05 : 0.0;
         rewardDisplay.teleport(baseLocation.clone().add(0, bob, 0));
         if (hologram != null) {
-            hologram.teleport(baseHologramLocation.clone().add(0, bob, 0));
+            hologram.teleport(baseHologramLocation);
         }
     }
 
