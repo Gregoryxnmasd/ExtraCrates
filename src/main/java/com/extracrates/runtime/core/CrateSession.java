@@ -96,6 +96,7 @@ public class CrateSession {
     private Location previousLocation;
     private BossBar rerollBossBar;
     private BossBar rerollHintBossBar;
+    private long lastRerollInputMillis;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -1032,6 +1033,11 @@ public class CrateSession {
     }
 
     public void handleRerollInput(boolean confirm) {
+        long now = System.currentTimeMillis();
+        if (now - lastRerollInputMillis < 150L) {
+            return;
+        }
+        lastRerollInputMillis = now;
         if (confirm) {
             confirmReward(true);
             return;
@@ -1044,11 +1050,11 @@ public class CrateSession {
             return;
         }
         if (!waitingForClaim && elapsedTicks < rerollEnabledAtTick) {
-            sendRerollMessage("reroll.blocked", Map.of());
+            sendRerollMessage("reroll.blocked", getCurrentReward(), Map.of());
             return;
         }
         if (maxRerolls > 0 && rerollsUsed >= maxRerolls) {
-            sendRerollMessage("reroll.blocked", Map.of());
+            sendRerollMessage("reroll.blocked", getCurrentReward(), Map.of());
             return;
         }
         if (!sessionManager.rerollSession(player)) {
@@ -1057,7 +1063,7 @@ public class CrateSession {
         rerollsUsed++;
         Reward reward = getCurrentReward();
         if (reward != null) {
-            sendRerollMessage("reroll.advance", Map.of("reward", reward.displayName()));
+            sendRerollMessage("reroll.advance", reward, Map.of("reward", reward.displayName()));
         }
     }
 
@@ -1069,7 +1075,7 @@ public class CrateSession {
         selectedRewardIndex = rewardIndex;
         Reward reward = getCurrentReward();
         if (notify && reward != null) {
-            sendRerollMessage("reroll.confirmed", Map.of("reward", reward.displayName()));
+            sendRerollMessage("reroll.confirmed", reward, Map.of("reward", reward.displayName()));
         }
         finish();
         end();
@@ -1082,6 +1088,9 @@ public class CrateSession {
         }
         int autoConfirmTicks = configLoader.getMainConfig().getInt("cutscene.auto-confirm-ticks", 0);
         if (autoConfirmTicks <= 0) {
+            return;
+        }
+        if (maxRerolls > 0 || (rewards != null && rewards.size() > 1)) {
             return;
         }
         autoConfirmTask = new BukkitRunnable() {
@@ -1305,7 +1314,7 @@ public class CrateSession {
             return;
         }
         String rerollsLeft = resolveRerollsLeft();
-        Map<String, String> placeholders = buildRerollPlaceholders(rerollsLeft);
+        Map<String, String> placeholders = buildRerollPlaceholders(rerollsLeft, getCurrentReward());
         String mainText = resolveConfigMessage("cutscene.reroll-bossbar.main-text", placeholders);
         String hintText = resolveConfigMessage("cutscene.reroll-bossbar.hint-text", placeholders);
         if (rerollBossBar != null && mainText.isBlank()) {
@@ -1371,13 +1380,20 @@ public class CrateSession {
         }
     }
 
-    private Map<String, String> buildRerollPlaceholders(String rerollsLeft) {
+    private Map<String, String> buildRerollPlaceholders(String rerollsLeft, Reward reward) {
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("rerolls_left", rerollsLeft);
         placeholders.put("rerolls_used", Integer.toString(rerollsUsed));
         placeholders.put("rerolls_remained", rerollsLeft);
         placeholders.put("extracrates_rerolls_remained", rerollsLeft);
         placeholders.put("extracrates_rerolls_used", Integer.toString(rerollsUsed));
+        if (reward != null) {
+            placeholders.put("reward", reward.displayName());
+            placeholders.put("reward_id", reward.id());
+            placeholders.put("reward_name", reward.displayName());
+            placeholders.put("extracrates_reward_id", reward.id());
+            placeholders.put("extracrates_reward_name", reward.displayName());
+        }
         return placeholders;
     }
 
@@ -1460,8 +1476,15 @@ public class CrateSession {
         return normalized;
     }
 
-    private void sendRerollMessage(String key, Map<String, String> placeholders) {
-        String raw = languageManager.getRaw(key, placeholders == null ? Map.of() : placeholders);
+    private void sendRerollMessage(String key, Reward reward, Map<String, String> placeholders) {
+        String raw = languageManager.getRaw(
+                key,
+                player,
+                crate,
+                reward,
+                null,
+                placeholders == null ? Map.of() : placeholders
+        );
         if (raw == null || raw.isBlank() || raw.equalsIgnoreCase(key)) {
             return;
         }
