@@ -236,10 +236,10 @@ public class CrateSession {
             return;
         }
         CrateDefinition.RewardFloatSettings floatSettings = resolveFloatSettings(reward);
-        Location displayLocation = anchor.clone().add(0, floatSettings.height(), 0);
+        Location displayLocation = anchor.clone().add(0, floatSettings.height() + resolveRewardDisplayOffset(), 0);
 
         rewardDisplay = createRewardDisplay(displayLocation, reward);
-        hologram = createHologram(displayLocation.clone().add(0, 0.4, 0), reward);
+        hologram = createHologram(resolveHologramLocation(displayLocation), reward);
 
         registerVisibleEntity(rewardDisplay);
         registerVisibleEntity(hologram);
@@ -293,11 +293,14 @@ public class CrateSession {
 
     private String resolveHologramText(Reward reward) {
         String format = reward.hologram();
-        if (format == null || format.isEmpty()) {
+        if (format == null || format.isBlank() || format.equalsIgnoreCase("none")) {
             format = crate.animation().hologramFormat();
         }
-        if (format == null || format.isEmpty()) {
+        if (format == null || format.isBlank() || format.equalsIgnoreCase("none")) {
             format = "%reward_name%";
+        }
+        if (!format.contains("%reward_name%")) {
+            format = format + " %reward_name%";
         }
         return format.replace("%reward_name%", reward.displayName());
     }
@@ -719,6 +722,12 @@ public class CrateSession {
     }
 
     private void executeConfiguredCommands(String path, Reward reward) {
+        if (preview) {
+            return;
+        }
+        if (crate.cutsceneSettings() != null && !crate.cutsceneSettings().commandsEnabled()) {
+            return;
+        }
         List<String> commands = configLoader.getMainConfig().getStringList(path);
         if (commands == null || commands.isEmpty()) {
             return;
@@ -836,14 +845,14 @@ public class CrateSession {
         }
         Location anchor = crate.rewardAnchor() != null ? crate.rewardAnchor() : player.getLocation().add(0, 1.5, 0);
         CrateDefinition.RewardFloatSettings floatSettings = crate.animation().rewardFloatSettings();
-        return anchor.clone().add(0, floatSettings.height(), 0);
+        return anchor.clone().add(0, floatSettings.height() + resolveRewardDisplayOffset(), 0);
     }
 
     private Location resolveHologramLocation(Location displayLocation) {
         if (hologramBaseLocation != null) {
             return hologramBaseLocation.clone();
         }
-        return displayLocation.clone().add(0, 0.4, 0);
+        return displayLocation.clone().add(0, resolveHologramOffset(), 0);
     }
 
     private ItemDisplay createRewardDisplay(Location displayLocation, Reward reward) {
@@ -855,17 +864,18 @@ public class CrateSession {
 
     private TextDisplay createHologram(Location hologramLocation, Reward reward) {
         return hologramLocation.getWorld().spawn(hologramLocation, TextDisplay.class, display -> {
-            String format = reward.hologram();
-            if (format == null || format.isEmpty()) {
-                format = crate.animation().hologramFormat();
-            }
-            if (format == null || format.isEmpty()) {
-                format = "%reward_name%";
-            }
-            String name = format.replace("%reward_name%", reward.displayName());
+            String name = resolveHologramText(reward);
             display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
             display.setBillboard(Display.Billboard.CENTER);
         });
+    }
+
+    private double resolveRewardDisplayOffset() {
+        return configLoader.getMainConfig().getDouble("cutscene.reward-display-offset-y", 0.0);
+    }
+
+    private double resolveHologramOffset() {
+        return configLoader.getMainConfig().getDouble("holograms.height-offset", 0.4);
     }
 
     private void applyRewardDisplayScale(ItemDisplay display) {
@@ -948,14 +958,7 @@ public class CrateSession {
     }
 
     private String buildHologramText(Reward reward) {
-        String format = reward.hologram();
-        if (format == null || format.isEmpty()) {
-            format = crate.animation().hologramFormat();
-        }
-        if (format == null || format.isEmpty()) {
-            format = "%reward_name%";
-        }
-        String name = format.replace("%reward_name%", reward.displayName());
+        String name = resolveHologramText(reward);
         if (preview) {
             name = name + "\n&7(solo vista previa)";
         }

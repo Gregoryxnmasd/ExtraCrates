@@ -58,6 +58,7 @@ cutscene:
   reroll-enable-ticks: 0
   auto-confirm-ticks: 0
   reward-display-scale: 0.7
+  reward-display-offset-y: -0.2
   fake-helmet-movement-speed: 10.0
   reroll-bossbar:
     main-text: "&eYou have %extracrates_rerolls_remained% rerolls remained."
