@@ -72,8 +72,8 @@ public class SessionListener implements Listener {
         }
         if (event.getAction() == Action.LEFT_CLICK_AIR || event.getAction() == Action.LEFT_CLICK_BLOCK) {
             session.handleRerollInput(false);
+            event.setCancelled(true);
         }
-        event.setCancelled(true);
     }
 
     @EventHandler
