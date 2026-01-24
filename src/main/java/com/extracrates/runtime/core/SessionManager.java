@@ -474,6 +474,12 @@ public class SessionManager {
             return;
         }
         endSession(player.getUniqueId());
+        removeSession(player.getUniqueId());
+        if (storage != null) {
+            for (String crateId : configLoader.getCrates().keySet()) {
+                storage.releaseLock(player.getUniqueId(), crateId);
+            }
+        }
         if (player.getGameMode() == GameMode.SPECTATOR) {
             player.setSpectatorTarget(null);
         }
