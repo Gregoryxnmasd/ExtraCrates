@@ -27,6 +27,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
+import org.joml.Vector3f;
 
 
 import java.util.*;
@@ -819,12 +820,8 @@ public class CrateSession {
                 hologramBaseLocation = hologram.getLocation().clone();
             }
         } else {
-            String format = crate.animation().hologramFormat();
-            if (format == null || format.isEmpty()) {
-                format = "%reward_name%";
-            }
-            String name = format.replace("%reward_name%", reward.displayName());
-            hologram.text(TextUtil.color(name));
+            Component text = buildHologramComponent(reward);
+            setTextDisplayText(hologram, text);
         }
         hideFromOthers(hologram);
     }
@@ -852,6 +849,7 @@ public class CrateSession {
     private ItemDisplay createRewardDisplay(Location displayLocation, Reward reward) {
         return displayLocation.getWorld().spawn(displayLocation, ItemDisplay.class, display -> {
             display.setItemStack(buildRewardDisplayItem(reward, displayLocation.getWorld()));
+            applyRewardDisplayScale(display);
         });
     }
 
@@ -868,6 +866,20 @@ public class CrateSession {
             display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
             display.setBillboard(Display.Billboard.CENTER);
         });
+    }
+
+    private void applyRewardDisplayScale(ItemDisplay display) {
+        double scale = configLoader.getMainConfig().getDouble("cutscene.reward-display-scale", 0.7);
+        double clamped = Math.max(0.1, scale);
+        Transformation transformation = display.getTransformation();
+        Vector3f baseScale = new Vector3f(transformation.getScale());
+        Vector3f scaled = baseScale.mul((float) clamped);
+        display.setTransformation(new Transformation(
+                transformation.getTranslation(),
+                transformation.getLeftRotation(),
+                scaled,
+                transformation.getRightRotation()
+        ));
     }
 
     private boolean isQaMode() {
@@ -1017,11 +1029,11 @@ public class CrateSession {
     }
 
     public void handleRerollInput(boolean confirm) {
-        if (rewards == null || rewards.size() <= 1) {
-            return;
-        }
         if (confirm) {
             confirmReward(true);
+            return;
+        }
+        if (rewards == null || rewards.size() <= 1) {
             return;
         }
         if (!player.hasPermission("extracrates.reroll")) {
