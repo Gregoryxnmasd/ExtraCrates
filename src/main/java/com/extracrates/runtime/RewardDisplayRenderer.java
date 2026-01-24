@@ -105,7 +105,7 @@ public class RewardDisplayRenderer {
             Location textLocation = baseLocation.clone().add(0, offset, 0);
             String line = lines.get(i);
             TextDisplay display = world.spawn(textLocation, TextDisplay.class, entity -> {
-                entity.text(TextUtil.color(line));
+                entity.text(plugin.getConfigLoader().getSettings().applyHologramFont(TextUtil.color(line)));
                 entity.setBillboard(Display.Billboard.CENTER);
                 if (animations.contains("glow")) {
                     entity.setGlowing(true);
