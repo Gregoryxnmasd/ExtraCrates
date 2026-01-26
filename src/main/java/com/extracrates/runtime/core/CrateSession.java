@@ -1015,6 +1015,9 @@ public class CrateSession {
             autoConfirmTask.cancel();
             autoConfirmTask = null;
         }
+        if (!configLoader.getMainConfig().getBoolean("cutscene.auto-confirm-enabled", false)) {
+            return;
+        }
         int autoConfirmTicks = configLoader.getMainConfig().getInt("cutscene.auto-confirm-ticks", 0);
         if (!configLoader.getMainConfig().getBoolean("cutscene.auto-confirm-enabled", false)) {
             return;
