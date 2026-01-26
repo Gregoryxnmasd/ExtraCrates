@@ -72,7 +72,6 @@ class RewardSelectorTest {
                 false,
                 null,
                 null,
-                new Reward.RewardMessage("", ""),
                 new Reward.RewardEffects("", "", ""),
                 null,
                 "",
