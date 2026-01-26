@@ -2,7 +2,7 @@
 language: en_us
 accessibility-mode: true
 particles-default: "crit"
-hologram-font: "resourcepack:cutscene_font"
+hologram-font: ""
 ui-mode: "bossbar"
 gui:
   title: "&8ExtraCrates"
