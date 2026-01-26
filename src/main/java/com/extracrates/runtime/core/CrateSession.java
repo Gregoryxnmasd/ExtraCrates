@@ -1028,7 +1028,7 @@ public class CrateSession {
             player.sendMessage(languageManager.getMessage("command.no-permission"));
             return;
         }
-        if (!waitingForClaim && elapsedTicks < rerollEnabledAtTick) {
+        if (!waitingForClaim) {
             sendRerollMessage("reroll.blocked", getCurrentReward(), Map.of());
             return;
         }
