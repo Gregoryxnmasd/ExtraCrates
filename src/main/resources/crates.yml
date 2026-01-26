@@ -54,7 +54,7 @@ crates:
         end: ui.toast.challenge_complete
     cutscene:
       overlay-model: cutscene_mask
-      commands-enabled: true
+      commands-enabled: false
       locks:
         movement: true
         hud: true
