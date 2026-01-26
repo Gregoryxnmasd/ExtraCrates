@@ -18,6 +18,7 @@ import com.extracrates.storage.StorageMigrationReport;
 import com.extracrates.storage.StorageTarget;
 import com.extracrates.sync.CrateHistoryEntry;
 import com.extracrates.sync.SyncEventType;
+import com.extracrates.util.CommandUtil;
 import com.extracrates.util.ItemUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -1115,6 +1116,9 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         }
         for (String command : reward.commands()) {
             String parsed = command.replace("%player%", player.getName());
+            if (CommandUtil.isBroadcastMessage(parsed)) {
+                continue;
+            }
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
         }
         player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.displayName())));
