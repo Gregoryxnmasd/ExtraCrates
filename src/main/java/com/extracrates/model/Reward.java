@@ -52,7 +52,11 @@ public record Reward(
         if (rewardItemStack == null) {
             rewardItemStack = section.getItemStack("item-stack");
         }
-        String displayName = resolveDisplayName(section.getString("display-name", id), displayItemStack, rewardItemStack);
+        String displayNameFallback = section.getString("display-name", id);
+        if (displayNameFallback == null || displayNameFallback.isBlank()) {
+            displayNameFallback = id;
+        }
+        String displayName = resolveDisplayName(displayNameFallback, displayItemStack, rewardItemStack);
         String item = section.getString("item", "STONE");
         int amount = section.getInt("amount", 1);
         String customModel = section.getString("custom-model", "");
