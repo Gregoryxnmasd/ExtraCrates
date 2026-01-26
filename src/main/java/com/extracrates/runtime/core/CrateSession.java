@@ -561,6 +561,10 @@ public class CrateSession {
     private List<Location> buildTimeline(World world, CutscenePath path) {
         List<Location> timeline = new ArrayList<>();
         List<com.extracrates.cutscene.CutscenePoint> points = path.getPoints();
+        com.extracrates.cutscene.CutsceneSpinSettings spinSettings = path.getSpinSettings();
+        double spinOffset = 0.0;
+        double spinStep = spinSettings != null ? spinSettings.stepDelta() : 0.0;
+        boolean spinStarted = false;
         String smoothing = resolveSmoothing(path);
         if (points.size() == 1) {
             com.extracrates.cutscene.CutscenePoint point = points.getFirst();
@@ -582,6 +586,13 @@ public class CrateSession {
                 double z = lerp(startLoc.getZ(), endLoc.getZ(), eased);
                 float yaw = lerpAngle(startLoc.getYaw(), endLoc.getYaw(), eased);
                 float pitch = lerpAngle(startLoc.getPitch(), endLoc.getPitch(), eased);
+                if (spinSettings != null && spinSettings.isActiveForSegment(i)) {
+                    yaw = wrapDegrees(yaw + (float) spinOffset);
+                    spinOffset += spinStep;
+                    spinStarted = true;
+                } else if (spinStarted) {
+                    yaw = wrapDegrees(yaw + (float) spinOffset);
+                }
                 timeline.add(new Location(world, x, y, z, yaw, pitch));
             }
         }

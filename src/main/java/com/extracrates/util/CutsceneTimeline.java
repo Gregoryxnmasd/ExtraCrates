@@ -15,6 +15,10 @@ public final class CutsceneTimeline {
     public static List<Location> build(World world, CutscenePath path) {
         List<Location> timeline = new ArrayList<>();
         List<CutscenePoint> points = path.getPoints();
+        com.extracrates.cutscene.CutsceneSpinSettings spinSettings = path.getSpinSettings();
+        double spinOffset = 0.0;
+        double spinStep = spinSettings != null ? spinSettings.stepDelta() : 0.0;
+        boolean spinStarted = false;
         for (int i = 0; i < points.size() - 1; i++) {
             CutscenePoint start = points.get(i);
             CutscenePoint end = points.get(i + 1);
@@ -29,6 +33,13 @@ public final class CutsceneTimeline {
                 double z = lerp(startLoc.getZ(), endLoc.getZ(), t);
                 float yaw = (float) lerp(startLoc.getYaw(), endLoc.getYaw(), t);
                 float pitch = (float) lerp(startLoc.getPitch(), endLoc.getPitch(), t);
+                if (spinSettings != null && spinSettings.isActiveForSegment(i)) {
+                    yaw = wrapDegrees(yaw + (float) spinOffset);
+                    spinOffset += spinStep;
+                    spinStarted = true;
+                } else if (spinStarted) {
+                    yaw = wrapDegrees(yaw + (float) spinOffset);
+                }
                 timeline.add(new Location(world, x, y, z, yaw, pitch));
             }
         }
@@ -37,5 +48,16 @@ public final class CutsceneTimeline {
 
     private static double lerp(double start, double end, double t) {
         return start + (end - start) * t;
+    }
+
+    private static float wrapDegrees(float angle) {
+        float wrapped = angle % 360.0f;
+        if (wrapped >= 180.0f) {
+            wrapped -= 360.0f;
+        }
+        if (wrapped < -180.0f) {
+            wrapped += 360.0f;
+        }
+        return wrapped;
     }
 }
