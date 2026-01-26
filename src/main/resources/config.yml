@@ -55,6 +55,7 @@ cutscene:
   default-speed: 0.35
   constant-speed: true
   smooth-tick: 2
+  chat-messages: false
   reroll-enable-ticks: 0
   auto-confirm-enabled: false
   auto-confirm-ticks: 0

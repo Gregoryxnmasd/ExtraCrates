@@ -130,7 +130,7 @@ public class CrateSession {
             finish();
             return;
         }
-        if (preview) {
+        if (preview && shouldSendCutsceneChat()) {
             player.sendMessage(Component.text("Modo vista previa: solo vista previa."));
         }
         rewardIndex = 0;
@@ -1025,7 +1025,9 @@ public class CrateSession {
             return;
         }
         if (!player.hasPermission("extracrates.reroll")) {
-            player.sendMessage(languageManager.getMessage("command.no-permission"));
+            if (shouldSendCutsceneChat()) {
+                player.sendMessage(languageManager.getMessage("command.no-permission"));
+            }
             return;
         }
         if (!waitingForClaim && elapsedTicks < rerollEnabledAtTick) {
@@ -1470,6 +1472,9 @@ public class CrateSession {
     }
 
     private void sendRerollMessage(String key, Reward reward, Map<String, String> placeholders) {
+        if (!shouldSendCutsceneChat()) {
+            return;
+        }
         String raw = languageManager.getRaw(
                 key,
                 player,
@@ -1482,6 +1487,10 @@ public class CrateSession {
             return;
         }
         player.sendMessage(TextUtil.color(raw));
+    }
+
+    private boolean shouldSendCutsceneChat() {
+        return configLoader.getMainConfig().getBoolean("cutscene.chat-messages", false);
     }
 
     private void executeEndCommands(Reward reward) {
