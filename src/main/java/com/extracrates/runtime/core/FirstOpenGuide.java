@@ -28,7 +28,7 @@ public final class FirstOpenGuide {
             return;
         }
         int stepDurationTicks = Math.max(20, configLoader.getMainConfig().getInt("guide.step-duration-ticks", 60));
-        BossBar bossBar = Bukkit.createBossBar("", BarColor.BLUE, BarStyle.SOLID);
+        BossBar bossBar = Bukkit.createBossBar("", BarColor.YELLOW, BarStyle.SOLID);
         bossBar.addPlayer(player);
         bossBar.setVisible(true);
 
