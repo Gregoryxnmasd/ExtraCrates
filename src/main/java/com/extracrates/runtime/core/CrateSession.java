@@ -302,7 +302,11 @@ public class CrateSession {
         if (!format.contains("%reward_name%")) {
             format = format + " %reward_name%";
         }
-        return format.replace("%reward_name%", reward.displayName());
+        String rewardName = reward.displayName();
+        if (rewardName == null || rewardName.isBlank()) {
+            rewardName = reward.id();
+        }
+        return format.replace("%reward_name%", rewardName);
     }
 
     private void setTextDisplayText(Entity entity, Component component) {
@@ -646,8 +650,12 @@ public class CrateSession {
             plugin.getLogger().warning("Reward item missing for " + reward.id() + ". Skipping item delivery.");
         }
 
+        Map<String, String> placeholders = buildCommandPlaceholders(reward);
         for (String command : reward.commands()) {
-            String parsed = command.replace("%player%", player.getName());
+            String parsed = applyPlaceholders(command, placeholders);
+            if (parsed == null || parsed.isBlank() || parsed.equalsIgnoreCase("none")) {
+                continue;
+            }
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
         }
     }
@@ -689,9 +697,11 @@ public class CrateSession {
         placeholders.put("crate_id", crate.id());
         placeholders.put("crate_name", crate.displayName());
         if (reward != null) {
+            placeholders.put("reward", reward.displayName());
             placeholders.put("reward_id", reward.id());
             placeholders.put("reward_name", reward.displayName());
         } else {
+            placeholders.put("reward", "none");
             placeholders.put("reward_id", "none");
             placeholders.put("reward_name", "none");
         }
@@ -960,7 +970,7 @@ public class CrateSession {
             confirmReward(true);
             return;
         }
-        if (rewards == null || rewards.size() <= 1) {
+        if (rewards == null || rewards.isEmpty()) {
             return;
         }
         if (!player.hasPermission("extracrates.reroll")) {
@@ -999,6 +1009,26 @@ public class CrateSession {
         end();
     }
 
+    private void scheduleAutoConfirm() {
+        if (autoConfirmTask != null) {
+            autoConfirmTask.cancel();
+            autoConfirmTask = null;
+        }
+        int autoConfirmTicks = configLoader.getMainConfig().getInt("cutscene.auto-confirm-ticks", 0);
+        if (autoConfirmTicks <= 0) {
+            return;
+        }
+        if (canReroll()) {
+            return;
+        }
+        autoConfirmTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                confirmReward(false);
+            }
+        };
+        autoConfirmTask.runTaskLater(plugin, autoConfirmTicks);
+    }
 
     private void capturePlayerState() {
         previousGameMode = player.getGameMode();
@@ -1208,7 +1238,7 @@ public class CrateSession {
         if (rewards == null || rewards.isEmpty()) {
             return;
         }
-        if (maxRerolls == 0 && rewards.size() <= 1) {
+        if (!canReroll() && !waitingForClaim) {
             return;
         }
         String rerollsLeft = resolveRerollsLeft();
@@ -1300,6 +1330,19 @@ public class CrateSession {
             return Integer.toString(Math.max(0, maxRerolls - rerollsUsed));
         }
         return configLoader.getMainConfig().getString("placeholders.unlimited-rerolls", "∞");
+    }
+
+    private boolean canReroll() {
+        if (rewards == null || rewards.isEmpty()) {
+            return false;
+        }
+        if (!player.hasPermission("extracrates.reroll")) {
+            return false;
+        }
+        if (maxRerolls > 0) {
+            return rerollsUsed < maxRerolls;
+        }
+        return true;
     }
 
     private String resolveConfigMessage(String path, Map<String, String> placeholders) {
