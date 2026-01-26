@@ -61,6 +61,7 @@ public class CrateSession {
     private BukkitRunnable musicTask;
     private BukkitRunnable watchdogTask;
     private BukkitRunnable rewardAnimationTask;
+    private BukkitRunnable autoConfirmTask;
 
     private int rewardIndex;
     private int rerollsUsed;
@@ -215,16 +216,42 @@ public class CrateSession {
             return pumpkin;
         }
         double speedValue = config.getDouble("cutscene.fake-helmet-movement-speed", 10.0);
-        org.bukkit.attribute.AttributeModifier modifier = new org.bukkit.attribute.AttributeModifier(
+        org.bukkit.attribute.AttributeModifier modifier = createMovementSpeedModifier(speedValue);
+        meta.addAttributeModifier(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED, modifier);
+        pumpkin.setItemMeta(meta);
+        return pumpkin;
+    }
+
+    private org.bukkit.attribute.AttributeModifier createMovementSpeedModifier(double speedValue) {
+        NamespacedKey key = new NamespacedKey(plugin, "extracrates_fake_pumpkin_speed");
+        try {
+            Class<?> slotGroupClass = Class.forName("org.bukkit.inventory.EquipmentSlotGroup");
+            Object slotGroup = Enum.valueOf(slotGroupClass.asSubclass(Enum.class), "HEAD");
+            return org.bukkit.attribute.AttributeModifier.class
+                    .getConstructor(NamespacedKey.class, double.class, org.bukkit.attribute.AttributeModifier.Operation.class, slotGroupClass)
+                    .newInstance(key, speedValue, org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER, slotGroup);
+        } catch (ReflectiveOperationException | IllegalArgumentException ignored) {
+            // Fallback for pre-1.20.5/1.21 APIs.
+        }
+        try {
+            return org.bukkit.attribute.AttributeModifier.class
+                    .getConstructor(NamespacedKey.class, double.class, org.bukkit.attribute.AttributeModifier.Operation.class, EquipmentSlot.class)
+                    .newInstance(key, speedValue, org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HEAD);
+        } catch (ReflectiveOperationException | IllegalArgumentException ignored) {
+            // Fallback to legacy constructor.
+        }
+        return createLegacyMovementModifier(speedValue);
+    }
+
+    @SuppressWarnings("deprecation")
+    private org.bukkit.attribute.AttributeModifier createLegacyMovementModifier(double speedValue) {
+        return new org.bukkit.attribute.AttributeModifier(
                 UUID.randomUUID(),
                 "extracrates_fake_pumpkin_speed",
                 speedValue,
                 org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER,
                 EquipmentSlot.HEAD
         );
-        meta.addAttributeModifier(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED, modifier);
-        pumpkin.setItemMeta(meta);
-        return pumpkin;
     }
 
     private void spawnRewardDisplay() {
