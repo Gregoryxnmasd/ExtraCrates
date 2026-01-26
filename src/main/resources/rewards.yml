@@ -22,9 +22,6 @@ pools:
           orbit-radius: 0.7
         commands:
           - "lp user %player% permission set crates.legendary.donor"
-        messages:
-          title: "&c&l¡Leyenda!"
-          subtitle: "&7Has ganado la Espada Dragón"
         effects:
           particles: "dragon_breath"
           sound: "entity.ender_dragon.flap"

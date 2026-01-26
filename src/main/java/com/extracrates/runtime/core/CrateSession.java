@@ -60,7 +60,6 @@ public class CrateSession {
     private BukkitRunnable task;
     private BukkitRunnable musicTask;
     private BukkitRunnable watchdogTask;
-    private BukkitRunnable autoConfirmTask;
     private BukkitRunnable rewardAnimationTask;
 
     private int rewardIndex;
@@ -304,7 +303,11 @@ public class CrateSession {
         if (!format.contains("%reward_name%")) {
             format = format + " %reward_name%";
         }
-        return format.replace("%reward_name%", reward.displayName());
+        String rewardName = reward.displayName();
+        if (rewardName == null || rewardName.isBlank()) {
+            rewardName = reward.id();
+        }
+        return format.replace("%reward_name%", rewardName);
     }
 
     private void setTextDisplayText(Entity entity, Component component) {
@@ -417,16 +420,11 @@ public class CrateSession {
         waitingForClaim = true;
         lastTaskTickMillis = System.currentTimeMillis();
         updateRerollHud();
-        scheduleAutoConfirm();
     }
 
     private void resetCutsceneForReroll() {
         if (task != null) {
             task.cancel();
-        }
-        if (autoConfirmTask != null) {
-            autoConfirmTask.cancel();
-            autoConfirmTask = null;
         }
         waitingForClaim = false;
         rewardAnimationTick = 0;
@@ -653,8 +651,12 @@ public class CrateSession {
             plugin.getLogger().warning("Reward item missing for " + reward.id() + ". Skipping item delivery.");
         }
 
+        Map<String, String> placeholders = buildCommandPlaceholders(reward);
         for (String command : reward.commands()) {
-            String parsed = command.replace("%player%", player.getName());
+            String parsed = applyPlaceholders(command, placeholders);
+            if (parsed == null || parsed.isBlank() || parsed.equalsIgnoreCase("none")) {
+                continue;
+            }
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
         }
     }
@@ -667,60 +669,6 @@ public class CrateSession {
             return null;
         }
         return rewards.get(rewardIndex);
-    }
-
-    private void showRewardMessage(Reward reward) {
-        if (reward == null || reward.message() == null) {
-            return;
-        }
-        String title = sanitizeMessage(reward.message().title());
-        String subtitle = sanitizeMessage(reward.message().subtitle());
-        if (title.isEmpty() && subtitle.isEmpty()) {
-            return;
-        }
-        UiMode mode = UiMode.fromConfig(configLoader.getMainConfig());
-        if ((mode == UiMode.BOSSBAR || mode == UiMode.BOTH) && !isBossBarSupported()) {
-            mode = UiMode.ACTIONBAR;
-        }
-        switch (mode) {
-            case NONE -> {
-                return;
-            }
-            case ACTIONBAR -> sendActionBarMessage(title, subtitle);
-            case BOSSBAR -> showBossBarMessage(title, subtitle);
-            case BOTH -> {
-                showBossBarMessage(title, subtitle);
-                sendActionBarMessage(title, subtitle);
-            }
-        }
-    }
-
-    private void showBossBarMessage(String title, String subtitle) {
-        String text = !title.isEmpty() ? title : subtitle;
-        if (text.isEmpty()) {
-            return;
-        }
-        BossBar bar = BossBar.bossBar(TextUtil.color(text), 1.0f, BossBar.Color.YELLOW, BossBar.Overlay.PROGRESS);
-        try {
-            player.showBossBar(bar);
-        } catch (RuntimeException | NoSuchMethodError ex) {
-            player.sendActionBar(TextUtil.color(text));
-            return;
-        }
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                player.hideBossBar(bar);
-            }
-        }.runTaskLater(plugin, 60L);
-    }
-
-    private void sendActionBarMessage(String title, String subtitle) {
-        String text = joinMessage(title, subtitle);
-        if (text.isEmpty()) {
-            return;
-        }
-        player.sendActionBar(TextUtil.color(text));
     }
 
     private void executeConfiguredCommands(String path, Reward reward) {
@@ -750,9 +698,11 @@ public class CrateSession {
         placeholders.put("crate_id", crate.id());
         placeholders.put("crate_name", crate.displayName());
         if (reward != null) {
+            placeholders.put("reward", reward.displayName());
             placeholders.put("reward_id", reward.id());
             placeholders.put("reward_name", reward.displayName());
         } else {
+            placeholders.put("reward", "none");
             placeholders.put("reward_id", "none");
             placeholders.put("reward_name", "none");
         }
@@ -781,24 +731,6 @@ public class CrateSession {
             bossBarSupported = false;
         }
         return bossBarSupported;
-    }
-
-    private String sanitizeMessage(String value) {
-        if (value == null) {
-            return "";
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? "" : trimmed;
-    }
-
-    private String joinMessage(String title, String subtitle) {
-        if (title.isEmpty()) {
-            return subtitle;
-        }
-        if (subtitle.isEmpty()) {
-            return title;
-        }
-        return title + " " + subtitle;
     }
 
     private void refreshRewardDisplay() {
@@ -975,10 +907,6 @@ public class CrateSession {
         ending = true;
         waitingForClaim = false;
         clearRerollDisplay();
-        if (autoConfirmTask != null) {
-            autoConfirmTask.cancel();
-            autoConfirmTask = null;
-        }
         if (task != null) {
             task.cancel();
         }
@@ -1042,7 +970,7 @@ public class CrateSession {
             confirmReward(true);
             return;
         }
-        if (rewards == null || rewards.size() <= 1) {
+        if (rewards == null || rewards.isEmpty()) {
             return;
         }
         if (!player.hasPermission("extracrates.reroll")) {
@@ -1400,6 +1328,19 @@ public class CrateSession {
             return Integer.toString(Math.max(0, maxRerolls - rerollsUsed));
         }
         return configLoader.getMainConfig().getString("placeholders.unlimited-rerolls", "∞");
+    }
+
+    private boolean canReroll() {
+        if (rewards == null || rewards.isEmpty()) {
+            return false;
+        }
+        if (!player.hasPermission("extracrates.reroll")) {
+            return false;
+        }
+        if (maxRerolls > 0) {
+            return rerollsUsed < maxRerolls;
+        }
+        return true;
     }
 
     private String resolveConfigMessage(String path, Map<String, String> placeholders) {
