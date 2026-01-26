@@ -43,12 +43,11 @@ public class RewardEditorMenu implements Listener {
     private static final int[] DETAIL_NAV_FILLER_SLOTS = {27, 28, 29, 30, 32, 33, 34};
 
     private static final int SLOT_DETAIL_DISPLAY_NAME = 9;
-    private static final int SLOT_DETAIL_CHANCE = 10;
-    private static final int SLOT_DETAIL_REWARD_ITEM = 11;
-    private static final int SLOT_DETAIL_DISPLAY_ITEM = 12;
-    private static final int SLOT_DETAIL_COMMANDS = 13;
-    private static final int SLOT_DETAIL_MAP_IMAGE = 14;
-    private static final int SLOT_DETAIL_RARITY = 15;
+    private static final int SLOT_DETAIL_REWARD_ITEM = 10;
+    private static final int SLOT_DETAIL_DISPLAY_ITEM = 11;
+    private static final int SLOT_DETAIL_COMMANDS = 12;
+    private static final int SLOT_DETAIL_MAP_IMAGE = 13;
+    private static final int SLOT_DETAIL_RARITY = 14;
 
     private static final int RARITY_MENU_SIZE = 45;
     private static final int RARITY_BACK_SLOT = 40;
@@ -167,10 +166,6 @@ public class RewardEditorMenu implements Listener {
         Inventory inventory = Bukkit.createInventory(player, 36, rewardTitle(rewardId));
         inventory.setItem(SLOT_DETAIL_DISPLAY_NAME, buildItem(Material.NAME_TAG, text("editor.rewards.reward.detail.display-name.name"), List.of(
                 text("editor.common.current", Map.of("value", reward != null ? reward.displayName() : rewardId)),
-                text("editor.common.click-edit")
-        )));
-        inventory.setItem(SLOT_DETAIL_CHANCE, buildItem(Material.GOLD_NUGGET, text("editor.rewards.reward.detail.chance.name"), List.of(
-                text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.chance() : 0))),
                 text("editor.common.click-edit")
         )));
         inventory.setItem(SLOT_DETAIL_REWARD_ITEM, buildItem(Material.CHEST, text("editor.rewards.reward.detail.reward-item.name"), List.of(
@@ -330,7 +325,6 @@ public class RewardEditorMenu implements Listener {
     private void handleRewardDetailClick(Player player, String poolId, String rewardId, int slot) {
         switch (slot) {
             case SLOT_DETAIL_DISPLAY_NAME -> promptRewardField(player, poolId, rewardId, "display-name", "editor.reward.prompt.display-name");
-            case SLOT_DETAIL_CHANCE -> promptRewardField(player, poolId, rewardId, "chance", "editor.reward.prompt.chance");
             case SLOT_DETAIL_REWARD_ITEM -> setRewardItemFromHand(player, poolId, rewardId);
             case SLOT_DETAIL_DISPLAY_ITEM -> setDisplayItemFromHand(player, poolId, rewardId);
             case SLOT_DETAIL_COMMANDS -> promptRewardField(player, poolId, rewardId, "commands", "editor.reward.prompt.commands");
@@ -706,7 +700,6 @@ public class RewardEditorMenu implements Listener {
         List<String> lore = new ArrayList<>();
         lore.add(text("editor.rewards.reward.item-lore.id", Map.of("id", reward.id())));
         lore.add(text("editor.rewards.reward.item-lore.display-name", Map.of("name", reward.displayName())));
-        lore.add(text("editor.rewards.reward.item-lore.chance", Map.of("chance", String.valueOf(reward.chance()))));
         lore.add(text("editor.rewards.reward.item-lore.item", Map.of("item", resolveRewardItemLabel(reward))));
         lore.add(text("editor.common.action.left-edit"));
         lore.add(text("editor.common.action.right-clone"));
@@ -743,25 +736,9 @@ public class RewardEditorMenu implements Listener {
         }
         return switch (field) {
             case "display-name" -> ValidationResult.valid(trimmed);
-            case "chance" -> parseChance(trimmed);
             case "commands" -> parseCommands(trimmed);
             default -> ValidationResult.valid(trimmed);
         };
-    }
-
-    private ValidationResult parseChance(String input) {
-        try {
-            double value = Double.parseDouble(input);
-            if (value < 0.01) {
-                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-chance-min"));
-            }
-            if (value > 100) {
-                return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-chance-max"));
-            }
-            return ValidationResult.valid(value);
-        } catch (NumberFormatException ex) {
-            return ValidationResult.invalid(languageManager.getMessage("editor.reward.error.invalid-chance-number"));
-        }
     }
 
     private String resolveRewardItemLabel(Reward reward) {

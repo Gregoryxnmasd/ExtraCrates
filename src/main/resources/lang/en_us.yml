@@ -125,16 +125,16 @@ editor:
       detail:
         rarity:
           name: "&eRarity"
-          desc: "&7Select the rarity for this reward."
+          desc: "&7Choose the rarity."
     rarity:
       title: "&8Rarities: %reward%"
       back:
         name: "&eBack"
-        lore: "&7Return to the reward."
+        lore: "&7Return to reward."
       item-lore:
         chance: "&7Chance: &f%chance%%"
         path: "&7Path: &f%path%"
-        select: "&fClick to select."
+        select: "&fClick to choose."
   confirmation:
     title:
       create: "&8Confirm creation"

@@ -1178,6 +1178,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
 
     private boolean isRewardFieldBlocked(String field) {
         return Set.of(
+                "chance",
                 "item",
                 "amount",
                 "custom-model",

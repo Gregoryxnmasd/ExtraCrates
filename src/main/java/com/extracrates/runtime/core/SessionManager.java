@@ -286,24 +286,6 @@ public class SessionManager {
         ));
     }
 
-    private RewardSelector.RewardSelectorSettings buildRewardSelectorSettings() {
-        boolean normalizeChances = configLoader.getMainConfig().getBoolean("rewards.normalize-chances", false);
-        double warningThreshold = configLoader.getMainConfig().getDouble("rewards.warning-threshold", 0);
-        RewardSelector.RewardWarningLogger warningLogger = (pool, reward, threshold) -> plugin.getLogger().warning(
-                String.format(
-                        "Reward chance exceeds threshold pool=%s rewardId=%s chance=%.4f threshold=%.4f",
-                        pool.id(),
-                        reward.id(),
-                        reward.chance(),
-                        threshold
-                )
-        );
-        if (warningThreshold <= 0) {
-            warningLogger = null;
-        }
-        return new RewardSelector.RewardSelectorSettings(normalizeChances, warningThreshold, warningLogger);
-    }
-
     private CutscenePath buildDefaultPath(Player player) {
         Location location = player.getEyeLocation();
         List<CutscenePoint> points = List.of(
@@ -348,12 +330,8 @@ public class SessionManager {
     }
 
     private List<Reward> rollRewards(RewardPool pool, Random random, RewardSelector.RewardRollLogger logger) {
-        RewardSelector.RewardSelectorSettings settings = buildRewardSelectorSettings();
         if (pool == null || pool.rewards().isEmpty()) {
             return List.of();
-        }
-        if (configLoader.getRarities().isEmpty()) {
-            return RewardSelector.roll(pool, random, logger, settings);
         }
         List<Reward> results = new ArrayList<>();
         int rolls = Math.max(1, pool.rollCount());
@@ -363,21 +341,21 @@ public class SessionManager {
             if (candidates.isEmpty()) {
                 break;
             }
-            RarityDefinition rarity = RaritySelector.select(configLoader.getRarities(), random);
+            RarityDefinition rarity = configLoader.getRarities().isEmpty()
+                    ? null
+                    : RaritySelector.select(configLoader.getRarities(), random);
             List<Reward> rarityRewards = rarity == null ? List.of() : candidates.stream()
                     .filter(reward -> matchesRarity(reward, rarity.id()))
                     .toList();
             List<Reward> chosenPool = rarityRewards.isEmpty() ? candidates : rarityRewards;
-            RewardSelector.RewardRollResult result = RewardSelector.rollOne(chosenPool, random, settings);
-            if (result == null || result.reward() == null) {
-                continue;
-            }
-            results.add(result.reward());
+            int index = random.nextInt(chosenPool.size());
+            Reward reward = chosenPool.get(index);
+            results.add(reward);
             if (available != null) {
-                available.remove(result.reward());
+                available.remove(reward);
             }
             if (logger != null) {
-                logger.log(result.reward(), result.roll(), result.total());
+                logger.log(reward, index + 1, chosenPool.size());
             }
         }
         return results;
