@@ -1336,7 +1336,7 @@ public class CrateSession {
             rerollHintBossBar = null;
         }
         if (rerollHintBossBar == null && !hintText.isBlank() && isBossBarSupported()) {
-            rerollHintBossBar = BossBar.bossBar(TextUtil.color(hintText), 1.0f, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
+            rerollHintBossBar = BossBar.bossBar(TextUtil.color(hintText), 1.0f, BossBar.Color.YELLOW, BossBar.Overlay.PROGRESS);
             try {
                 player.showBossBar(rerollHintBossBar);
             } catch (RuntimeException | NoSuchMethodError ex) {
