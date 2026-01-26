@@ -304,8 +304,8 @@ public class SessionManager {
     private CutscenePath buildDefaultPath(Player player) {
         Location location = player.getEyeLocation();
         List<CutscenePoint> points = List.of(
-                new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch()),
-                new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch())
+                new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch(), false),
+                new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch(), false)
         );
         return new CutscenePath("default", 3.0, true, 0.15, "linear", "", com.extracrates.cutscene.CutsceneSpinSettings.disabled(), points);
     }

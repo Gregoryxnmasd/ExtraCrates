@@ -72,7 +72,7 @@ public class RouteEditorSession {
     }
 
     public void addPoint(Location location, float yaw, float pitch) {
-        points.add(new CutscenePoint(location.getX(), location.getY(), location.getZ(), yaw, pitch));
+        points.add(new CutscenePoint(location.getX(), location.getY(), location.getZ(), yaw, pitch, false));
         player.sendMessage(languageManager.getMessage(
                 "route.editor.point-added",
                 java.util.Map.of(
@@ -109,6 +109,9 @@ public class RouteEditorSession {
         for (int i = 0; i < points.size() - 1; i++) {
             CutscenePoint start = points.get(i);
             CutscenePoint end = points.get(i + 1);
+            if (end.direct()) {
+                continue;
+            }
             Location startLoc = new Location(player.getWorld(), start.x(), start.y(), start.z());
             Location endLoc = new Location(player.getWorld(), end.x(), end.y(), end.z());
             double distance = startLoc.distance(endLoc);

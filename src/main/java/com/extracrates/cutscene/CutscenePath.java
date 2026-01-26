@@ -99,7 +99,8 @@ public class CutscenePath {
                 double z = getNumber(map, "z");
                 double yaw = getNumber(map, "yaw");
                 double pitch = getNumber(map, "pitch");
-                points.add(new CutscenePoint(x, y, z, (float) yaw, (float) pitch));
+                boolean direct = getBoolean(map, "direct");
+                points.add(new CutscenePoint(x, y, z, (float) yaw, (float) pitch, direct));
             }
         }
         CutsceneSpinSettings spinSettings = CutsceneSpinSettings.fromSection(section.getConfigurationSection("spin"), points.size());
@@ -117,6 +118,13 @@ public class CutscenePath {
         for (int i = 0; i < points.size() - 1; i++) {
             CutscenePoint start = points.get(i);
             CutscenePoint end = points.get(i + 1);
+            if (end.direct()) {
+                if (timeline.isEmpty()) {
+                    timeline.add(start);
+                }
+                timeline.add(end);
+                continue;
+            }
             double distance = Math.sqrt(
                     Math.pow(start.x() - end.x(), 2)
                             + Math.pow(start.y() - end.y(), 2)
@@ -130,7 +138,7 @@ public class CutscenePath {
                 double z = lerp(start.z(), end.z(), t);
                 float yaw = (float) lerp(start.yaw(), end.yaw(), t);
                 float pitch = (float) lerp(start.pitch(), end.pitch(), t);
-                timeline.add(new CutscenePoint(x, y, z, yaw, pitch));
+                timeline.add(new CutscenePoint(x, y, z, yaw, pitch, false));
             }
         }
         return timeline;
@@ -146,5 +154,16 @@ public class CutscenePath {
             return number.doubleValue();
         }
         return 0.0;
+    }
+
+    private static boolean getBoolean(java.util.Map<?, ?> map, String key) {
+        Object value = map.get(key);
+        if (value instanceof Boolean flag) {
+            return flag;
+        }
+        if (value instanceof String text) {
+            return Boolean.parseBoolean(text);
+        }
+        return false;
     }
 }

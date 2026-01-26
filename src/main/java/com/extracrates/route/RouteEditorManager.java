@@ -120,7 +120,8 @@ public class RouteEditorManager {
                     eyeLocation.getY(),
                     eyeLocation.getZ(),
                     eyeLocation.getYaw(),
-                    eyeLocation.getPitch()
+                    eyeLocation.getPitch(),
+                    false
             ));
         }
         for (CutscenePoint point : sessionPoints) {
@@ -130,6 +131,9 @@ public class RouteEditorManager {
             values.put("z", point.z());
             values.put("yaw", point.yaw());
             values.put("pitch", point.pitch());
+            if (point.direct()) {
+                values.put("direct", true);
+            }
             points.add(values);
         }
         section.set("points", points);

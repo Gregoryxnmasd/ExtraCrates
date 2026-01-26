@@ -22,6 +22,22 @@ public final class CutsceneTimeline {
         for (int i = 0; i < points.size() - 1; i++) {
             CutscenePoint start = points.get(i);
             CutscenePoint end = points.get(i + 1);
+            if (end.direct()) {
+                if (timeline.isEmpty()) {
+                    timeline.add(new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch()));
+                }
+                float yaw = end.yaw();
+                float pitch = end.pitch();
+                if (spinSettings != null && spinSettings.isActiveForSegment(i)) {
+                    yaw = wrapDegrees(yaw + (float) spinOffset);
+                    spinOffset += spinStep;
+                    spinStarted = true;
+                } else if (spinStarted) {
+                    yaw = wrapDegrees(yaw + (float) spinOffset);
+                }
+                timeline.add(new Location(world, end.x(), end.y(), end.z(), yaw, pitch));
+                continue;
+            }
             Location startLoc = new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch());
             Location endLoc = new Location(world, end.x(), end.y(), end.z(), end.yaw(), end.pitch());
             double distance = startLoc.distance(endLoc);
