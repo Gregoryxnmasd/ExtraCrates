@@ -204,6 +204,51 @@ public class ConfigValidator {
                             "Usa un valor mayor a 0."
                     ));
                 }
+                ConfigurationSection spinSection = pathSection.getConfigurationSection("spin");
+                if (spinSection != null && spinSection.getBoolean("enabled", false)) {
+                    int startPoint = spinSection.getInt("start-point", 0);
+                    int endPoint = spinSection.getInt("end-point", points.size() - 1);
+                    if (startPoint < 0 || startPoint >= points.size()) {
+                        errors.add(new ValidationIssue(
+                                "paths.yml:paths." + pathId + ".spin.start-point",
+                                "start-point fuera de rango: " + startPoint + ".",
+                                "Usa un indice entre 0 y " + Math.max(0, points.size() - 1) + "."
+                        ));
+                    }
+                    if (endPoint < 0 || endPoint >= points.size()) {
+                        errors.add(new ValidationIssue(
+                                "paths.yml:paths." + pathId + ".spin.end-point",
+                                "end-point fuera de rango: " + endPoint + ".",
+                                "Usa un indice entre 0 y " + Math.max(0, points.size() - 1) + "."
+                        ));
+                    }
+                    if (endPoint <= startPoint) {
+                        errors.add(new ValidationIssue(
+                                "paths.yml:paths." + pathId + ".spin.end-point",
+                                "end-point debe ser mayor a start-point.",
+                                "Configura un rango valido para el efecto spin."
+                        ));
+                    }
+                    String direction = spinSection.getString("direction", "right");
+                    String normalizedDirection = direction == null ? "" : direction.trim().toLowerCase(Locale.ROOT);
+                    if (!(normalizedDirection.equals("left") || normalizedDirection.equals("right")
+                            || normalizedDirection.equals("izquierda") || normalizedDirection.equals("derecha")
+                            || normalizedDirection.equals("l") || normalizedDirection.equals("r"))) {
+                        errors.add(new ValidationIssue(
+                                "paths.yml:paths." + pathId + ".spin.direction",
+                                "Direccion de spin invalida: '" + direction + "'.",
+                                "Usa 'left' o 'right'."
+                        ));
+                    }
+                    double speed = spinSection.getDouble("speed", 0.0);
+                    if (speed <= 0) {
+                        errors.add(new ValidationIssue(
+                                "paths.yml:paths." + pathId + ".spin.speed",
+                                "speed invalido: " + speed + ".",
+                                "Usa un valor mayor a 0."
+                        ));
+                    }
+                }
             }
         }
 

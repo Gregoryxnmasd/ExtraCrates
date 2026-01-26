@@ -4,12 +4,6 @@ paths:
     smoothing: catmull-rom
     constant-speed: true
     step-resolution: 0.12
-    spin:
-      enabled: true
-      start-point: 0
-      end-point: 2
-      direction: "right"
-      speed: 3.5
     points:
     - x: 0
       y: 2

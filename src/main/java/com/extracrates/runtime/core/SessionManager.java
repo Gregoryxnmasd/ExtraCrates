@@ -307,7 +307,7 @@ public class SessionManager {
                 new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch()),
                 new CutscenePoint(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch())
         );
-        return new CutscenePath("default", 3.0, true, 0.15, "linear", "", points);
+        return new CutscenePath("default", 3.0, true, 0.15, "linear", "", com.extracrates.cutscene.CutsceneSpinSettings.disabled(), points);
     }
 
     private CutscenePath resolveCutscenePath(CrateDefinition crate, Player player) {
