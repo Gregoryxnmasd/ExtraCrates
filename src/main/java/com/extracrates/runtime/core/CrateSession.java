@@ -97,6 +97,7 @@ public class CrateSession {
     private BossBar rerollBossBar;
     private BossBar rerollHintBossBar;
     private long lastRerollInputMillis;
+    private boolean endCommandsExecuted;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -991,7 +992,6 @@ public class CrateSession {
             rewardAnimationTask.cancel();
         }
         stopMusic();
-        executeConfiguredCommands("cutscene.on-end", getCurrentReward());
         untrackEntity(cameraEntity);
         untrackEntity(rewardDisplay);
         untrackEntity(hologram);
@@ -1078,6 +1078,7 @@ public class CrateSession {
             sendRerollMessage("reroll.confirmed", reward, Map.of("reward", reward.displayName()));
         }
         finish();
+        executeEndCommands(reward);
         end();
     }
 
@@ -1087,10 +1088,10 @@ public class CrateSession {
             autoConfirmTask = null;
         }
         int autoConfirmTicks = configLoader.getMainConfig().getInt("cutscene.auto-confirm-ticks", 0);
-        if (autoConfirmTicks <= 0) {
+        if (!configLoader.getMainConfig().getBoolean("cutscene.auto-confirm-enabled", false)) {
             return;
         }
-        if (maxRerolls > 0 || (rewards != null && rewards.size() > 1)) {
+        if (autoConfirmTicks <= 0) {
             return;
         }
         autoConfirmTask = new BukkitRunnable() {
@@ -1310,9 +1311,6 @@ public class CrateSession {
         if (rewards == null || rewards.isEmpty()) {
             return;
         }
-        if (maxRerolls == 0 && rewards.size() <= 1) {
-            return;
-        }
         String rerollsLeft = resolveRerollsLeft();
         Map<String, String> placeholders = buildRerollPlaceholders(rerollsLeft, getCurrentReward());
         String mainText = resolveConfigMessage("cutscene.reroll-bossbar.main-text", placeholders);
@@ -1489,6 +1487,14 @@ public class CrateSession {
             return;
         }
         player.sendMessage(TextUtil.color(raw));
+    }
+
+    private void executeEndCommands(Reward reward) {
+        if (endCommandsExecuted) {
+            return;
+        }
+        endCommandsExecuted = true;
+        executeConfiguredCommands("cutscene.on-end", reward);
     }
 
     private record RewardDisplayCacheKey(String rewardId, String worldName, String rewardModel) {

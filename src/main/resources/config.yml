@@ -56,6 +56,7 @@ cutscene:
   constant-speed: true
   smooth-tick: 2
   reroll-enable-ticks: 0
+  auto-confirm-enabled: false
   auto-confirm-ticks: 0
   reward-display-scale: 0.7
   reward-display-offset-y: -0.2
