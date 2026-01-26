@@ -25,6 +25,8 @@ paths:
       z: 2.5
       yaw: -30
       pitch: 10
+    direct-points:
+    - 2
     particle-preview: end_rod
   seasonal_line:
     duration-seconds: 4.0
