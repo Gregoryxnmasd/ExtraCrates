@@ -459,7 +459,7 @@ public record CrateDefinition(
         public static CutsceneSettings fromSections(ConfigurationSection section, ConfigurationSection defaults) {
             boolean lockMovement = readBoolean(section, "locks.movement", defaults, "locks.movement", true);
             boolean hideHud = readBoolean(section, "locks.hud", defaults, "locks.hud", true);
-            boolean commandsEnabled = readBoolean(section, "commands-enabled", defaults, "commands-enabled", true);
+            boolean commandsEnabled = readBoolean(section, "commands-enabled", defaults, "commands-enabled", false);
             MusicSettings musicSettings = MusicSettings.fromSections(
                     section == null ? null : section.getConfigurationSection("music"),
                     defaults == null ? null : defaults.getConfigurationSection("music")
