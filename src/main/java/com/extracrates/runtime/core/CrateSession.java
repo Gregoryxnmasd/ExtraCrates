@@ -11,6 +11,7 @@ import com.extracrates.runtime.UiMode;
 import com.extracrates.config.LanguageManager;
 import com.extracrates.util.ItemUtil;
 import com.extracrates.util.ResourcepackModelResolver;
+import com.extracrates.util.CommandUtil;
 import com.extracrates.util.TextUtil;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -705,6 +706,9 @@ public class CrateSession {
             if (parsed == null || parsed.isBlank() || parsed.equalsIgnoreCase("none")) {
                 continue;
             }
+            if (CommandUtil.isBroadcastMessage(parsed)) {
+                continue;
+            }
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
         }
     }
@@ -734,6 +738,9 @@ public class CrateSession {
         for (String command : commands) {
             String parsed = applyPlaceholders(command, placeholders);
             if (parsed == null || parsed.isBlank() || parsed.equalsIgnoreCase("none")) {
+                continue;
+            }
+            if (CommandUtil.isBroadcastMessage(parsed)) {
                 continue;
             }
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
