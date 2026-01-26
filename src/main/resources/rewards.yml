@@ -74,7 +74,6 @@ pools:
         rarity: legendary
         item: filled_map
         display-name: '&bPóster Especial'
-        map-image: reward_poster
         effects:
           animation: float
       Soul Sword Skin:
