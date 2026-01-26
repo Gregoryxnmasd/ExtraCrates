@@ -48,6 +48,7 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         saveDefaultConfig();
         saveResource("crates.yml", false);
         saveResource("rewards.yml", false);
+        saveResource("rarities.yml", false);
         saveResource("paths.yml", false);
         saveResource("lang/en_us.yml", false);
 

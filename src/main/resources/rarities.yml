@@ -1,0 +1,17 @@
+rarities:
+  rare:
+    display-name: "&bRare"
+    chance: 60.0
+    path: "spawn"
+  epic:
+    display-name: "&5Epic"
+    chance: 25.0
+    path: "seasonal_line"
+  legendary:
+    display-name: "&6Legendary"
+    chance: 10.0
+    path: "legendary_path"
+  magistral:
+    display-name: "&dMagistral"
+    chance: 5.0
+    path: "legendary_path"

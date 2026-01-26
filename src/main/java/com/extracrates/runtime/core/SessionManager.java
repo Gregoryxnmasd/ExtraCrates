@@ -7,6 +7,7 @@ import com.extracrates.cutscene.CutscenePath;
 import com.extracrates.cutscene.CutscenePoint;
 import com.extracrates.economy.EconomyService;
 import com.extracrates.model.CrateDefinition;
+import com.extracrates.model.RarityDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.model.RewardPool;
 import com.extracrates.storage.CrateOpenEntry;
@@ -26,6 +27,7 @@ import com.extracrates.sync.SyncEventType;
 import com.extracrates.sync.SyncSettings;
 import com.extracrates.sync.CrateHistoryEntry;
 import com.extracrates.util.ItemUtil;
+import com.extracrates.util.RaritySelector;
 import com.extracrates.util.RewardSelector;
 import com.extracrates.util.ResourcepackModelResolver;
 import com.extracrates.util.TextUtil;
@@ -45,6 +47,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
@@ -130,18 +133,18 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.world-blocked"));
             return false;
         }
-        CutscenePath path = resolveCutscenePath(crate, player);
         RewardPool rewardPool = resolveRewardPool(crate);
         if (rewardPool == null) {
             player.sendMessage(languageManager.getMessage("session.error.missing-reward-pool"));
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
-        List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
+        List<Reward> rewards = rollRewards(rewardPool, random, buildRollLogger(player));
         if (rewards.isEmpty()) {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
+        CutscenePath path = resolveCutscenePath(crate, rewards.getFirst(), player);
         OpenState openState = null;
         if (!preview) {
             if (storage != null && !storage.acquireLock(player.getUniqueId(), crate.id())) {
@@ -237,7 +240,7 @@ public class SessionManager {
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
-        List<Reward> rewards = RewardSelector.roll(rewardPool, random, buildRollLogger(player));
+        List<Reward> rewards = rollRewards(rewardPool, random, buildRollLogger(player));
         if (rewards.isEmpty()) {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
@@ -283,24 +286,6 @@ public class SessionManager {
         ));
     }
 
-    private RewardSelector.RewardSelectorSettings buildRewardSelectorSettings() {
-        boolean normalizeChances = configLoader.getMainConfig().getBoolean("rewards.normalize-chances", false);
-        double warningThreshold = configLoader.getMainConfig().getDouble("rewards.warning-threshold", 0);
-        RewardSelector.RewardWarningLogger warningLogger = (pool, reward, threshold) -> plugin.getLogger().warning(
-                String.format(
-                        "Reward chance exceeds threshold pool=%s rewardId=%s chance=%.4f threshold=%.4f",
-                        pool.id(),
-                        reward.id(),
-                        reward.chance(),
-                        threshold
-                )
-        );
-        if (warningThreshold <= 0) {
-            warningLogger = null;
-        }
-        return new RewardSelector.RewardSelectorSettings(normalizeChances, warningThreshold, warningLogger);
-    }
-
     private CutscenePath buildDefaultPath(Player player) {
         Location location = player.getEyeLocation();
         List<CutscenePoint> points = List.of(
@@ -310,13 +295,71 @@ public class SessionManager {
         return new CutscenePath("default", 3.0, true, 0.15, "linear", "", com.extracrates.cutscene.CutsceneSpinSettings.disabled(), points);
     }
 
-    private CutscenePath resolveCutscenePath(CrateDefinition crate, Player player) {
+    private CutscenePath resolveCutscenePath(CrateDefinition crate, Reward reward, Player player) {
+        CutscenePath rarityPath = resolveRarityPath(reward);
+        if (rarityPath != null && !rarityPath.getPoints().isEmpty()) {
+            return rarityPath;
+        }
         String pathId = crate.animation() != null ? crate.animation().path() : null;
         CutscenePath path = pathId != null ? configLoader.getPaths().get(pathId) : null;
         if (path == null || path.getPoints().isEmpty()) {
             return buildDefaultPath(player);
         }
         return path;
+    }
+
+    private CutscenePath resolveRarityPath(Reward reward) {
+        if (reward == null || reward.rarity() == null || reward.rarity().isBlank()) {
+            return null;
+        }
+        RarityDefinition rarity = configLoader.getRarities().get(reward.rarity().toLowerCase(Locale.ROOT));
+        if (rarity == null || rarity.path() == null || rarity.path().isBlank()) {
+            return null;
+        }
+        return configLoader.getPaths().get(rarity.path());
+    }
+
+    private List<Reward> rollRewards(RewardPool pool, Random random, RewardSelector.RewardRollLogger logger) {
+        if (pool == null || pool.rewards().isEmpty()) {
+            return List.of();
+        }
+        List<Reward> results = new ArrayList<>();
+        int rolls = Math.max(1, pool.rollCount());
+        List<Reward> available = pool.preventDuplicateItems() ? new ArrayList<>(pool.rewards()) : null;
+        for (int i = 0; i < rolls; i++) {
+            List<Reward> candidates = available != null ? available : pool.rewards();
+            if (candidates.isEmpty()) {
+                break;
+            }
+            RarityDefinition rarity = configLoader.getRarities().isEmpty()
+                    ? null
+                    : RaritySelector.select(configLoader.getRarities(), random);
+            List<Reward> rarityRewards = rarity == null ? List.of() : candidates.stream()
+                    .filter(reward -> matchesRarity(reward, rarity.id()))
+                    .toList();
+            List<Reward> chosenPool = rarityRewards.isEmpty() ? candidates : rarityRewards;
+            int index = random.nextInt(chosenPool.size());
+            Reward reward = chosenPool.get(index);
+            results.add(reward);
+            if (available != null) {
+                available.remove(reward);
+            }
+            if (logger != null) {
+                logger.log(reward, index + 1, chosenPool.size());
+            }
+        }
+        return results;
+    }
+
+    private boolean matchesRarity(Reward reward, String rarityId) {
+        if (reward == null || rarityId == null) {
+            return false;
+        }
+        String rewardRarity = reward.rarity();
+        if (rewardRarity == null || rewardRarity.isBlank()) {
+            return false;
+        }
+        return rewardRarity.equalsIgnoreCase(rarityId);
     }
 
     private RewardPool resolveRewardPool(CrateDefinition crate) {
