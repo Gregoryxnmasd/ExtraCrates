@@ -22,7 +22,7 @@ Este documento describe cómo implementar el plugin solicitado: un sistema de cr
 
 ### Modelos de datos
 - `CrateDefinition`: id, nombre, tipo (normal, llave, evento, temporada, caja misteriosa), requisitos, animación, tabla de recompensas, ubicaciones de aparición.
-- `Reward`: id, nombre visible, peso, comandos, ítems, modelos personalizados, probabilidades, mensajes, partículas, sonidos, duración flotando, animaciones locales.
+- `Reward`: id, nombre visible, peso, comandos, ítems, modelos personalizados, probabilidades, partículas, sonidos, duración flotando, animaciones locales.
 - `CutscenePath`: puntos de control (XYZ + yaw/pitch), duración total, interpolación lineal uniforme (misma velocidad), suavizado (catmull-rom), partículas de guía y previsualización en GUI.
 - `SessionContext`: jugador, crate, ruta, armor stand de cámara, holograma, ítem flotante, estado (progreso, cancelaciones, timeouts).
 
@@ -44,7 +44,7 @@ Este documento describe cómo implementar el plugin solicitado: un sistema de cr
   - Flags avanzadas: bloqueo de movimiento, ocultar HUD, ocultar otros jugadores, pausa en desconexión.
   - Previsualización en vivo de la cutscene y de la recompensa final.
 - **Editor de recompensas**
-- Tabla de pesos (chance), vista previa de ítem/modelo, comandos, mensajes, cantidad, títulos, partículas personalizadas.
+- Tabla de pesos (chance), vista previa de ítem/modelo, comandos, cantidad, títulos, partículas personalizadas.
   - Botón de "añadir animación local" (por ejemplo, giro del ítem flotante o pulsos de escala).
 - Soporte a imágenes en mapas o displays (resourcepack) y partículas propias.
 - **Editor de rutas**
