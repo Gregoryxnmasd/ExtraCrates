@@ -93,11 +93,10 @@ public class RewardDisplayRenderer {
         }
 
         List<String> lines = new ArrayList<>();
-        String format = crate.animation().hologramFormat();
-        String name = format.replace("%reward_name%", reward.displayName());
-        lines.add(name);
+        String format = resolveHologramFormat(crate.animation().hologramFormat(), reward);
+        lines.add(format);
         if (reward.hologram() != null && !reward.hologram().isEmpty()) {
-            lines.add(reward.hologram());
+            lines.add(applyRewardName(reward.hologram(), reward));
         }
 
         for (int i = 0; i < lines.size(); i++) {
@@ -230,6 +229,24 @@ public class RewardDisplayRenderer {
                 particles.getSpread(),
                 particles.getSpeed()
         );
+    }
+
+    private String resolveHologramFormat(String format, Reward reward) {
+        String resolved = format;
+        if (resolved == null || resolved.isBlank() || resolved.equalsIgnoreCase("none")) {
+            resolved = "%reward_name%";
+        }
+        if (!resolved.contains("%reward_name%")) {
+            resolved = resolved + " %reward_name%";
+        }
+        return applyRewardName(resolved, reward);
+    }
+
+    private String applyRewardName(String input, Reward reward) {
+        if (input == null || reward == null) {
+            return input;
+        }
+        return input.replace("%reward_name%", reward.displayName());
     }
 
     private void spawnTrail(Location center) {
