@@ -226,10 +226,12 @@ public class CrateSession {
         NamespacedKey key = new NamespacedKey(plugin, "extracrates_fake_pumpkin_speed");
         try {
             Class<?> slotGroupClass = Class.forName("org.bukkit.inventory.EquipmentSlotGroup");
-            Object slotGroup = Enum.valueOf(slotGroupClass.asSubclass(Enum.class), "HEAD");
-            return org.bukkit.attribute.AttributeModifier.class
-                    .getConstructor(NamespacedKey.class, double.class, org.bukkit.attribute.AttributeModifier.Operation.class, slotGroupClass)
-                    .newInstance(key, speedValue, org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER, slotGroup);
+            Object slotGroup = resolveHeadSlotGroup(slotGroupClass);
+            if (slotGroup != null) {
+                return org.bukkit.attribute.AttributeModifier.class
+                        .getConstructor(NamespacedKey.class, double.class, org.bukkit.attribute.AttributeModifier.Operation.class, slotGroupClass)
+                        .newInstance(key, speedValue, org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER, slotGroup);
+            }
         } catch (ReflectiveOperationException | IllegalArgumentException ignored) {
             // Fallback for pre-1.20.5/1.21 APIs.
         }
@@ -241,6 +243,20 @@ public class CrateSession {
             // Fallback to legacy constructor.
         }
         return createLegacyMovementModifier(speedValue);
+    }
+
+    private Object resolveHeadSlotGroup(Class<?> slotGroupClass) throws ReflectiveOperationException {
+        try {
+            return slotGroupClass.getField("HEAD").get(null);
+        } catch (NoSuchFieldException ignored) {
+            // Try enum resolution if EquipmentSlotGroup is an enum.
+        }
+        if (slotGroupClass.isEnum()) {
+            @SuppressWarnings("unchecked")
+            Class<? extends Enum> enumClass = (Class<? extends Enum>) slotGroupClass;
+            return Enum.valueOf(enumClass, "HEAD");
+        }
+        return null;
     }
 
     private org.bukkit.attribute.AttributeModifier createLegacyMovementModifier(double speedValue) {
