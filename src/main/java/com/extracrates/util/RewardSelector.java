@@ -33,7 +33,7 @@ public final class RewardSelector {
         int rolls = Math.max(1, pool.rollCount());
         List<Reward> available = pool.preventDuplicateItems() ? new ArrayList<>(pool.rewards()) : null;
         for (int i = 0; i < rolls; i++) {
-            RollResult result = selectOne(pool.rewards(), random, safeSettings);
+            RewardRollResult result = selectOne(pool.rewards(), random, safeSettings);
             results.add(result.reward());
             if (available != null && !available.isEmpty()) {
                 available.remove(result.reward());
@@ -43,6 +43,14 @@ public final class RewardSelector {
             }
         }
         return results;
+    }
+
+    public static RewardRollResult rollOne(List<Reward> rewards, Random random, RewardSelectorSettings settings) {
+        if (rewards == null || rewards.isEmpty()) {
+            return null;
+        }
+        RewardSelectorSettings safeSettings = settings == null ? RewardSelectorSettings.disabled() : settings;
+        return selectOne(rewards, random, safeSettings);
     }
 
     private static void warnIfNeeded(RewardPool pool, RewardSelectorSettings settings) {
@@ -56,12 +64,12 @@ public final class RewardSelector {
         }
     }
 
-    private static RollResult selectOne(List<Reward> rewards, Random random, RewardSelectorSettings settings) {
+    private static RewardRollResult selectOne(List<Reward> rewards, Random random, RewardSelectorSettings settings) {
         double total = rewards.stream().mapToDouble(Reward::chance).sum();
         if (total <= 0) {
             double roll = random.nextDouble();
             Reward reward = rewards.get(random.nextInt(rewards.size()));
-            return new RollResult(reward, roll, total);
+            return new RewardRollResult(reward, roll, total);
         }
         if (settings.normalizeChances() && Math.abs(total - 1.0) > 1.0e-9) {
             double roll = random.nextDouble();
@@ -69,22 +77,22 @@ public final class RewardSelector {
             for (Reward reward : rewards) {
                 current += reward.chance() / total;
                 if (roll <= current) {
-                    return new RollResult(reward, roll, 1.0);
+                    return new RewardRollResult(reward, roll, 1.0);
                 }
             }
             Reward reward = rewards.getLast();
-            return new RollResult(reward, roll, 1.0);
+            return new RewardRollResult(reward, roll, 1.0);
         }
         double roll = random.nextDouble() * total;
         double current = 0;
         for (Reward reward : rewards) {
             current += reward.chance();
             if (roll <= current) {
-                return new RollResult(reward, roll, total);
+                return new RewardRollResult(reward, roll, total);
             }
         }
         Reward reward = rewards.getLast();
-        return new RollResult(reward, roll, total);
+        return new RewardRollResult(reward, roll, total);
     }
 
     public interface RewardRollLogger {
@@ -105,6 +113,6 @@ public final class RewardSelector {
         }
     }
 
-    private record RollResult(Reward reward, double roll, double total) {
+    public record RewardRollResult(Reward reward, double roll, double total) {
     }
 }

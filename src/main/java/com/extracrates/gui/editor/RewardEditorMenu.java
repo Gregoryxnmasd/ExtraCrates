@@ -16,9 +16,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +48,30 @@ public class RewardEditorMenu implements Listener {
     private static final int SLOT_DETAIL_DISPLAY_ITEM = 12;
     private static final int SLOT_DETAIL_COMMANDS = 13;
     private static final int SLOT_DETAIL_MAP_IMAGE = 14;
+    private static final int SLOT_DETAIL_RARITY = 15;
+
+    private static final int RARITY_MENU_SIZE = 45;
+    private static final int RARITY_BACK_SLOT = 40;
+    private static final int RARITY_ROW_START = 18;
+    private static final int RARITY_ROW_END = 26;
+    private static final List<Material> MAGISTRAL_COLORS = List.of(
+            Material.WHITE_WOOL,
+            Material.LIGHT_GRAY_WOOL,
+            Material.GRAY_WOOL,
+            Material.BLACK_WOOL,
+            Material.BROWN_WOOL,
+            Material.RED_WOOL,
+            Material.ORANGE_WOOL,
+            Material.YELLOW_WOOL,
+            Material.LIME_WOOL,
+            Material.GREEN_WOOL,
+            Material.CYAN_WOOL,
+            Material.LIGHT_BLUE_WOOL,
+            Material.BLUE_WOOL,
+            Material.PURPLE_WOOL,
+            Material.MAGENTA_WOOL,
+            Material.PINK_WOOL
+    );
 
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
@@ -56,6 +82,8 @@ public class RewardEditorMenu implements Listener {
     private final Component poolTitle;
     private final Map<UUID, String> activePool = new HashMap<>();
     private final Map<UUID, String> activeReward = new HashMap<>();
+    private final Map<UUID, Map<Integer, String>> raritySlots = new HashMap<>();
+    private final Map<UUID, BukkitRunnable> rarityAnimations = new HashMap<>();
 
     public RewardEditorMenu(
             ExtraCratesPlugin plugin,
@@ -161,6 +189,10 @@ public class RewardEditorMenu implements Listener {
                 text("editor.common.current", Map.of("value", reward != null ? emptyFallback(reward.mapImage()) : "")),
                 text("editor.common.click-edit")
         )));
+        inventory.setItem(SLOT_DETAIL_RARITY, buildItem(resolveRarityMaterial(reward != null ? reward.rarity() : ""), text("editor.rewards.reward.detail.rarity.name"), List.of(
+                text("editor.common.current", Map.of("value", resolveRarityLabel(reward))),
+                text("editor.rewards.reward.detail.rarity.desc")
+        )));
         fillDetailNavigation(inventory);
         inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE,
                 text("editor.rewards.reward.delete.name"),
@@ -193,6 +225,23 @@ public class RewardEditorMenu implements Listener {
         if (poolId != null && rewardId != null && viewTitle.equals(rewardTitle(rewardId))) {
             event.setCancelled(true);
             handleRewardDetailClick(player, poolId, rewardId, event.getSlot());
+            return;
+        }
+        if (poolId != null && rewardId != null && viewTitle.equals(rarityTitle(rewardId))) {
+            event.setCancelled(true);
+            handleRarityClick(player, poolId, rewardId, event.getSlot());
+        }
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (!(event.getPlayer() instanceof Player player)) {
+            return;
+        }
+        String rewardId = activeReward.get(player.getUniqueId());
+        if (rewardId != null && event.getView().title().equals(rarityTitle(rewardId))) {
+            stopRarityAnimation(player);
+            raritySlots.remove(player.getUniqueId());
         }
     }
 
@@ -286,10 +335,92 @@ public class RewardEditorMenu implements Listener {
             case SLOT_DETAIL_DISPLAY_ITEM -> setDisplayItemFromHand(player, poolId, rewardId);
             case SLOT_DETAIL_COMMANDS -> promptRewardField(player, poolId, rewardId, "commands", "editor.reward.prompt.commands");
             case SLOT_DETAIL_MAP_IMAGE -> promptRewardField(player, poolId, rewardId, "map-image", "editor.reward.prompt.map-image");
+            case SLOT_DETAIL_RARITY -> openRaritySelector(player, poolId, rewardId);
             case SLOT_DETAIL_DELETE -> confirmDeleteReward(player, poolId, rewardId);
             case SLOT_DETAIL_BACK -> openPoolDetail(player, poolId);
             default -> {
             }
+        }
+    }
+
+    private void openRaritySelector(Player player, String poolId, String rewardId) {
+        activePool.put(player.getUniqueId(), poolId);
+        activeReward.put(player.getUniqueId(), rewardId);
+        Inventory inventory = Bukkit.createInventory(player, RARITY_MENU_SIZE, rarityTitle(rewardId));
+        fillRarityFrame(inventory);
+        inventory.setItem(RARITY_BACK_SLOT, buildItem(Material.ARROW,
+                text("editor.rewards.rarity.back.name"),
+                List.of(text("editor.rewards.rarity.back.lore"))));
+        List<com.extracrates.model.RarityDefinition> rarities = new ArrayList<>(configLoader.getRarities().values());
+        rarities.sort(Comparator.comparingDouble(com.extracrates.model.RarityDefinition::chance).reversed()
+                .thenComparing(com.extracrates.model.RarityDefinition::id));
+        Map<Integer, String> slotMap = new HashMap<>();
+        int slot = RARITY_ROW_START;
+        for (com.extracrates.model.RarityDefinition rarity : rarities) {
+            if (slot > RARITY_ROW_END) {
+                break;
+            }
+            inventory.setItem(slot, buildRarityItem(rarity, resolveRarityMaterial(rarity.id())));
+            slotMap.put(slot, rarity.id());
+            if ("magistral".equalsIgnoreCase(rarity.id())) {
+                startRarityAnimation(player, slot, rarity);
+            }
+            slot++;
+        }
+        raritySlots.put(player.getUniqueId(), slotMap);
+        player.openInventory(inventory);
+    }
+
+    private void handleRarityClick(Player player, String poolId, String rewardId, int slot) {
+        if (slot == RARITY_BACK_SLOT) {
+            stopRarityAnimation(player);
+            openRewardDetail(player, poolId, rewardId);
+            return;
+        }
+        Map<Integer, String> slotMap = raritySlots.get(player.getUniqueId());
+        if (slotMap == null || !slotMap.containsKey(slot)) {
+            return;
+        }
+        String rarityId = slotMap.get(slot);
+        updateRewardField(poolId, rewardId, "rarity", rarityId);
+        stopRarityAnimation(player);
+        openRewardDetail(player, poolId, rewardId);
+    }
+
+    private void fillRarityFrame(Inventory inventory) {
+        ItemStack filler = buildItem(Material.GRAY_STAINED_GLASS_PANE, " ", List.of());
+        for (int slot = 0; slot < 9; slot++) {
+            inventory.setItem(slot, filler);
+        }
+        for (int slot = 36; slot < 45; slot++) {
+            inventory.setItem(slot, filler);
+        }
+    }
+
+    private void startRarityAnimation(Player player, int slot, com.extracrates.model.RarityDefinition rarity) {
+        stopRarityAnimation(player);
+        BukkitRunnable task = new BukkitRunnable() {
+            private int index = 0;
+
+            @Override
+            public void run() {
+                Inventory inventory = player.getOpenInventory().getTopInventory();
+                if (inventory == null || inventory.getSize() != RARITY_MENU_SIZE) {
+                    cancel();
+                    return;
+                }
+                Material material = MAGISTRAL_COLORS.get(index++ % MAGISTRAL_COLORS.size());
+                inventory.setItem(slot, buildRarityItem(rarity, material));
+            }
+        };
+        task.runTaskTimer(plugin, 0L, 6L);
+        rarityAnimations.put(player.getUniqueId(), task);
+    }
+
+    private void stopRarityAnimation(Player player) {
+        BukkitRunnable task = rarityAnimations.remove(player.getUniqueId());
+        if (task != null) {
+            task.cancel();
         }
     }
 
@@ -583,6 +714,15 @@ public class RewardEditorMenu implements Listener {
         return buildItem(Material.GOLD_INGOT, "&e" + reward.displayName(), lore);
     }
 
+    private ItemStack buildRarityItem(com.extracrates.model.RarityDefinition rarity, Material material) {
+        List<String> lore = new ArrayList<>();
+        lore.add(text("editor.rewards.rarity.item-lore.chance", Map.of("chance", String.valueOf(rarity.chance()))));
+        String pathValue = rarity.path() == null || rarity.path().isBlank() ? text("editor.common.none") : rarity.path();
+        lore.add(text("editor.rewards.rarity.item-lore.path", Map.of("path", pathValue)));
+        lore.add(text("editor.rewards.rarity.item-lore.select"));
+        return buildItem(material, "&e" + rarity.displayName(), lore);
+    }
+
     private ItemStack buildItem(Material material, String name, List<String> loreLines) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
@@ -654,6 +794,31 @@ public class RewardEditorMenu implements Listener {
         return text("editor.common.none");
     }
 
+    private Material resolveRarityMaterial(String rarityId) {
+        if (rarityId == null) {
+            return Material.WHITE_WOOL;
+        }
+        return switch (rarityId.trim().toLowerCase(Locale.ROOT)) {
+            case "rare" -> Material.LIGHT_BLUE_WOOL;
+            case "epic" -> Material.PURPLE_WOOL;
+            case "legendary" -> Material.ORANGE_WOOL;
+            case "magistral" -> Material.MAGENTA_WOOL;
+            default -> Material.WHITE_WOOL;
+        };
+    }
+
+    private String resolveRarityLabel(Reward reward) {
+        if (reward == null || reward.rarity() == null || reward.rarity().isBlank()) {
+            return text("editor.common.none");
+        }
+        String rarityId = reward.rarity();
+        com.extracrates.model.RarityDefinition rarity = configLoader.getRarities().get(rarityId.toLowerCase(Locale.ROOT));
+        if (rarity == null) {
+            return rarityId;
+        }
+        return rarity.displayName();
+    }
+
     private ValidationResult parseCommands(String input) {
         if (isNoneValue(input)) {
             return ValidationResult.valid(List.of());
@@ -692,6 +857,10 @@ public class RewardEditorMenu implements Listener {
 
     private Component rewardTitle(String rewardId) {
         return TextUtil.colorNoItalic(text("editor.rewards.reward.title", Map.of("reward", rewardId)));
+    }
+
+    private Component rarityTitle(String rewardId) {
+        return TextUtil.colorNoItalic(text("editor.rewards.rarity.title", Map.of("reward", rewardId)));
     }
 
     private String emptyFallback(String value) {
