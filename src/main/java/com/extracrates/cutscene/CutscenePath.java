@@ -13,6 +13,7 @@ public class CutscenePath {
     private final double stepResolution;
     private final String smoothing;
     private final String particlePreview;
+    private final CutsceneSpinSettings spinSettings;
     private final List<CutscenePoint> points;
     private volatile List<CutscenePoint> timelineCache;
 
@@ -23,6 +24,7 @@ public class CutscenePath {
             double stepResolution,
             String smoothing,
             String particlePreview,
+            CutsceneSpinSettings spinSettings,
             List<CutscenePoint> points
     ) {
         this.id = id;
@@ -31,6 +33,7 @@ public class CutscenePath {
         this.stepResolution = stepResolution;
         this.smoothing = smoothing;
         this.particlePreview = particlePreview;
+        this.spinSettings = spinSettings;
         this.points = points;
     }
 
@@ -56,6 +59,10 @@ public class CutscenePath {
 
     public String getParticlePreview() {
         return particlePreview;
+    }
+
+    public CutsceneSpinSettings getSpinSettings() {
+        return spinSettings;
     }
 
     public List<CutscenePoint> getPoints() {
@@ -95,7 +102,8 @@ public class CutscenePath {
                 points.add(new CutscenePoint(x, y, z, (float) yaw, (float) pitch));
             }
         }
-        return new CutscenePath(id, duration, constantSpeed, stepResolution, smoothing, particlePreview, points);
+        CutsceneSpinSettings spinSettings = CutsceneSpinSettings.fromSection(section.getConfigurationSection("spin"), points.size());
+        return new CutscenePath(id, duration, constantSpeed, stepResolution, smoothing, particlePreview, spinSettings, points);
     }
 
     private List<CutscenePoint> buildTimelinePoints() {
