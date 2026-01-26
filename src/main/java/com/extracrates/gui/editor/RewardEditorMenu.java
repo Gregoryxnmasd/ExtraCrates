@@ -574,6 +574,7 @@ public class RewardEditorMenu implements Listener {
     private ItemStack buildRewardItem(Reward reward) {
         List<String> lore = new ArrayList<>();
         lore.add(text("editor.rewards.reward.item-lore.id", Map.of("id", reward.id())));
+        lore.add(text("editor.rewards.reward.item-lore.display-name", Map.of("name", reward.displayName())));
         lore.add(text("editor.rewards.reward.item-lore.chance", Map.of("chance", String.valueOf(reward.chance()))));
         lore.add(text("editor.rewards.reward.item-lore.item", Map.of("item", resolveRewardItemLabel(reward))));
         lore.add(text("editor.common.action.left-edit"));
