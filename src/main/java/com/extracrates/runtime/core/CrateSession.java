@@ -1042,7 +1042,10 @@ public class CrateSession {
             confirmReward(true);
             return;
         }
-        if (rewards == null || rewards.size() <= 1) {
+        if (rewards == null || rewards.isEmpty()) {
+            return;
+        }
+        if (maxRerolls == 0 && rewards.size() <= 1) {
             return;
         }
         if (!player.hasPermission("extracrates.reroll")) {
