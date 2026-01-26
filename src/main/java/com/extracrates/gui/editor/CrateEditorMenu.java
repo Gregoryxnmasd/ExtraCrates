@@ -129,9 +129,9 @@ public class CrateEditorMenu implements Listener {
                 text("editor.common.current", Map.of("value", crate != null ? crate.animation().path() : "")),
                 text("editor.common.click-select")
         )));
-        inventory.setItem(SLOT_DETAIL_REWARD_LOCATION, buildItem(Material.ENDER_PEARL, text("editor.crates.detail.reward-location.name"), List.of(
-                text("editor.crates.detail.reward-location.desc"),
-                text("editor.common.click-set")
+        inventory.setItem(SLOT_DETAIL_REWARD_LOCATION, buildItem(Material.ENDER_PEARL, textOrFallback("editor.crates.detail.reward-location.name", "&eReward location"), List.of(
+                textOrFallback("editor.crates.detail.reward-location.desc", "&7Set where the reward item appears."),
+                textOrFallback("editor.common.click-set", "&fClick to set.")
         )));
         inventory.setItem(SLOT_DETAIL_LOCK_MOVEMENT, buildItem(Material.IRON_BOOTS, text("editor.crates.detail.lock-movement.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(crate != null && crate.cutsceneSettings().lockMovement()))),
@@ -616,6 +616,11 @@ public class CrateEditorMenu implements Listener {
 
     private String text(String key, Map<String, String> placeholders) {
         return languageManager.getRaw(key, placeholders);
+    }
+
+    private String textOrFallback(String key, String fallback) {
+        String value = text(key);
+        return value == null || value.isBlank() ? fallback : value;
     }
 
     private String describeType(CrateType type) {
