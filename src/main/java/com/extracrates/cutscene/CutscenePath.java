@@ -15,6 +15,7 @@ public class CutscenePath {
     private final String particlePreview;
     private final CutsceneSpinSettings spinSettings;
     private final List<CutscenePoint> points;
+    private final java.util.Set<Integer> directPoints;
     private volatile List<CutscenePoint> timelineCache;
 
     public CutscenePath(
@@ -25,7 +26,8 @@ public class CutscenePath {
             String smoothing,
             String particlePreview,
             CutsceneSpinSettings spinSettings,
-            List<CutscenePoint> points
+            List<CutscenePoint> points,
+            java.util.Set<Integer> directPoints
     ) {
         this.id = id;
         this.durationSeconds = durationSeconds;
@@ -35,6 +37,7 @@ public class CutscenePath {
         this.particlePreview = particlePreview;
         this.spinSettings = spinSettings;
         this.points = points;
+        this.directPoints = directPoints;
     }
 
     public String getId() {
@@ -65,6 +68,10 @@ public class CutscenePath {
         return spinSettings;
     }
 
+    public boolean isDirectPoint(int index) {
+        return directPoints.contains(index);
+    }
+
     public List<CutscenePoint> getPoints() {
         return Collections.unmodifiableList(points);
     }
@@ -91,6 +98,7 @@ public class CutscenePath {
         double stepResolution = section.getDouble("step-resolution", 0.15);
         String smoothing = section.getString("smoothing", "linear");
         String particlePreview = section.getString("particle-preview", "");
+        java.util.Set<Integer> directPoints = parseDirectPoints(section.getList("direct-points", List.of()));
         List<CutscenePoint> points = new ArrayList<>();
         for (Object raw : section.getList("points", new ArrayList<>())) {
             if (raw instanceof java.util.Map<?, ?> map) {
@@ -103,7 +111,7 @@ public class CutscenePath {
             }
         }
         CutsceneSpinSettings spinSettings = CutsceneSpinSettings.fromSection(section.getConfigurationSection("spin"), points.size());
-        return new CutscenePath(id, duration, constantSpeed, stepResolution, smoothing, particlePreview, spinSettings, points);
+        return new CutscenePath(id, duration, constantSpeed, stepResolution, smoothing, particlePreview, spinSettings, points, directPoints);
     }
 
     private List<CutscenePoint> buildTimelinePoints() {
@@ -117,6 +125,13 @@ public class CutscenePath {
         for (int i = 0; i < points.size() - 1; i++) {
             CutscenePoint start = points.get(i);
             CutscenePoint end = points.get(i + 1);
+            if (isDirectPoint(i + 1)) {
+                if (timeline.isEmpty()) {
+                    timeline.add(start);
+                }
+                timeline.add(end);
+                continue;
+            }
             double distance = Math.sqrt(
                     Math.pow(start.x() - end.x(), 2)
                             + Math.pow(start.y() - end.y(), 2)
@@ -146,5 +161,21 @@ public class CutscenePath {
             return number.doubleValue();
         }
         return 0.0;
+    }
+
+    private static java.util.Set<Integer> parseDirectPoints(List<?> rawPoints) {
+        java.util.Set<Integer> indices = new java.util.HashSet<>();
+        for (Object raw : rawPoints) {
+            if (raw instanceof Number number) {
+                indices.add(number.intValue());
+            } else if (raw instanceof String text) {
+                try {
+                    indices.add(Integer.parseInt(text.trim()));
+                } catch (NumberFormatException ignored) {
+                    // ignore invalid values
+                }
+            }
+        }
+        return indices;
     }
 }
