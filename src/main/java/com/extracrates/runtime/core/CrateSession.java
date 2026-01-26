@@ -1030,7 +1030,7 @@ public class CrateSession {
             }
             return;
         }
-        if (!waitingForClaim && elapsedTicks < rerollEnabledAtTick) {
+        if (!waitingForClaim) {
             sendRerollMessage("reroll.blocked", getCurrentReward(), Map.of());
             return;
         }
