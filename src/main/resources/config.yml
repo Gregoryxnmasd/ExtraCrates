@@ -55,12 +55,8 @@ cutscene:
   default-speed: 0.35
   constant-speed: true
   smooth-tick: 2
-  chat-messages: false
   reroll-enable-ticks: 0
-  auto-confirm-enabled: false
   auto-confirm-ticks: 0
-  reward-display-scale: 0.7
-  reward-display-offset-y: -0.2
   fake-helmet-movement-speed: 10.0
   reroll-bossbar:
     main-text: "&eYou have %extracrates_rerolls_remained% rerolls remained."
@@ -71,8 +67,12 @@ cutscene:
   fake-equip: true
   armorstand-invisible: true
   camera-entity: "armor_stand"
-  on-start: []
-  on-end: []
+  on-start:
+    - "hud hud remove %player% main"
+    - "hud compass remove %player% all"
+  on-end:
+    - "hud hud add %player% main"
+    - "hud compass add %player% all"
   locks:
     movement: true
     hud: true

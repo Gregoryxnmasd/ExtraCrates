@@ -5,9 +5,9 @@ pools:
     rewards:
       dragon_sword:
         chance: 0.5
-        display-name: "&cEspada Dragón"
-        item: "diamond_sword"
-        custom-model: "dragon_sword"
+        display-name: '&cEspada Dragón'
+        item: diamond_sword
+        custom-model: dragon_sword
         glow: true
         enchantments:
           sharpness: 6
@@ -21,50 +21,86 @@ pools:
           text-line-spacing: 0.3
           orbit-radius: 0.7
         commands:
-          - "lp user %player% permission set crates.legendary.donor"
+        - lp user %player% permission set crates.legendary.donor
+        messages:
+          title: '&c&l¡Leyenda!'
+          subtitle: '&7Has ganado la Espada Dragón'
         effects:
-          particles: "dragon_breath"
-          sound: "entity.ender_dragon.flap"
-          animation: "reward_spin"
+          particles: dragon_breath
+          sound: entity.ender_dragon.flap
+          animation: reward_spin
       coins_big:
         chance: 12.5
         commands:
-          - "eco give %player% 50000"
-        display-name: "&6Coins x50k"
-        hologram: "&6$50,000"
+        - eco give %player% 50000
+        display-name: '&6Coins x50k'
+        hologram: '&6$50,000'
         effects:
-          particles: "totem"
-          sound: "entity.player.levelup"
+          particles: totem
+          sound: entity.player.levelup
   seasonal_pool:
     roll-count: 1
     prevent-duplicate-items: false
     rewards:
       candy_bow:
         chance: 2.5
-        item: "bow"
-        custom-model: "candy_bow"
-        display-name: "&dArco Dulce"
+        item: bow
+        custom-model: candy_bow
+        display-name: '&dArco Dulce'
         effects:
-          particles: "heart"
-          animation: "spin"
-          sound: "item.trident.riptide_1"
+          particles: heart
+          animation: spin
+          sound: item.trident.riptide_1
       xp_bottle:
         chance: 25
-        item: "experience_bottle"
+        item: experience_bottle
         amount: 64
-        display-name: "&aExperiencia"
+        display-name: '&aExperiencia'
       pumpkin_mask:
         chance: 3
-        item: "carved_pumpkin"
-        custom-model: "cutscene_mask"
-        display-name: "&6Máscara de Cinemática"
+        item: carved_pumpkin
+        custom-model: cutscene_mask
+        display-name: '&6Máscara de Cinemática'
         effects:
-          animation: "pulse"
-          particles: "glow"
+          animation: pulse
+          particles: glow
       map_poster:
         chance: 1
-        item: "filled_map"
-        display-name: "&bPóster Especial"
-        map-image: "reward_poster"
+        item: filled_map
+        display-name: '&bPóster Especial'
+        map-image: reward_poster
         effects:
-          animation: "float"
+          animation: float
+      Soul Sword Skin:
+        chance: 100.0
+        display-name: '&f &x&e&6&a&8&0&0Soul Sword Skin'
+        reward-item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4440
+          id: minecraft:paper
+          count: 1
+          components:
+            minecraft:lore: '[{extra:[{color:"dark_gray",text:"You can apply this
+              skin to"}],italic:0b,text:""},{extra:[{color:"dark_gray",text:"its respective
+              titanium tool."}],italic:0b,text:""}]'
+            minecraft:custom_name: '{extra:[{color:"white",extra:[{color:"#E6A800",text:"Soul
+              Sword Skin"}],text:" "}],italic:0b,text:""}'
+            minecraft:custom_model_data: '{floats:[11550.0f]}'
+            minecraft:custom_data: '{PublicBukkitValues:{"hmcwraps:wrapper":"soul_sword"},itemsadder:{id:"soul_sword_token",namespace:"toolskins"}}'
+            minecraft:item_name: '{color:"white",italic:0b,text:"soul_sword_token"}'
+          schema_version: 1
+        display-item:
+          ==: org.bukkit.inventory.ItemStack
+          DataVersion: 4440
+          id: minecraft:paper
+          count: 1
+          components:
+            minecraft:lore: '[{extra:[{color:"dark_gray",text:"You can apply this
+              skin to"}],italic:0b,text:""},{extra:[{color:"dark_gray",text:"its respective
+              titanium tool."}],italic:0b,text:""}]'
+            minecraft:custom_name: '{extra:[{color:"white",extra:[{color:"#E6A800",text:"Soul
+              Sword Skin"}],text:" "}],italic:0b,text:""}'
+            minecraft:custom_model_data: '{floats:[11550.0f]}'
+            minecraft:custom_data: '{PublicBukkitValues:{"hmcwraps:wrapper":"soul_sword"},itemsadder:{id:"soul_sword_token",namespace:"toolskins"}}'
+            minecraft:item_name: '{color:"white",italic:0b,text:"soul_sword_token"}'
+          schema_version: 1

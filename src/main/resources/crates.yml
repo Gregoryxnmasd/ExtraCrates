@@ -16,7 +16,7 @@ crates:
     allowed-worlds: []
     blocked-worlds: []
     locations:
-      world: world
+      world: Main-Village
       camera-start:
         x: 10.5
         y: 65.0
@@ -24,9 +24,9 @@ crates:
         yaw: 0
         pitch: 0
       reward-anchor:
-        x: 12.0
-        y: 65.5
-        z: -16.0
+        x: 71.99864102190182
+        y: 87.0625
+        z: 141.5965061666392
     allowed-area:
       world: world
       min:
@@ -54,7 +54,7 @@ crates:
         end: ui.toast.challenge_complete
     cutscene:
       overlay-model: cutscene_mask
-      commands-enabled: false
+      commands-enabled: true
       locks:
         movement: true
         hud: true
@@ -65,7 +65,7 @@ crates:
         fade-in-ticks: 40
         fade-out-ticks: 40
       max-rerolls: 3
-    rewards-pool: legendary_pool
+    rewards-pool: seasonal_pool
   seasonal:
     display-name: '&dTemporada'
     type: event
