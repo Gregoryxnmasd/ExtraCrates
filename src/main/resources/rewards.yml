@@ -6,6 +6,7 @@ pools:
       dragon_sword:
         chance: 0.5
         display-name: '&cEspada Dragón'
+        rarity: legendary
         item: diamond_sword
         custom-model: dragon_sword
         glow: true
@@ -31,6 +32,7 @@ pools:
           animation: reward_spin
       coins_big:
         chance: 12.5
+        rarity: rare
         commands:
         - eco give %player% 50000
         display-name: '&6Coins x50k'
@@ -44,6 +46,7 @@ pools:
     rewards:
       candy_bow:
         chance: 2.5
+        rarity: epic
         item: bow
         custom-model: candy_bow
         display-name: '&dArco Dulce'
@@ -53,11 +56,13 @@ pools:
           sound: item.trident.riptide_1
       xp_bottle:
         chance: 25
+        rarity: rare
         item: experience_bottle
         amount: 64
         display-name: '&aExperiencia'
       pumpkin_mask:
         chance: 3
+        rarity: epic
         item: carved_pumpkin
         custom-model: cutscene_mask
         display-name: '&6Máscara de Cinemática'
@@ -66,6 +71,7 @@ pools:
           particles: glow
       map_poster:
         chance: 1
+        rarity: legendary
         item: filled_map
         display-name: '&bPóster Especial'
         map-image: reward_poster
