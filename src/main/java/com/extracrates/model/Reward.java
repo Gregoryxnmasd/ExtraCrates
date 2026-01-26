@@ -20,7 +20,6 @@ public record Reward(
         boolean glow,
         Map<String, Integer> enchantments,
         List<String> commands,
-        RewardMessage message,
         RewardEffects effects,
         RewardDisplayOverrides rewardDisplayOverrides,
         String hologram,
@@ -71,21 +70,11 @@ public record Reward(
             }
         }
         List<String> commands = section.getStringList("commands");
-        RewardMessage message = RewardMessage.fromSection(section.getConfigurationSection("messages"));
         RewardEffects effects = RewardEffects.fromSection(section.getConfigurationSection("effects"));
         RewardDisplayOverrides rewardDisplayOverrides = RewardDisplayOverrides.fromSection(section.getConfigurationSection("reward-display"));
         String hologram = section.getString("hologram", "");
         String mapImage = section.getString("map-image", "");
-        return new Reward(id, chance, displayName, item, amount, rewardItemStack, displayItemStack, customModel, glow, enchantments, commands, message, effects, rewardDisplayOverrides, hologram, mapImage);
-    }
-
-    public record RewardMessage(String title, String subtitle) {
-        public static RewardMessage fromSection(ConfigurationSection section) {
-            if (section == null) {
-                return new RewardMessage("", "");
-            }
-            return new RewardMessage(section.getString("title", ""), section.getString("subtitle", ""));
-        }
+        return new Reward(id, chance, displayName, item, amount, rewardItemStack, displayItemStack, customModel, glow, enchantments, commands, effects, rewardDisplayOverrides, hologram, mapImage);
     }
 
     private static int toInt(Object value) {
