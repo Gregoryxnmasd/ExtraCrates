@@ -243,15 +243,20 @@ public class CrateSession {
         return createLegacyMovementModifier(speedValue);
     }
 
-    @SuppressWarnings("deprecation")
     private org.bukkit.attribute.AttributeModifier createLegacyMovementModifier(double speedValue) {
-        return new org.bukkit.attribute.AttributeModifier(
-                UUID.randomUUID(),
-                "extracrates_fake_pumpkin_speed",
-                speedValue,
-                org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER,
-                EquipmentSlot.HEAD
-        );
+        try {
+            return org.bukkit.attribute.AttributeModifier.class
+                    .getConstructor(UUID.class, String.class, double.class, org.bukkit.attribute.AttributeModifier.Operation.class, EquipmentSlot.class)
+                    .newInstance(
+                            UUID.randomUUID(),
+                            "extracrates_fake_pumpkin_speed",
+                            speedValue,
+                            org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER,
+                            EquipmentSlot.HEAD
+                    );
+        } catch (ReflectiveOperationException | IllegalArgumentException ex) {
+            throw new IllegalStateException("Unable to create legacy AttributeModifier", ex);
+        }
     }
 
     private void spawnRewardDisplay() {
