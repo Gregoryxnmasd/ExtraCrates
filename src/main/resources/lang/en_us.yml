@@ -120,6 +120,21 @@ editor:
     pending: "&cYou already have a pending input. Type &fcancel&c to abort."
     cancelled: "&eInput cancelled."
     invalid-id: "&cPlease provide a valid ID."
+  rewards:
+    reward:
+      detail:
+        rarity:
+          name: "&eRarity"
+          desc: "&7Select the rarity for this reward."
+    rarity:
+      title: "&8Rarities: %reward%"
+      back:
+        name: "&eBack"
+        lore: "&7Return to the reward."
+      item-lore:
+        chance: "&7Chance: &f%chance%%"
+        path: "&7Path: &f%path%"
+        select: "&fClick to select."
   confirmation:
     title:
       create: "&8Confirm creation"

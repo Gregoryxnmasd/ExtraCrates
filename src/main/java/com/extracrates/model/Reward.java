@@ -23,7 +23,8 @@ public record Reward(
         RewardEffects effects,
         RewardDisplayOverrides rewardDisplayOverrides,
         String hologram,
-        String mapImage
+        String mapImage,
+        String rarity
 ) {
     public Reward {
         enchantments = enchantments == null ? Map.of() : Map.copyOf(enchantments);
@@ -74,7 +75,8 @@ public record Reward(
         RewardDisplayOverrides rewardDisplayOverrides = RewardDisplayOverrides.fromSection(section.getConfigurationSection("reward-display"));
         String hologram = section.getString("hologram", "");
         String mapImage = section.getString("map-image", "");
-        return new Reward(id, chance, displayName, item, amount, rewardItemStack, displayItemStack, customModel, glow, enchantments, commands, effects, rewardDisplayOverrides, hologram, mapImage);
+        String rarity = section.getString("rarity", "");
+        return new Reward(id, chance, displayName, item, amount, rewardItemStack, displayItemStack, customModel, glow, enchantments, commands, effects, rewardDisplayOverrides, hologram, mapImage, rarity);
     }
 
     private static int toInt(Object value) {

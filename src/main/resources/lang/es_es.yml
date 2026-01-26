@@ -387,12 +387,24 @@ editor:
           name: "&eComandos"
         map-image:
           name: "&eImagen de mapa"
+        rarity:
+          name: "&eRareza"
+          desc: "&7Selecciona la rareza para esta reward."
       item-lore:
         id: "&7ID: &f%id%"
         display-name: "&7Nombre: &f%name%"
         chance: "&7Chance: &f%chance%"
         item: "&7Item: &f%item%"
         hint: "&7Click izquierdo para editar. Click derecho para clonar. Shift+click derecho para borrar."
+    rarity:
+      title: "&8Rarezas: %reward%"
+      back:
+        name: "&eVolver"
+        lore: "&7Regresar a la reward."
+      item-lore:
+        chance: "&7Chance: &f%chance%%"
+        path: "&7Path: &f%path%"
+        select: "&fClick para seleccionar."
   reward:
     prompt:
       new-pool-id: "Ingresa el ID del pool"
