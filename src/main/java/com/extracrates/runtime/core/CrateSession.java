@@ -973,6 +973,9 @@ public class CrateSession {
         if (rewards == null || rewards.isEmpty()) {
             return;
         }
+        if (maxRerolls == 0 && rewards.size() <= 1) {
+            return;
+        }
         if (!player.hasPermission("extracrates.reroll")) {
             player.sendMessage(languageManager.getMessage("command.no-permission"));
             return;
