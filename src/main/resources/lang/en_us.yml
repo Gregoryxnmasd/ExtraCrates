@@ -401,6 +401,7 @@ editor:
           name: "&eMap image"
       item-lore:
         id: "&7ID: &f%id%"
+        display-name: "&7Display name: &f%name%"
         chance: "&7Chance: &f%chance%"
         item: "&7Item: &f%item%"
         hint: "&7Left click to edit. Right click to clone. Shift+right click to delete."

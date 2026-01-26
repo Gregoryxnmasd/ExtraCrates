@@ -389,6 +389,7 @@ editor:
           name: "&eImagen de mapa"
       item-lore:
         id: "&7ID: &f%id%"
+        display-name: "&7Nombre: &f%name%"
         chance: "&7Chance: &f%chance%"
         item: "&7Item: &f%item%"
         hint: "&7Click izquierdo para editar. Click derecho para clonar. Shift+click derecho para borrar."
