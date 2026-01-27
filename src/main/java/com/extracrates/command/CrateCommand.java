@@ -365,6 +365,19 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                     routeEditorManager.capturePoint(player);
                     return true;
                 }
+                if (action.equalsIgnoreCase("delete")) {
+                    if (args.length < 3) {
+                        sender.sendMessage(languageManager.getMessage("command.route-usage"));
+                        return true;
+                    }
+                    String pathId = args[2];
+                    if (routeEditorManager.clearPathPoints(pathId)) {
+                        sender.sendMessage(languageManager.getMessage("command.route-delete-success", java.util.Map.of("path", pathId)));
+                    } else {
+                        sender.sendMessage(languageManager.getMessage("command.route-delete-failed", java.util.Map.of("path", pathId)));
+                    }
+                    return true;
+                }
                 if (!routeEditorManager.startSession(player, action)) {
                     sender.sendMessage(languageManager.getMessage("command.route-already-active"));
                     return true;
@@ -480,7 +493,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("route")) {
-            options.addAll(List.of("save", "cancel", "add", "capture", "marker"));
+            options.addAll(List.of("save", "cancel", "add", "capture", "marker", "delete"));
             options.addAll(configLoader.getPaths().keySet());
             return filterByPrefix(options, current);
         }
@@ -488,6 +501,10 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             String action = args[1].toLowerCase(Locale.ROOT);
             if (action.equals("marker")) {
                 options.add("move");
+                return filterByPrefix(options, current);
+            }
+            if (action.equals("delete")) {
+                options.addAll(configLoader.getPaths().keySet());
                 return filterByPrefix(options, current);
             }
         }

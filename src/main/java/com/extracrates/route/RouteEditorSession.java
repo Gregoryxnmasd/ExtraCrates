@@ -28,7 +28,8 @@ public class RouteEditorSession {
             Player player,
             String pathId,
             Particle previewParticle,
-            String particleName
+            String particleName,
+            List<CutscenePoint> initialPoints
     ) {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
@@ -36,6 +37,9 @@ public class RouteEditorSession {
         this.pathId = pathId;
         this.previewParticle = previewParticle;
         this.particleName = particleName;
+        if (initialPoints != null && !initialPoints.isEmpty()) {
+            points.addAll(initialPoints);
+        }
     }
 
     public String getPathId() {

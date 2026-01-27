@@ -40,12 +40,14 @@ public class RouteEditorManager {
             }
         }
         Particle particle = parseParticle(particleName);
+        List<CutscenePoint> initialPoints = loadExistingPoints(pathId);
         RouteEditorSession session = new RouteEditorSession(
                 plugin,
                 player,
                 pathId,
                 particle,
-                particleName
+                particleName,
+                initialPoints
         );
         sessions.put(player.getUniqueId(), session);
         session.startPreview();
@@ -85,6 +87,29 @@ public class RouteEditorManager {
         }
         session.moveMarker(player.getEyeLocation());
         player.sendMessage(languageManager.getMessage("route.editor.marker-moved"));
+    }
+
+    public boolean clearPathPoints(String pathId) {
+        File file = new File(plugin.getDataFolder(), "paths.yml");
+        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+        ConfigurationSection pathsSection = config.getConfigurationSection("paths");
+        if (pathsSection == null) {
+            return false;
+        }
+        ConfigurationSection section = pathsSection.getConfigurationSection(pathId);
+        if (section == null) {
+            return false;
+        }
+        section.set("points", new ArrayList<>());
+        section.set("direct-points", new ArrayList<>());
+        try {
+            config.save(file);
+            configLoader.loadAll();
+            return true;
+        } catch (IOException ex) {
+            plugin.getLogger().log(Level.WARNING, "No se pudo borrar los puntos en paths.yml para la ruta '" + pathId + "'.", ex);
+            return false;
+        }
     }
 
     private void saveSession(Player player, RouteEditorSession session) {
@@ -147,6 +172,14 @@ public class RouteEditorManager {
             player.sendMessage(languageManager.getMessage("route.editor.save-failed"));
             plugin.getLogger().log(Level.WARNING, "No se pudo guardar paths.yml para la ruta '" + session.getPathId() + "'.", ex);
         }
+    }
+
+    private List<CutscenePoint> loadExistingPoints(String pathId) {
+        com.extracrates.cutscene.CutscenePath path = configLoader.getPaths().get(pathId);
+        if (path == null) {
+            return List.of();
+        }
+        return new ArrayList<>(path.getPoints());
     }
 
     private Particle parseParticle(String particleName) {
