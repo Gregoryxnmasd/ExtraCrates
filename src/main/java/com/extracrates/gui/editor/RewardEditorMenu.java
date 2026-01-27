@@ -408,7 +408,7 @@ public class RewardEditorMenu implements Listener {
                 inventory.setItem(slot, buildRarityItem(rarity, material));
             }
         };
-        task.runTaskTimer(plugin, 0L, 3L);
+        task.runTaskTimer(plugin, 0L, 1L);
         rarityAnimations.put(player.getUniqueId(), task);
     }
 
