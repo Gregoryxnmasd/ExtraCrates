@@ -107,6 +107,13 @@ public class CrateSession {
     private boolean endCommandsExecuted;
     private boolean usingPlayerCamera;
     private boolean playerBlindnessApplied;
+    private boolean playerCameraActive;
+    private boolean playerMovementStateCaptured;
+    private Vector previousVelocity;
+    private Float previousWalkSpeed;
+    private Float previousFlySpeed;
+    private Boolean previousAllowFlight;
+    private Boolean previousFlying;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
