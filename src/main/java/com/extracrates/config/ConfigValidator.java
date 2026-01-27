@@ -249,6 +249,44 @@ public class ConfigValidator {
                         ));
                     }
                 }
+                List<?> segmentCommands = pathSection.getList("segment-commands", List.of());
+                for (int idx = 0; idx < segmentCommands.size(); idx++) {
+                    Object raw = segmentCommands.get(idx);
+                    if (!(raw instanceof java.util.Map<?, ?> map)) {
+                        continue;
+                    }
+                    int startPoint = readIndex(map.get("start-point"), 0);
+                    int endPoint = readIndex(map.get("end-point"), startPoint + 1);
+                    if (startPoint < 0 || startPoint >= points.size()) {
+                        errors.add(new ValidationIssue(
+                                "paths.yml:paths." + pathId + ".segment-commands[" + idx + "].start-point",
+                                "start-point fuera de rango: " + startPoint + ".",
+                                "Usa un indice entre 0 y " + Math.max(0, points.size() - 1) + "."
+                        ));
+                    }
+                    if (endPoint < 0 || endPoint >= points.size()) {
+                        errors.add(new ValidationIssue(
+                                "paths.yml:paths." + pathId + ".segment-commands[" + idx + "].end-point",
+                                "end-point fuera de rango: " + endPoint + ".",
+                                "Usa un indice entre 0 y " + Math.max(0, points.size() - 1) + "."
+                        ));
+                    }
+                    if (endPoint <= startPoint) {
+                        errors.add(new ValidationIssue(
+                                "paths.yml:paths." + pathId + ".segment-commands[" + idx + "].end-point",
+                                "end-point debe ser mayor a start-point.",
+                                "Configura un rango valido para segment-commands."
+                        ));
+                    }
+                    List<String> commands = readCommandList(map.get("commands"));
+                    if (commands.isEmpty()) {
+                        warnings.add(new ValidationIssue(
+                                "paths.yml:paths." + pathId + ".segment-commands[" + idx + "].commands",
+                                "commands esta vacio.",
+                                "Agrega comandos a ejecutar entre los puntos."
+                        ));
+                    }
+                }
             }
         }
 
@@ -309,6 +347,43 @@ public class ConfigValidator {
 
     private String formatIssue(ValidationIssue issue) {
         return issue.path() + " -> " + issue.message() + " Sugerencia: " + issue.suggestion();
+    }
+
+    private int readIndex(Object raw, int fallback) {
+        if (raw instanceof Number number) {
+            return number.intValue();
+        }
+        if (raw instanceof String text) {
+            try {
+                return Integer.parseInt(text.trim());
+            } catch (NumberFormatException ignored) {
+                return fallback;
+            }
+        }
+        return fallback;
+    }
+
+    private List<String> readCommandList(Object raw) {
+        if (raw instanceof List<?> list) {
+            List<String> commands = new ArrayList<>();
+            for (Object entry : list) {
+                if (entry == null) {
+                    continue;
+                }
+                String text = entry.toString().trim();
+                if (!text.isEmpty()) {
+                    commands.add(text);
+                }
+            }
+            return commands;
+        }
+        if (raw instanceof String text) {
+            String trimmed = text.trim();
+            if (!trimmed.isEmpty()) {
+                return List.of(trimmed);
+            }
+        }
+        return List.of();
     }
 
     public record ValidationIssue(String path, String message, String suggestion) {
