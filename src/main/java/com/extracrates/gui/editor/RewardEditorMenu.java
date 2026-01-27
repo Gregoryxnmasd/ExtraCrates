@@ -19,6 +19,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -712,6 +713,8 @@ public class RewardEditorMenu implements Listener {
         if (meta != null) {
             meta.displayName(TextUtil.colorNoItalic("&e" + reward.displayName()));
             meta.lore(lore.stream().map(TextUtil::colorNoItalic).toList());
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_UNBREAKABLE,
+                    ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_POTION_EFFECTS);
             item.setItemMeta(meta);
         }
         return item;
@@ -747,6 +750,8 @@ public class RewardEditorMenu implements Listener {
             if (loreLines != null && !loreLines.isEmpty()) {
                 meta.lore(loreLines.stream().map(TextUtil::colorNoItalic).toList());
             }
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_UNBREAKABLE,
+                    ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_POTION_EFFECTS);
             item.setItemMeta(meta);
         }
         return item;
