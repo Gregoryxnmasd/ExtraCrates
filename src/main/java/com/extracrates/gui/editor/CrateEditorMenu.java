@@ -82,9 +82,7 @@ public class CrateEditorMenu implements Listener {
 
     public void open(Player player) {
         Inventory inventory = Bukkit.createInventory(player, 54, title);
-        List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
-        crates.sort(Comparator.comparing((CrateDefinition crate) -> resolveCreatedAt(crate.id()))
-                .thenComparing(CrateDefinition::id, String.CASE_INSENSITIVE_ORDER));
+        List<CrateDefinition> crates = getSortedCrates();
         int slot = 9;
         for (CrateDefinition crate : crates) {
             if (slot > 35) {
@@ -213,8 +211,7 @@ public class CrateEditorMenu implements Listener {
             parent.open(player);
             return;
         }
-        List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
-        crates.sort(Comparator.comparing(CrateDefinition::id));
+        List<CrateDefinition> crates = getSortedCrates();
         int index = slot - 9;
         if (slot < 9 || slot > 35 || index < 0 || index >= crates.size()) {
             return;
@@ -637,6 +634,13 @@ public class CrateEditorMenu implements Listener {
         } catch (NumberFormatException ex) {
             return 0;
         }
+    }
+
+    private List<CrateDefinition> getSortedCrates() {
+        List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
+        crates.sort(Comparator.comparing((CrateDefinition crate) -> resolveCreatedAt(crate.id()))
+                .thenComparing(CrateDefinition::id, String.CASE_INSENSITIVE_ORDER));
+        return crates;
     }
 
     private long resolveCreatedAt(String crateId) {
