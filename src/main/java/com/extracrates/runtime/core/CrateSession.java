@@ -754,7 +754,7 @@ public class CrateSession {
             return;
         }
         player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.displayName())));
-        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader);
         if (item.getType() != Material.AIR) {
             player.getInventory().addItem(item);
         } else {
@@ -989,7 +989,7 @@ public class CrateSession {
         }
         ItemStack item = reward.displayItemStack() != null
                 ? reward.displayItemStack().clone()
-                : ItemUtil.buildItem(reward, world, configLoader, plugin.getMapImageCache());
+                : ItemUtil.buildItem(reward, world, configLoader);
         String rewardModel = crate.animation().rewardModel();
         if (reward.displayItemStack() != null || rewardModel == null || rewardModel.isEmpty()) {
             REWARD_DISPLAY_CACHE.put(cacheKey, item.clone());

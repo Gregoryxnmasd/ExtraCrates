@@ -16,7 +16,7 @@ public final class ItemUtil {
     private ItemUtil() {
     }
 
-    public static ItemStack buildItem(Reward reward, World world, ConfigLoader configLoader, MapImageCache mapImageCache) {
+    public static ItemStack buildItem(Reward reward, World world, ConfigLoader configLoader) {
         boolean debugTimings = configLoader != null && configLoader.getMainConfig().getBoolean("debug.timings", false);
         long start = debugTimings ? System.nanoTime() : 0L;
         CacheKey cacheKey = new CacheKey(reward.id(), worldKey(world), reward.customModel());
