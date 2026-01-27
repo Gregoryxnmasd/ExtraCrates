@@ -105,13 +105,14 @@ public class RewardEditorMenu implements Listener {
         List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
         pools.sort(Comparator.comparing((RewardPool pool) -> resolveCreatedAt(pool.id()))
                 .thenComparing(RewardPool::id, String.CASE_INSENSITIVE_ORDER));
-        int slot = 9;
+        List<ItemStack> poolItems = new ArrayList<>();
         for (RewardPool pool : pools) {
-            if (slot > 35) {
+            if (poolItems.size() >= 27) {
                 break;
             }
-            inventory.setItem(slot++, buildPoolItem(pool));
+            poolItems.add(buildPoolItem(pool));
         }
+        MenuSpacer.applyCenteredItems(inventory, 9, 35, poolItems);
         fillListNavigation(inventory);
         inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE,
                 text("editor.rewards.list.create.name"),
@@ -128,13 +129,14 @@ public class RewardEditorMenu implements Listener {
         RewardPool pool = configLoader.getRewardPools().get(poolId);
         Inventory inventory = Bukkit.createInventory(player, 54, TextUtil.colorNoItalic(text("editor.rewards.pool.title", Map.of("pool", poolId))));
         List<Reward> rewards = pool != null ? pool.rewards() : List.of();
-        int slot = 9;
+        List<ItemStack> rewardItems = new ArrayList<>();
         for (Reward reward : rewards) {
-            if (slot > 35) {
+            if (rewardItems.size() >= 27) {
                 break;
             }
-            inventory.setItem(slot++, buildRewardItem(reward));
+            rewardItems.add(buildRewardItem(reward));
         }
+        MenuSpacer.applyCenteredItems(inventory, 9, 35, rewardItems);
         fillListNavigation(inventory);
         inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE,
                 text("editor.rewards.pool.create-reward.name"),
@@ -248,11 +250,12 @@ public class RewardEditorMenu implements Listener {
         List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
         pools.sort(Comparator.comparing((RewardPool pool) -> resolveCreatedAt(pool.id()))
                 .thenComparing(RewardPool::id, String.CASE_INSENSITIVE_ORDER));
-        int index = slot - 9;
-        if (slot < 9 || slot > 35 || index < 0 || index >= pools.size()) {
+        int visibleCount = Math.min(pools.size(), 27);
+        int centeredIndex = MenuSpacer.centeredIndex(9, 35, visibleCount, slot);
+        if (centeredIndex < 0 || centeredIndex >= visibleCount) {
             return;
         }
-        RewardPool pool = pools.get(index);
+        RewardPool pool = pools.get(centeredIndex);
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
@@ -292,11 +295,12 @@ public class RewardEditorMenu implements Listener {
             return;
         }
         List<Reward> rewards = pool.rewards();
-        int index = slot - 9;
-        if (slot < 9 || slot > 35 || index < 0 || index >= rewards.size()) {
+        int visibleCount = Math.min(rewards.size(), 27);
+        int centeredIndex = MenuSpacer.centeredIndex(9, 35, visibleCount, slot);
+        if (centeredIndex < 0 || centeredIndex >= visibleCount) {
             return;
         }
-        Reward reward = rewards.get(index);
+        Reward reward = rewards.get(centeredIndex);
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
@@ -344,17 +348,21 @@ public class RewardEditorMenu implements Listener {
         rarities.sort(Comparator.comparingDouble(com.extracrates.model.RarityDefinition::chance).reversed()
                 .thenComparing(com.extracrates.model.RarityDefinition::id));
         Map<Integer, String> slotMap = new HashMap<>();
-        int slot = RARITY_ROW_START;
-        for (com.extracrates.model.RarityDefinition rarity : rarities) {
-            if (slot > RARITY_ROW_END) {
-                break;
-            }
+        int maxRarities = Math.min(rarities.size(), RARITY_ROW_END - RARITY_ROW_START + 1);
+        List<ItemStack> rarityItems = new ArrayList<>();
+        for (int i = 0; i < maxRarities; i++) {
+            com.extracrates.model.RarityDefinition rarity = rarities.get(i);
+            rarityItems.add(buildRarityItem(rarity, resolveRarityMaterial(rarity.id())));
+        }
+        List<Integer> slots = MenuSpacer.centeredSlots(RARITY_ROW_START, RARITY_ROW_END, rarityItems.size());
+        for (int i = 0; i < slots.size(); i++) {
+            com.extracrates.model.RarityDefinition rarity = rarities.get(i);
+            int slot = slots.get(i);
             inventory.setItem(slot, buildRarityItem(rarity, resolveRarityMaterial(rarity.id())));
             slotMap.put(slot, rarity.id());
             if ("magistral".equalsIgnoreCase(rarity.id())) {
                 startRarityAnimation(player, slot, rarity);
             }
-            slot++;
         }
         raritySlots.put(player.getUniqueId(), slotMap);
         player.openInventory(inventory);
