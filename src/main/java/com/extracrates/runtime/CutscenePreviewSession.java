@@ -6,6 +6,8 @@ import com.extracrates.util.CutsceneTimeline;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Particle;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -24,6 +26,8 @@ public class CutscenePreviewSession {
     private GameMode originalGameMode;
     private Location originalLocation;
     private boolean finished;
+    private boolean usingPlayerCamera;
+    private boolean playerBlindnessApplied;
 
     public CutscenePreviewSession(
             ExtraCratesPlugin plugin,
@@ -40,7 +44,7 @@ public class CutscenePreviewSession {
     }
 
     public void start() {
-        List<Location> timeline = CutsceneTimeline.build(player.getWorld(), path);
+        List<CutsceneTimeline.CutsceneTimelineFrame> timeline = CutsceneTimeline.buildFrames(player.getWorld(), path);
         if (timeline.isEmpty()) {
             finish();
             return;
@@ -49,10 +53,12 @@ public class CutscenePreviewSession {
         originalGameMode = player.getGameMode();
         originalLocation = player.getLocation();
         player.setGameMode(GameMode.SPECTATOR);
-        Location start = timeline.getFirst();
+        CutsceneTimeline.CutsceneTimelineFrame start = timeline.getFirst();
         boolean armorStandInvisible = plugin.getConfig().getBoolean("cutscene.armorstand-invisible", true);
         String cameraEntityType = plugin.getConfig().getString("cutscene.camera-entity", "armor_stand");
-        cameraEntity = CameraEntityFactory.spawn(start, cameraEntityType, armorStandInvisible);
+        cameraEntity = CameraEntityFactory.spawn(start.location(), cameraEntityType, armorStandInvisible);
+        usingPlayerCamera = path.usesPlayerCamera(start.segmentIndex());
+        applyFrame(start);
         task = new BukkitRunnable() {
             int index = 0;
             int elapsedTicks = 0;
@@ -67,11 +73,10 @@ public class CutscenePreviewSession {
                 }
                 double progress = totalTicks <= 1 ? 1.0 : elapsedTicks / (double) (totalTicks - 1);
                 int targetIndex = lastIndex <= 0 ? 0 : (int) Math.round(progress * lastIndex);
-                Location point = timeline.get(Math.min(lastIndex, Math.max(0, targetIndex)));
-                cameraEntity.teleport(point);
-                player.setSpectatorTarget(cameraEntity);
+                CutsceneTimeline.CutsceneTimelineFrame frame = timeline.get(Math.min(lastIndex, Math.max(0, targetIndex)));
+                applyFrame(frame);
                 if (particle != null) {
-                    player.getWorld().spawnParticle(particle, point, 1, 0, 0, 0, 0);
+                    player.getWorld().spawnParticle(particle, frame.location(), 1, 0, 0, 0, 0);
                 }
                 elapsedTicks++;
             }
@@ -94,6 +99,7 @@ public class CutscenePreviewSession {
             return;
         }
         finished = true;
+        clearCutsceneBlindness();
         if (cameraEntity != null && cameraEntity.isValid()) {
             cameraEntity.remove();
         }
@@ -117,5 +123,39 @@ public class CutscenePreviewSession {
             }
         };
         finishTask.runTaskLater(plugin, 40L);
+    }
+
+    private void applyFrame(CutsceneTimeline.CutsceneTimelineFrame frame) {
+        Location point = frame.location();
+        boolean shouldUsePlayer = path.usesPlayerCamera(frame.segmentIndex());
+        if (shouldUsePlayer != usingPlayerCamera) {
+            usingPlayerCamera = shouldUsePlayer;
+        }
+        if (usingPlayerCamera) {
+            player.setSpectatorTarget(null);
+            player.teleport(point);
+            applyCutsceneBlindness();
+        } else if (cameraEntity != null) {
+            cameraEntity.teleport(point);
+            player.setSpectatorTarget(cameraEntity);
+            clearCutsceneBlindness();
+        }
+    }
+
+    private void applyCutsceneBlindness() {
+        if (playerBlindnessApplied) {
+            return;
+        }
+        PotionEffect effect = new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 100, false, false, false);
+        player.addPotionEffect(effect, true);
+        playerBlindnessApplied = true;
+    }
+
+    private void clearCutsceneBlindness() {
+        if (!playerBlindnessApplied) {
+            return;
+        }
+        player.removePotionEffect(PotionEffectType.BLINDNESS);
+        playerBlindnessApplied = false;
     }
 }

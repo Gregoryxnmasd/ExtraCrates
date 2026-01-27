@@ -103,6 +103,8 @@ public class CrateSession {
     private BossBar rerollHintBossBar;
     private long lastRerollInputMillis;
     private boolean endCommandsExecuted;
+    private boolean usingPlayerCamera;
+    private boolean playerBlindnessApplied;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -206,7 +208,6 @@ public class CrateSession {
         FileConfiguration config = configLoader.getMainConfig();
         sessionManager.applySpectator(player);
         player.setSpectatorTarget(cameraEntity);
-        applyCutsceneBlindness();
 
         if (config.getBoolean("cutscene.fake-equip", true)) {
             previousHelmet = player.getInventory().getHelmet();
@@ -221,8 +222,49 @@ public class CrateSession {
     }
 
     private void applyCutsceneBlindness() {
+        if (playerBlindnessApplied) {
+            return;
+        }
         PotionEffect effect = new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 100, false, false, false);
         player.addPotionEffect(effect, true);
+        playerBlindnessApplied = true;
+    }
+
+    private void clearCutsceneBlindness() {
+        if (!playerBlindnessApplied) {
+            return;
+        }
+        player.removePotionEffect(PotionEffectType.BLINDNESS);
+        playerBlindnessApplied = false;
+    }
+
+    private void applyFrameLocation(CutsceneFrame frame) {
+        Location point = frame.location();
+        boolean shouldUsePlayer = path.usesPlayerCamera(frame.segmentIndex());
+        if (shouldUsePlayer != usingPlayerCamera) {
+            usingPlayerCamera = shouldUsePlayer;
+            if (usingPlayerCamera) {
+                player.setSpectatorTarget(null);
+                player.teleport(point);
+                applyCutsceneBlindness();
+            } else {
+                if (cameraEntity != null) {
+                    cameraEntity.teleport(point);
+                    player.setSpectatorTarget(cameraEntity);
+                }
+                clearCutsceneBlindness();
+            }
+            return;
+        }
+        if (usingPlayerCamera) {
+            player.teleport(point);
+            if (!playerBlindnessApplied) {
+                applyCutsceneBlindness();
+            }
+        } else if (cameraEntity != null) {
+            cameraEntity.teleport(point);
+            player.setSpectatorTarget(cameraEntity);
+        }
     }
 
     private ItemStack buildFakePumpkin(FileConfiguration config) {
@@ -442,6 +484,8 @@ public class CrateSession {
             end();
             return;
         }
+        usingPlayerCamera = path.usesPlayerCamera(timeline.getFirst().segmentIndex());
+        applyFrameLocation(timeline.getFirst());
         double minTeleportDistance = Math.max(0.0, configLoader.getMainConfig().getDouble("cutscene.min-teleport-distance", 0.0));
         double minTeleportDistanceSquared = minTeleportDistance * minTeleportDistance;
         task = new BukkitRunnable() {
@@ -461,15 +505,13 @@ public class CrateSession {
                 double progress = totalTicks <= 1 ? 1.0 : tick / (double) (totalTicks - 1);
                 int index = lastIndex <= 0 ? 0 : (int) Math.round(progress * lastIndex);
                 CutsceneFrame frame = timeline.get(Math.min(lastIndex, Math.max(0, index)));
-                Location point = frame.location();
                 tick++;
                 lastTaskTickMillis = System.currentTimeMillis();
                 if (frame.segmentIndex() != lastSegmentIndex) {
                     executeSegmentCommands(path.getSegmentCommands(), frame.segmentIndex(), executedSegmentCommands);
                     lastSegmentIndex = frame.segmentIndex();
                 }
-                cameraEntity.teleport(point);
-                player.setSpectatorTarget(cameraEntity);
+                applyFrameLocation(frame);
                 elapsedTicks++;
                 if (!rerollLocked && rewards.size() > 1 && rewardSwitchTicks > 0) {
                     while (elapsedTicks >= nextRewardSwitchTick && rewardIndex < rewards.size() - 1) {
@@ -491,6 +533,7 @@ public class CrateSession {
         waitingForClaim = true;
         lastTaskTickMillis = System.currentTimeMillis();
         updateRerollHud();
+        clearCutsceneBlindness();
     }
 
     private void resetCutsceneForReroll() {
@@ -509,6 +552,8 @@ public class CrateSession {
             cameraEntity.teleport(start);
             player.setSpectatorTarget(cameraEntity);
         }
+        usingPlayerCamera = false;
+        clearCutsceneBlindness();
         scheduleTimeout();
     }
 
