@@ -612,6 +612,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         sessionManager.clearCrateEffects(target);
         sessionManager.removeSession(target.getUniqueId());
         sessionManager.clearLocalState(target.getUniqueId());
+        sessionManager.clearStoredPlayerData(target.getUniqueId());
         sender.sendMessage(Component.text("Hard reset aplicado para " + target.getName() + "."));
         if (!sender.equals(target)) {
             target.sendMessage(Component.text("Tu sesión de crates fue reiniciada por un administrador."));

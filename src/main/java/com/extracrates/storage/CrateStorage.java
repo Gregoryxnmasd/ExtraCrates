@@ -36,5 +36,7 @@ public interface CrateStorage {
 
     void markRewardDelivered(UUID playerId, String crateId, String rewardId);
 
+    void clearPlayerData(UUID playerId);
+
     void close();
 }
