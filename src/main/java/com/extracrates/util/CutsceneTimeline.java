@@ -26,16 +26,7 @@ public final class CutsceneTimeline {
                 if (timeline.isEmpty()) {
                     timeline.add(new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch()));
                 }
-                float yaw = end.yaw();
-                float pitch = end.pitch();
-                if (spinSettings != null && spinSettings.isActiveForSegment(i)) {
-                    yaw = wrapDegrees(yaw + (float) spinOffset);
-                    spinOffset += spinStep;
-                    spinStarted = true;
-                } else if (spinStarted) {
-                    yaw = wrapDegrees(yaw + (float) spinOffset);
-                }
-                timeline.add(new Location(world, end.x(), end.y(), end.z(), yaw, pitch));
+                timeline.add(new Location(world, end.x(), end.y(), end.z(), end.yaw(), end.pitch()));
                 continue;
             }
             Location startLoc = new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch());

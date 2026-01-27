@@ -16,6 +16,7 @@ public class CutscenePath {
     private final CutsceneSpinSettings spinSettings;
     private final List<CutscenePoint> points;
     private final java.util.Set<Integer> directPoints;
+    private final List<CutsceneSegmentCommand> segmentCommands;
     private volatile List<CutscenePoint> timelineCache;
 
     public CutscenePath(
@@ -27,7 +28,8 @@ public class CutscenePath {
             String particlePreview,
             CutsceneSpinSettings spinSettings,
             List<CutscenePoint> points,
-            java.util.Set<Integer> directPoints
+            java.util.Set<Integer> directPoints,
+            List<CutsceneSegmentCommand> segmentCommands
     ) {
         this.id = id;
         this.durationSeconds = durationSeconds;
@@ -38,6 +40,7 @@ public class CutscenePath {
         this.spinSettings = spinSettings;
         this.points = points;
         this.directPoints = directPoints;
+        this.segmentCommands = segmentCommands;
     }
 
     public String getId() {
@@ -76,6 +79,10 @@ public class CutscenePath {
         return Collections.unmodifiableList(points);
     }
 
+    public List<CutsceneSegmentCommand> getSegmentCommands() {
+        return Collections.unmodifiableList(segmentCommands);
+    }
+
     public List<CutscenePoint> getTimelinePoints() {
         List<CutscenePoint> cached = timelineCache;
         if (cached != null) {
@@ -111,7 +118,19 @@ public class CutscenePath {
             }
         }
         CutsceneSpinSettings spinSettings = CutsceneSpinSettings.fromSection(section.getConfigurationSection("spin"), points.size());
-        return new CutscenePath(id, duration, constantSpeed, stepResolution, smoothing, particlePreview, spinSettings, points, directPoints);
+        List<CutsceneSegmentCommand> segmentCommands = parseSegmentCommands(section.getList("segment-commands", List.of()), points.size());
+        return new CutscenePath(
+                id,
+                duration,
+                constantSpeed,
+                stepResolution,
+                smoothing,
+                particlePreview,
+                spinSettings,
+                points,
+                directPoints,
+                segmentCommands
+        );
     }
 
     private List<CutscenePoint> buildTimelinePoints() {
@@ -177,5 +196,71 @@ public class CutscenePath {
             }
         }
         return indices;
+    }
+
+    private static List<CutsceneSegmentCommand> parseSegmentCommands(List<?> rawCommands, int pointsCount) {
+        if (rawCommands == null || rawCommands.isEmpty()) {
+            return List.of();
+        }
+        int lastIndex = Math.max(0, pointsCount - 1);
+        List<CutsceneSegmentCommand> commands = new ArrayList<>();
+        for (Object raw : rawCommands) {
+            if (!(raw instanceof java.util.Map<?, ?> map)) {
+                continue;
+            }
+            int startPoint = clampIndex(getInt(map, "start-point", 0), lastIndex);
+            int endPoint = clampIndex(getInt(map, "end-point", startPoint + 1), lastIndex);
+            if (endPoint <= startPoint) {
+                continue;
+            }
+            List<String> entries = readStringList(map.get("commands"));
+            if (entries.isEmpty()) {
+                continue;
+            }
+            commands.add(new CutsceneSegmentCommand(startPoint, endPoint, entries));
+        }
+        return commands;
+    }
+
+    private static int clampIndex(int value, int lastIndex) {
+        return Math.min(Math.max(value, 0), lastIndex);
+    }
+
+    private static int getInt(java.util.Map<?, ?> map, String key, int fallback) {
+        Object value = map.get(key);
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String text) {
+            try {
+                return Integer.parseInt(text.trim());
+            } catch (NumberFormatException ignored) {
+                return fallback;
+            }
+        }
+        return fallback;
+    }
+
+    private static List<String> readStringList(Object value) {
+        if (value instanceof List<?> list) {
+            List<String> result = new ArrayList<>();
+            for (Object entry : list) {
+                if (entry == null) {
+                    continue;
+                }
+                String text = entry.toString().trim();
+                if (!text.isEmpty()) {
+                    result.add(text);
+                }
+            }
+            return result;
+        }
+        if (value instanceof String text) {
+            String trimmed = text.trim();
+            if (!trimmed.isEmpty()) {
+                return List.of(trimmed);
+            }
+        }
+        return List.of();
     }
 }
