@@ -46,7 +46,7 @@ public class RewardEditorMenu implements Listener {
     private static final int SLOT_DETAIL_REWARD_ITEM = 10;
     private static final int SLOT_DETAIL_DISPLAY_ITEM = 11;
     private static final int SLOT_DETAIL_COMMANDS = 12;
-    private static final int SLOT_DETAIL_RARITY = 14;
+    private static final int SLOT_DETAIL_RARITY = 13;
 
     private static final int RARITY_MENU_SIZE = 45;
     private static final int RARITY_BACK_SLOT = 40;
@@ -700,6 +700,7 @@ public class RewardEditorMenu implements Listener {
     }
 
     private ItemStack buildRewardItem(Reward reward) {
+        ItemStack item = buildRewardDisplayItem(reward);
         List<String> lore = new ArrayList<>();
         lore.add(text("editor.rewards.reward.item-lore.id", Map.of("id", reward.id())));
         lore.add(text("editor.rewards.reward.item-lore.display-name", Map.of("name", reward.displayName())));
@@ -707,7 +708,26 @@ public class RewardEditorMenu implements Listener {
         lore.add(text("editor.common.action.left-edit"));
         lore.add(text("editor.common.action.right-clone"));
         lore.add(text("editor.common.action.shift-right-delete"));
-        return buildItem(Material.GOLD_INGOT, "&e" + reward.displayName(), lore);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(TextUtil.colorNoItalic("&e" + reward.displayName()));
+            meta.lore(lore.stream().map(TextUtil::colorNoItalic).toList());
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private ItemStack buildRewardDisplayItem(Reward reward) {
+        ItemStack baseItem = reward.displayItemStack();
+        if (baseItem == null) {
+            baseItem = reward.itemStack();
+        }
+        if (baseItem != null) {
+            ItemStack item = baseItem.clone();
+            item.setAmount(1);
+            return item;
+        }
+        return new ItemStack(parseMaterial(reward.item()));
     }
 
     private ItemStack buildRarityItem(com.extracrates.model.RarityDefinition rarity, Material material) {
@@ -772,6 +792,11 @@ public class RewardEditorMenu implements Listener {
             return stack.getType().name().toLowerCase(Locale.ROOT);
         }
         return text("editor.common.none");
+    }
+
+    private Material parseMaterial(String item) {
+        Material material = Material.matchMaterial(item.toUpperCase(Locale.ROOT));
+        return material != null ? material : Material.CHEST;
     }
 
     private Material resolveRarityMaterial(String rarityId) {
@@ -841,13 +866,6 @@ public class RewardEditorMenu implements Listener {
 
     private Component rarityTitle(String rewardId) {
         return TextUtil.colorNoItalic(text("editor.rewards.rarity.title", Map.of("reward", rewardId)));
-    }
-
-    private String emptyFallback(String value) {
-        if (value == null || value.trim().isEmpty()) {
-            return text("editor.common.none");
-        }
-        return value;
     }
 
     private String text(String key) {
