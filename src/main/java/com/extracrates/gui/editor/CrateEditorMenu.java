@@ -83,13 +83,14 @@ public class CrateEditorMenu implements Listener {
     public void open(Player player) {
         Inventory inventory = Bukkit.createInventory(player, 54, title);
         List<CrateDefinition> crates = getSortedCrates();
-        int slot = 9;
+        List<ItemStack> crateItems = new ArrayList<>();
         for (CrateDefinition crate : crates) {
-            if (slot > 35) {
+            if (crateItems.size() >= 27) {
                 break;
             }
-            inventory.setItem(slot++, buildCrateItem(crate));
+            crateItems.add(buildCrateItem(crate));
         }
+        MenuSpacer.applyCenteredItems(inventory, 9, 35, crateItems);
         fillListNavigation(inventory);
         inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE,
                 text("editor.crates.list.create.name"),
@@ -212,11 +213,12 @@ public class CrateEditorMenu implements Listener {
             return;
         }
         List<CrateDefinition> crates = getSortedCrates();
-        int index = slot - 9;
-        if (slot < 9 || slot > 35 || index < 0 || index >= crates.size()) {
+        int visibleCount = Math.min(crates.size(), 27);
+        int centeredIndex = MenuSpacer.centeredIndex(9, 35, visibleCount, slot);
+        if (centeredIndex < 0 || centeredIndex >= visibleCount) {
             return;
         }
-        CrateDefinition crate = crates.get(index);
+        CrateDefinition crate = crates.get(centeredIndex);
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
@@ -379,15 +381,16 @@ public class CrateEditorMenu implements Listener {
         List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
         pools.sort(Comparator.comparing((RewardPool pool) -> resolvePoolCreatedAt(pool.id()))
                 .thenComparing(RewardPool::id, String.CASE_INSENSITIVE_ORDER));
-        int slot = 9;
+        List<ItemStack> poolItems = new ArrayList<>();
         for (RewardPool pool : pools) {
-            if (slot > 35) {
+            if (poolItems.size() >= 27) {
                 break;
             }
-            inventory.setItem(slot++, buildItem(Material.EMERALD, "&a" + pool.id(), List.of(
+            poolItems.add(buildItem(Material.EMERALD, "&a" + pool.id(), List.of(
                     text("editor.common.click-select")
             )));
         }
+        MenuSpacer.applyCenteredItems(inventory, 9, 35, poolItems);
         fillListNavigation(inventory);
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.crates.paths.back.name"),
@@ -398,13 +401,15 @@ public class CrateEditorMenu implements Listener {
 
     private void openOpenModeSelector(Player player, String crateId) {
         Inventory inventory = Bukkit.createInventory(player, 36, openModeTitle(crateId));
-        int slot = SLOT_SELECTOR_START;
-        for (String mode : List.of("reward-only", "preview-only", "economy-required", "full")) {
-            inventory.setItem(slot++, buildItem(Material.BOOK, text("editor.crates.open-mode.option.name", Map.of("mode", mode)), List.of(
+        List<String> modes = List.of("reward-only", "preview-only", "economy-required", "full");
+        List<ItemStack> modeItems = new ArrayList<>();
+        for (String mode : modes) {
+            modeItems.add(buildItem(Material.BOOK, text("editor.crates.open-mode.option.name", Map.of("mode", mode)), List.of(
                     text("editor.crates.open-mode.option.desc." + mode),
                     text("editor.common.click-select")
             )));
         }
+        MenuSpacer.applyCenteredItems(inventory, 9, 17, modeItems);
         fillSelectorNavigation(inventory);
         inventory.setItem(SLOT_SELECTOR_BACK, buildItem(Material.ARROW,
                 text("editor.crates.detail.back.name"),
@@ -418,18 +423,19 @@ public class CrateEditorMenu implements Listener {
         List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
         paths.sort(Comparator.comparing((CutscenePath path) -> resolvePathCreatedAt(path.getId()))
                 .thenComparing(CutscenePath::getId, String.CASE_INSENSITIVE_ORDER));
-        int slot = 9;
-        inventory.setItem(slot++, buildItem(Material.BARRIER, text("editor.common.none"), List.of(
+        List<ItemStack> pathItems = new ArrayList<>();
+        pathItems.add(buildItem(Material.BARRIER, text("editor.common.none"), List.of(
                 text("editor.common.click-select")
         )));
         for (CutscenePath path : paths) {
-            if (slot > 35) {
+            if (pathItems.size() >= 27) {
                 break;
             }
-            inventory.setItem(slot++, buildItem(Material.ENDER_EYE, "&b" + path.getId(), List.of(
+            pathItems.add(buildItem(Material.ENDER_EYE, "&b" + path.getId(), List.of(
                     text("editor.common.click-select")
             )));
         }
+        MenuSpacer.applyCenteredItems(inventory, 9, 35, pathItems);
         fillListNavigation(inventory);
         inventory.setItem(SLOT_LIST_BACK, buildItem(Material.ARROW,
                 text("editor.crates.paths.back.name"),
@@ -446,11 +452,12 @@ public class CrateEditorMenu implements Listener {
         List<RewardPool> pools = new ArrayList<>(configLoader.getRewardPools().values());
         pools.sort(Comparator.comparing((RewardPool pool) -> resolvePoolCreatedAt(pool.id()))
                 .thenComparing(RewardPool::id, String.CASE_INSENSITIVE_ORDER));
-        int index = slot - 9;
-        if (slot < 9 || slot > 35 || index < 0 || index >= pools.size()) {
+        int visibleCount = Math.min(pools.size(), 27);
+        int centeredIndex = MenuSpacer.centeredIndex(9, 35, visibleCount, slot);
+        if (centeredIndex < 0 || centeredIndex >= visibleCount) {
             return;
         }
-        RewardPool pool = pools.get(index);
+        RewardPool pool = pools.get(centeredIndex);
         updateCrateField(crateId, "rewards-pool", pool.id());
         player.sendMessage(languageManager.getMessage("editor.crate.success.updated"));
         openDetail(player, crateId);
@@ -461,12 +468,12 @@ public class CrateEditorMenu implements Listener {
             openDetail(player, crateId);
             return;
         }
-        int index = slot - SLOT_SELECTOR_START;
         List<String> modes = List.of("reward-only", "preview-only", "economy-required", "full");
-        if (index < 0 || index >= modes.size()) {
+        int centeredIndex = MenuSpacer.centeredIndex(9, 17, modes.size(), slot);
+        if (centeredIndex < 0 || centeredIndex >= modes.size()) {
             return;
         }
-        updateCrateField(crateId, "open-mode", modes.get(index));
+        updateCrateField(crateId, "open-mode", modes.get(centeredIndex));
         player.sendMessage(languageManager.getMessage("editor.crate.success.updated"));
         openDetail(player, crateId);
     }
@@ -476,20 +483,21 @@ public class CrateEditorMenu implements Listener {
             openDetail(player, crateId);
             return;
         }
-        if (slot == 9) {
+        List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
+        paths.sort(Comparator.comparing((CutscenePath path) -> resolvePathCreatedAt(path.getId()))
+                .thenComparing(CutscenePath::getId, String.CASE_INSENSITIVE_ORDER));
+        int maxPaths = Math.min(paths.size(), 26);
+        int centeredIndex = MenuSpacer.centeredIndex(9, 35, maxPaths + 1, slot);
+        if (centeredIndex < 0 || centeredIndex > maxPaths) {
+            return;
+        }
+        if (centeredIndex == 0) {
             updateCrateField(crateId, "animation.path", "");
             player.sendMessage(languageManager.getMessage("editor.crate.success.updated"));
             openDetail(player, crateId);
             return;
         }
-        List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
-        paths.sort(Comparator.comparing((CutscenePath path) -> resolvePathCreatedAt(path.getId()))
-                .thenComparing(CutscenePath::getId, String.CASE_INSENSITIVE_ORDER));
-        int adjustedSlot = slot - 10;
-        if (slot < 10 || slot > 35 || adjustedSlot < 0 || adjustedSlot >= paths.size()) {
-            return;
-        }
-        CutscenePath path = paths.get(adjustedSlot);
+        CutscenePath path = paths.get(centeredIndex - 1);
         updateCrateField(crateId, "animation.path", path.getId());
         player.sendMessage(languageManager.getMessage("editor.crate.success.updated"));
         openDetail(player, crateId);

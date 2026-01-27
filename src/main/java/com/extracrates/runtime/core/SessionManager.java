@@ -37,7 +37,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -61,6 +63,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public class SessionManager {
+    public static final String REWARD_HOLOGRAM_KEY = "extracrates_reward_hologram";
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final EconomyService economyService;
@@ -70,6 +73,7 @@ public class SessionManager {
     private final boolean storageEnabled;
     private final String serverId;
     private final NamespacedKey keyMarker;
+    private final NamespacedKey rewardHologramMarker;
     // Stores both preview and normal crate sessions. Preview sessions are marked in CrateSession.
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
@@ -91,6 +95,7 @@ public class SessionManager {
         this.syncBridge = new SyncBridge(plugin, configLoader, this);
         this.serverId = SyncSettings.fromConfig(configLoader.getMainConfig()).getServerId();
         this.keyMarker = new NamespacedKey(plugin, "crate_key_id");
+        this.rewardHologramMarker = new NamespacedKey(plugin, REWARD_HOLOGRAM_KEY);
     }
 
     public void shutdown() {
@@ -189,7 +194,7 @@ public class SessionManager {
             Instant previousCooldown = getCooldownTimestamp(player, crate.id());
             openState = new OpenState(storage != null, false, false, previousCooldown);
         }
-        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview, openState);
+        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, null, path, this, preview, openState);
         sessions.put(player.getUniqueId(), session);
         Instant createdAt = Instant.now();
         plugin.getLogger().info(() -> String.format(
@@ -199,6 +204,55 @@ public class SessionManager {
                 createdAt
         ));
         if (!preview && storage != null) {
+            storage.logOpenStarted(player.getUniqueId(), crate.id(), resolveServerId(), createdAt);
+        }
+        session.start();
+        return true;
+    }
+
+    public boolean openCrateWithRarity(Player player, CrateDefinition crate, String rarityId) {
+        if (sessions.containsKey(player.getUniqueId())) {
+            player.sendMessage(languageManager.getMessage("session.already-in-progress"));
+            return false;
+        }
+        if (!hasCratePermission(player, crate)) {
+            player.sendMessage(languageManager.getMessage("session.no-permission", player, crate, null, null));
+            return false;
+        }
+        if (isWorldBlocked(player, crate)) {
+            player.sendMessage(languageManager.getMessage("session.world-blocked"));
+            return false;
+        }
+        RewardPool rewardPool = resolveRewardPool(crate);
+        if (rewardPool == null) {
+            player.sendMessage(languageManager.getMessage("session.error.missing-reward-pool"));
+            return false;
+        }
+        Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
+        List<Reward> rewards = rollRewardsByRarity(rewardPool, rarityId, random, buildRollLogger(player));
+        if (rewards.isEmpty()) {
+            player.sendMessage(languageManager.getMessage("session.no-rewards-rarity", java.util.Map.of("rarity", rarityId)));
+            return false;
+        }
+        CutscenePath path = resolveCutscenePath(crate, rewards.getFirst(), player);
+        OpenState openState = null;
+        if (storage != null && !storage.acquireLock(player.getUniqueId(), crate.id())) {
+            player.sendMessage(Component.text("Ya tienes una apertura en progreso."));
+            return false;
+        }
+        Instant previousCooldown = getCooldownTimestamp(player, crate.id());
+        openState = new OpenState(storage != null, false, false, previousCooldown);
+        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, rarityId, path, this, false, openState);
+        sessions.put(player.getUniqueId(), session);
+        Instant createdAt = Instant.now();
+        plugin.getLogger().info(() -> String.format(
+                "Sesion creada (rarity): jugador=%s crate=%s rarity=%s timestamp=%s",
+                player.getName(),
+                crate.id(),
+                rarityId,
+                createdAt
+        ));
+        if (storage != null) {
             storage.logOpenStarted(player.getUniqueId(), crate.id(), resolveServerId(), createdAt);
         }
         session.start();
@@ -275,9 +329,16 @@ public class SessionManager {
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
-        List<Reward> rewards = rollRewards(rewardPool, random, buildRollLogger(player));
+        String forcedRarityId = session.getForcedRarityId();
+        List<Reward> rewards = forcedRarityId == null || forcedRarityId.isBlank()
+                ? rollRewards(rewardPool, random, buildRollLogger(player))
+                : rollRewardsByRarity(rewardPool, forcedRarityId, random, buildRollLogger(player));
         if (rewards.isEmpty()) {
-            player.sendMessage(languageManager.getMessage("session.no-rewards"));
+            if (forcedRarityId == null || forcedRarityId.isBlank()) {
+                player.sendMessage(languageManager.getMessage("session.no-rewards"));
+            } else {
+                player.sendMessage(languageManager.getMessage("session.no-rewards-rarity", java.util.Map.of("rarity", forcedRarityId)));
+            }
             return false;
         }
         CutscenePath path = resolveCutscenePath(crate, rewards.getFirst(), player);
@@ -357,6 +418,7 @@ public class SessionManager {
                 points,
                 java.util.Set.of(),
                 List.of(),
+                List.of(),
                 List.of()
         );
     }
@@ -404,6 +466,42 @@ public class SessionManager {
                     .filter(reward -> matchesRarity(reward, rarity.id()))
                     .toList();
             List<Reward> chosenPool = rarityRewards.isEmpty() ? candidates : rarityRewards;
+            int index = random.nextInt(chosenPool.size());
+            Reward reward = chosenPool.get(index);
+            results.add(reward);
+            if (available != null) {
+                available.remove(reward);
+            }
+            if (logger != null) {
+                logger.log(reward, index + 1, chosenPool.size());
+            }
+        }
+        return results;
+    }
+
+    private List<Reward> rollRewardsByRarity(
+            RewardPool pool,
+            String rarityId,
+            Random random,
+            RewardSelector.RewardRollLogger logger
+    ) {
+        if (pool == null || pool.rewards().isEmpty() || rarityId == null || rarityId.isBlank()) {
+            return List.of();
+        }
+        List<Reward> candidates = pool.rewards().stream()
+                .filter(reward -> matchesRarity(reward, rarityId))
+                .toList();
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+        List<Reward> results = new ArrayList<>();
+        int rolls = Math.max(1, pool.rollCount());
+        List<Reward> available = pool.preventDuplicateItems() ? new ArrayList<>(candidates) : null;
+        for (int i = 0; i < rolls; i++) {
+            List<Reward> chosenPool = available != null ? available : candidates;
+            if (chosenPool.isEmpty()) {
+                break;
+            }
             int index = random.nextInt(chosenPool.size());
             Reward reward = chosenPool.get(index);
             results.add(reward);
@@ -596,6 +694,21 @@ public class SessionManager {
         if (player.getGameMode() == GameMode.SPECTATOR) {
             player.setGameMode(GameMode.SURVIVAL);
         }
+    }
+
+    public void clearRewardHolograms() {
+        for (World world : Bukkit.getWorlds()) {
+            for (TextDisplay display : world.getEntitiesByClass(TextDisplay.class)) {
+                if (isRewardHologram(display)) {
+                    display.remove();
+                }
+            }
+        }
+    }
+
+    private boolean isRewardHologram(TextDisplay display) {
+        PersistentDataContainer container = display.getPersistentDataContainer();
+        return container.has(rewardHologramMarker, PersistentDataType.BYTE);
     }
 
     private void toggleHud(Player player, boolean hidden) {

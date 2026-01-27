@@ -26,6 +26,7 @@ import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
@@ -39,6 +40,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -62,6 +64,7 @@ public class CrateSession {
     private final SessionManager sessionManager;
     private final boolean preview;
     private final OpenState openState;
+    private final String forcedRarityId;
     private final com.extracrates.runtime.RewardAnimationService rewardAnimationService = new com.extracrates.runtime.RewardAnimationService();
 
     private Entity cameraEntity;
@@ -127,6 +130,7 @@ public class CrateSession {
             Player player,
             CrateDefinition crate,
             List<Reward> rewards,
+            String forcedRarityId,
             CutscenePath path,
             SessionManager sessionManager,
             boolean preview,
@@ -138,6 +142,7 @@ public class CrateSession {
         this.player = player;
         this.crate = crate;
         this.rewards = rewards;
+        this.forcedRarityId = forcedRarityId;
         this.path = path;
         this.sessionManager = sessionManager;
         this.preview = preview;
@@ -242,7 +247,7 @@ public class CrateSession {
         if (playerBlindnessApplied) {
             return;
         }
-        PotionEffect effect = new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 100, false, false, false);
+        PotionEffect effect = new PotionEffect(PotionEffectType.BLINDNESS, PotionEffect.INFINITE_DURATION, 100, false, false, false);
         player.addPotionEffect(effect, true);
         playerBlindnessApplied = true;
     }
@@ -506,6 +511,7 @@ public class CrateSession {
         }
         usingPlayerCamera = path.usesPlayerCamera(timeline.getFirst().segmentIndex());
         applyFrameLocation(timeline.getFirst());
+        executeInlineCommands(path.getStartCommands(), getCurrentReward());
         double minTeleportDistance = Math.max(0.0, configLoader.getMainConfig().getDouble("cutscene.min-teleport-distance", 0.0));
         double minTeleportDistanceSquared = minTeleportDistance * minTeleportDistance;
         task = new BukkitRunnable() {
@@ -1021,6 +1027,11 @@ public class CrateSession {
             String name = resolveHologramText(reward);
             display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
             display.setBillboard(Display.Billboard.CENTER);
+            display.getPersistentDataContainer().set(
+                    new NamespacedKey(plugin, SessionManager.REWARD_HOLOGRAM_KEY),
+                    PersistentDataType.BYTE,
+                    (byte) 1
+            );
         });
     }
 
@@ -1435,6 +1446,10 @@ public class CrateSession {
 
     public CrateDefinition getCrate() {
         return crate;
+    }
+
+    public String getForcedRarityId() {
+        return forcedRarityId;
     }
 
     private void applyMovementLock() {

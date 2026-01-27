@@ -8,7 +8,7 @@ softdepend: [ProtocolLib, PlaceholderAPI]
 commands:
   crates:
     description: Manage crates and their main options.
-    usage: /<command> <gui|open|preview|cutscene|reload|clear|route|sync|migrate>
+    usage: /<command> <gui|open|preview|openrarity|cutscene|reload|clear|route|sync|migrate>
     aliases: [crate, extracrates]
 permissions:
   extracrates.editor:
@@ -32,6 +32,9 @@ permissions:
   extracrates.open:
     description: Allows opening crates.
     default: true
+  extracrates.open.rarity:
+    description: Allows opening crates with a forced rarity.
+    default: op
   extracrates.preview:
     description: Allows previewing crates.
     default: true

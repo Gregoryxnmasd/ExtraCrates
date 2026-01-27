@@ -202,6 +202,34 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
                 sessionManager.openCrate(target, crate, sub.equals("preview"));
                 return true;
             }
+            case "openrarity" -> {
+                if (!sender.hasPermission("extracrates.open.rarity")) {
+                    sender.sendMessage(languageManager.getMessage("command.no-permission"));
+                    return true;
+                }
+                if (args.length < 4) {
+                    sender.sendMessage(languageManager.getMessage("command.open-rarity-usage"));
+                    return true;
+                }
+                Player target = Bukkit.getPlayerExact(args[1]);
+                if (target == null) {
+                    sender.sendMessage(languageManager.getMessage("command.player-not-found"));
+                    return true;
+                }
+                String crateId = args[2];
+                CrateDefinition crate = configLoader.getCrates().get(crateId);
+                if (crate == null) {
+                    sender.sendMessage(languageManager.getMessage("command.crate-not-found", target, null, null, null));
+                    return true;
+                }
+                String rarityId = args[3];
+                if (!configLoader.getRarities().containsKey(rarityId.toLowerCase(Locale.ROOT))) {
+                    sender.sendMessage(languageManager.getMessage("command.rarity-not-found", Map.of("rarity", rarityId)));
+                    return true;
+                }
+                sessionManager.openCrateWithRarity(target, crate, rarityId);
+                return true;
+            }
             case "reroll" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage(languageManager.getMessage("command.only-players"));
@@ -412,7 +440,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         List<String> options = new ArrayList<>();
         String current = args.length > 0 ? args[args.length - 1] : "";
         if (args.length == 1) {
-            options.addAll(List.of("gui", "history", "editor", "open", "preview", "cutscene", "reroll", "reload", "debug", "sync", "route", "migrate", "clear", "forceclear", "hardreset", "crates", "pools", "rewards"));
+            options.addAll(List.of("gui", "history", "editor", "open", "preview", "openrarity", "cutscene", "reroll", "reload", "debug", "sync", "route", "migrate", "clear", "forceclear", "hardreset", "crates", "pools", "rewards"));
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("crates")) {
@@ -524,8 +552,20 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             }
             return filterByPrefix(options, current);
         }
+        if (args.length == 2 && args[0].equalsIgnoreCase("openrarity")) {
+            Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
+            return filterByPrefix(options, current);
+        }
         if (args.length == 3 && (args[0].equalsIgnoreCase("open") || args[0].equalsIgnoreCase("preview"))) {
             options.addAll(configLoader.getCrates().keySet());
+            return filterByPrefix(options, current);
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("openrarity")) {
+            options.addAll(configLoader.getCrates().keySet());
+            return filterByPrefix(options, current);
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("openrarity")) {
+            options.addAll(configLoader.getRarities().keySet());
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("cutscene")) {
