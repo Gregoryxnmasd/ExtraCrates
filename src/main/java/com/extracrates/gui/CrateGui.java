@@ -125,6 +125,11 @@ public class CrateGui implements Listener {
         if (holder == null) {
             return;
         }
+        if (!(holder instanceof CrateGuiHolder
+            || holder instanceof CrateActionHolder
+            || holder instanceof RewardPreviewHolder)) {
+            return;
+        }
         event.setCancelled(true);
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) {
