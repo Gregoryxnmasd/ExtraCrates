@@ -21,7 +21,6 @@ import com.extracrates.runtime.core.ExtraCratesApiService;
 import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.storage.PendingRewardStore;
 import com.extracrates.sync.SyncBridge;
-import com.extracrates.util.MapImageCache;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.command.PluginCommand;
