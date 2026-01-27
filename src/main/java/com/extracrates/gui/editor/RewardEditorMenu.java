@@ -702,17 +702,21 @@ public class RewardEditorMenu implements Listener {
 
     private ItemStack buildRewardItem(Reward reward) {
         ItemStack item = buildRewardDisplayItem(reward);
+        String displayName = reward.displayName();
+        if (displayName == null || displayName.isBlank()) {
+            displayName = reward.id();
+        }
         List<String> lore = new ArrayList<>();
         lore.add(text("editor.rewards.reward.item-lore.id", Map.of("id", reward.id())));
-        lore.add(text("editor.rewards.reward.item-lore.display-name", Map.of("name", reward.displayName())));
+        lore.add(text("editor.rewards.reward.item-lore.display-name", Map.of("name", displayName)));
         lore.add(text("editor.rewards.reward.item-lore.item", Map.of("item", resolveRewardItemLabel(reward))));
         lore.add(text("editor.common.action.left-edit"));
         lore.add(text("editor.common.action.right-clone"));
         lore.add(text("editor.common.action.shift-right-delete"));
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(TextUtil.colorNoItalic("&e" + reward.displayName()));
-            meta.lore(lore.stream().map(TextUtil::colorNoItalic).toList());
+            meta.displayName(TextUtil.colorNoItalic("&e" + displayName));
+            meta.lore(sanitizeLore(lore));
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_UNBREAKABLE,
                     ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_POTION_EFFECTS);
             item.setItemMeta(meta);
@@ -746,9 +750,10 @@ public class RewardEditorMenu implements Listener {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(TextUtil.colorNoItalic(name));
-            if (loreLines != null && !loreLines.isEmpty()) {
-                meta.lore(loreLines.stream().map(TextUtil::colorNoItalic).toList());
+            meta.displayName(TextUtil.colorNoItalic(resolveItemName(material, name)));
+            List<Component> lore = sanitizeLore(loreLines);
+            if (!lore.isEmpty()) {
+                meta.lore(lore);
             }
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_UNBREAKABLE,
                     ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_POTION_EFFECTS);
@@ -802,6 +807,33 @@ public class RewardEditorMenu implements Listener {
     private Material parseMaterial(String item) {
         Material material = Material.matchMaterial(item.toUpperCase(Locale.ROOT));
         return material != null ? material : Material.CHEST;
+    }
+
+    private List<Component> sanitizeLore(List<String> loreLines) {
+        if (loreLines == null || loreLines.isEmpty()) {
+            return List.of();
+        }
+        return loreLines.stream()
+                .filter(line -> line != null && !line.isBlank())
+                .map(TextUtil::colorNoItalic)
+                .toList();
+    }
+
+    private String resolveItemName(Material material, String name) {
+        if (name != null && !name.isBlank()) {
+            return name;
+        }
+        String base = material.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+        StringBuilder title = new StringBuilder();
+        for (String part : base.split(" ")) {
+            if (part.isBlank()) {
+                continue;
+            }
+            title.append(Character.toUpperCase(part.charAt(0)))
+                    .append(part.substring(1))
+                    .append(' ');
+        }
+        return "&f" + title.toString().trim();
     }
 
     private Material resolveRarityMaterial(String rarityId) {
