@@ -116,6 +116,41 @@ public class SessionManager {
         }
     }
 
+    public int cleanupActiveSessions(String reason, boolean localMode) {
+        List<CrateSession> activeSessions = new ArrayList<>(sessions.values());
+        if (activeSessions.isEmpty()) {
+            plugin.getLogger().info(() -> String.format(
+                    "Cleanup de sesiones (%s): no hay sesiones activas%s.",
+                    reason,
+                    localMode ? " en modo local" : ""
+            ));
+            return 0;
+        }
+        plugin.getLogger().info(() -> String.format(
+                "Cleanup de sesiones (%s): limpiando %d sesiones activas%s.",
+                reason,
+                activeSessions.size(),
+                localMode ? " en modo local" : ""
+        ));
+        for (CrateSession session : activeSessions) {
+            Player player = session.getPlayer();
+            if (player != null) {
+                plugin.getLogger().info(() -> String.format(
+                        "Cleanup sesion: jugador=%s uuid=%s crate=%s",
+                        player.getName(),
+                        player.getUniqueId(),
+                        session.getCrateId()
+                ));
+                clearCrateEffects(player);
+                continue;
+            }
+            UUID playerId = session.getPlayerId();
+            endSession(playerId);
+            removeSession(playerId);
+        }
+        return activeSessions.size();
+    }
+
     public boolean openCrate(Player player, CrateDefinition crate) {
         return openCrate(player, crate, false);
     }
