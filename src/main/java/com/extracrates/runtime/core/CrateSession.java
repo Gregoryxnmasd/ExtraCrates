@@ -212,9 +212,6 @@ public class CrateSession {
         FileConfiguration config = configLoader.getMainConfig();
         sessionManager.applySpectator(player);
         player.setSpectatorTarget(cameraEntity);
-        applyCutsceneBlindness();
-        applyMovementLock();
-
         if (config.getBoolean("cutscene.fake-equip", true)) {
             previousHelmet = player.getInventory().getHelmet();
             ItemStack pumpkin = buildFakePumpkin(config);
