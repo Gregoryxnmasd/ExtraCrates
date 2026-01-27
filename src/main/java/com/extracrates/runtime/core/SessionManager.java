@@ -355,6 +355,7 @@ public class SessionManager {
                 com.extracrates.cutscene.CutsceneSpinSettings.disabled(),
                 points,
                 java.util.Set.of(),
+                List.of(),
                 List.of()
         );
     }
