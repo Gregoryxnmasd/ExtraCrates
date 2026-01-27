@@ -18,6 +18,8 @@ public interface SyncStore {
 
     java.util.List<CrateHistoryEntry> getHistory(UUID playerId, String crateId, int limit, int offset);
 
+    void clearPlayerHistory(UUID playerId);
+
     void flush();
 
     boolean isHealthy();

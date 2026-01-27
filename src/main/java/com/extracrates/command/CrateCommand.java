@@ -17,6 +17,7 @@ import com.extracrates.storage.PendingRewardStore;
 import com.extracrates.storage.StorageMigrationReport;
 import com.extracrates.storage.StorageTarget;
 import com.extracrates.sync.CrateHistoryEntry;
+import com.extracrates.sync.SyncBridge;
 import com.extracrates.sync.SyncEventType;
 import com.extracrates.util.CommandUtil;
 import com.extracrates.util.ItemUtil;
@@ -76,6 +77,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
     private final SyncCommand syncCommand;
     private final RouteEditorManager routeEditorManager;
     private final PendingRewardStore pendingRewardStore;
+    private final SyncBridge syncBridge;
 
     public CrateCommand(
             ExtraCratesPlugin plugin,
@@ -98,6 +100,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         this.syncCommand = syncCommand;
         this.routeEditorManager = routeEditorManager;
         this.pendingRewardStore = plugin.getPendingRewardStore();
+        this.syncBridge = plugin.getSyncBridge();
     }
 
     @Override

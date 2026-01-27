@@ -161,6 +161,10 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         return pendingRewardStore;
     }
 
+    public SyncBridge getSyncBridge() {
+        return syncBridge;
+    }
+
     private void registerPlaceholderExpansion() {
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") == null) {
             return;
