@@ -101,7 +101,7 @@ public class SessionListener implements Listener {
             return;
         }
         CrateSession session = sessionManager.getSession(player.getUniqueId());
-        if (session == null) {
+        if (session == null || !session.isActive()) {
             return;
         }
         event.setCancelled(true);
@@ -113,7 +113,7 @@ public class SessionListener implements Listener {
             return;
         }
         CrateSession session = sessionManager.getSession(player.getUniqueId());
-        if (session == null) {
+        if (session == null || !session.isActive()) {
             return;
         }
         event.setCancelled(true);
