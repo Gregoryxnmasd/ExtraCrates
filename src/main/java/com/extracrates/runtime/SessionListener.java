@@ -115,6 +115,9 @@ public class SessionListener implements Listener {
             sessionManager.removeSession(player.getUniqueId());
             return;
         }
+        if (!isExtraCratesGui(event.getView().getTopInventory().getHolder())) {
+            return;
+        }
         event.setCancelled(true);
     }
 
@@ -129,6 +132,9 @@ public class SessionListener implements Listener {
         }
         if (!session.isActive()) {
             sessionManager.removeSession(player.getUniqueId());
+            return;
+        }
+        if (!isExtraCratesGui(event.getView().getTopInventory().getHolder())) {
             return;
         }
         event.setCancelled(true);
@@ -171,5 +177,13 @@ public class SessionListener implements Listener {
             return;
         }
         event.setCancelled(true);
+    }
+
+    private boolean isExtraCratesGui(org.bukkit.inventory.InventoryHolder holder) {
+        if (holder == null) {
+            return false;
+        }
+        String holderClassName = holder.getClass().getName();
+        return holderClassName.startsWith("com.extracrates.gui.");
     }
 }
