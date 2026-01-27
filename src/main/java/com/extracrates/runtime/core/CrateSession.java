@@ -29,6 +29,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
+import org.bukkit.util.Vector;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.joml.Vector3f;
@@ -103,6 +104,10 @@ public class CrateSession {
     private BossBar rerollHintBossBar;
     private long lastRerollInputMillis;
     private boolean endCommandsExecuted;
+    private Float previousWalkSpeed;
+    private Float previousFlySpeed;
+    private Boolean previousAllowFlight;
+    private Boolean previousFlying;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -207,6 +212,7 @@ public class CrateSession {
         sessionManager.applySpectator(player);
         player.setSpectatorTarget(cameraEntity);
         applyCutsceneBlindness();
+        applyMovementLock();
 
         if (config.getBoolean("cutscene.fake-equip", true)) {
             previousHelmet = player.getInventory().getHelmet();
@@ -464,12 +470,15 @@ public class CrateSession {
                 Location point = frame.location();
                 tick++;
                 lastTaskTickMillis = System.currentTimeMillis();
+                applyCutsceneBlindness();
+                applyMovementLock();
                 if (frame.segmentIndex() != lastSegmentIndex) {
                     executeSegmentCommands(path.getSegmentCommands(), frame.segmentIndex(), executedSegmentCommands);
                     lastSegmentIndex = frame.segmentIndex();
                 }
                 cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
+                player.teleport(point);
                 elapsedTicks++;
                 if (!rerollLocked && rewards.size() > 1 && rewardSwitchTicks > 0) {
                     while (elapsedTicks >= nextRewardSwitchTick && rewardIndex < rewards.size() - 1) {
@@ -1199,6 +1208,10 @@ public class CrateSession {
         previousInventoryContents = cloneItemStackArray(player.getInventory().getContents());
         previousArmorContents = cloneItemStackArray(player.getInventory().getArmorContents());
         previousOffHand = cloneItemStack(player.getInventory().getItemInOffHand());
+        previousWalkSpeed = player.getWalkSpeed();
+        previousFlySpeed = player.getFlySpeed();
+        previousAllowFlight = player.getAllowFlight();
+        previousFlying = player.isFlying();
     }
 
     private void restorePlayerState() {
@@ -1209,6 +1222,18 @@ public class CrateSession {
         } else {
             player.setSpectatorTarget(null);
             player.setGameMode(restoreMode);
+        }
+        if (previousWalkSpeed != null) {
+            player.setWalkSpeed(previousWalkSpeed);
+        }
+        if (previousFlySpeed != null) {
+            player.setFlySpeed(previousFlySpeed);
+        }
+        if (previousAllowFlight != null) {
+            player.setAllowFlight(previousAllowFlight);
+        }
+        if (previousFlying != null) {
+            player.setFlying(previousFlying);
         }
         player.removePotionEffect(PotionEffectType.BLINDNESS);
     }
@@ -1300,6 +1325,14 @@ public class CrateSession {
 
     public CrateDefinition getCrate() {
         return crate;
+    }
+
+    private void applyMovementLock() {
+        player.setWalkSpeed(0.0f);
+        player.setFlySpeed(0.0f);
+        player.setAllowFlight(true);
+        player.setFlying(true);
+        player.setVelocity(new Vector(0, 0, 0));
     }
 
     private boolean toggleHud(boolean hidden) {
