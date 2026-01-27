@@ -3,6 +3,7 @@ package com.extracrates.runtime.core;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.config.ConfigLoader;
 import com.extracrates.cutscene.CutscenePath;
+import com.extracrates.cutscene.CutsceneSegmentCommand;
 import com.extracrates.model.CrateDefinition;
 import com.extracrates.model.Reward;
 import com.extracrates.runtime.CameraEntityFactory;
@@ -426,7 +427,7 @@ public class CrateSession {
             end();
             return;
         }
-        List<Location> timeline = buildTimeline(cameraEntity.getWorld(), path);
+        List<CutsceneFrame> timeline = buildTimeline(cameraEntity.getWorld(), path);
         if (timeline.isEmpty()) {
             logVerbose("Cutscene finalizada: timeline vacio para crate=%s", crate.id());
             finish();
@@ -439,6 +440,8 @@ public class CrateSession {
             int tick = 0;
             final int totalTicks = resolveTotalTicks(timeline);
             final int lastIndex = timeline.size() - 1;
+            int lastSegmentIndex = -1;
+            final java.util.Set<CutsceneSegmentCommand> executedSegmentCommands = new java.util.HashSet<>();
 
             @Override
             public void run() {
@@ -449,9 +452,14 @@ public class CrateSession {
                 }
                 double progress = totalTicks <= 1 ? 1.0 : tick / (double) (totalTicks - 1);
                 int index = lastIndex <= 0 ? 0 : (int) Math.round(progress * lastIndex);
-                Location point = timeline.get(Math.min(lastIndex, Math.max(0, index)));
+                CutsceneFrame frame = timeline.get(Math.min(lastIndex, Math.max(0, index)));
+                Location point = frame.location();
                 tick++;
                 lastTaskTickMillis = System.currentTimeMillis();
+                if (frame.segmentIndex() != lastSegmentIndex) {
+                    executeSegmentCommands(path.getSegmentCommands(), frame.segmentIndex(), executedSegmentCommands);
+                    lastSegmentIndex = frame.segmentIndex();
+                }
                 cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
                 elapsedTicks++;
@@ -496,7 +504,7 @@ public class CrateSession {
         scheduleTimeout();
     }
 
-    private int resolveTotalTicks(List<Location> timeline) {
+    private int resolveTotalTicks(List<CutsceneFrame> timeline) {
         if (path != null) {
             int durationTicks = (int) Math.round(path.getDurationSeconds() * 20.0);
             if (durationTicks > 0) {
@@ -564,8 +572,8 @@ public class CrateSession {
         watchdogTask.runTaskTimer(plugin, 20L, 20L);
     }
 
-    private List<Location> buildTimeline(World world, CutscenePath path) {
-        List<Location> timeline = new ArrayList<>();
+    private List<CutsceneFrame> buildTimeline(World world, CutscenePath path) {
+        List<CutsceneFrame> timeline = new ArrayList<>();
         List<com.extracrates.cutscene.CutscenePoint> points = path.getPoints();
         com.extracrates.cutscene.CutsceneSpinSettings spinSettings = path.getSpinSettings();
         double spinOffset = 0.0;
@@ -574,7 +582,10 @@ public class CrateSession {
         String smoothing = resolveSmoothing(path);
         if (points.size() == 1) {
             com.extracrates.cutscene.CutscenePoint point = points.getFirst();
-            timeline.add(new Location(world, point.x(), point.y(), point.z(), point.yaw(), point.pitch()));
+            timeline.add(new CutsceneFrame(
+                    new Location(world, point.x(), point.y(), point.z(), point.yaw(), point.pitch()),
+                    0
+            ));
             return timeline;
         }
         for (int i = 0; i < points.size() - 1; i++) {
@@ -582,18 +593,15 @@ public class CrateSession {
             com.extracrates.cutscene.CutscenePoint end = points.get(i + 1);
             if (path.isDirectPoint(i + 1)) {
                 if (timeline.isEmpty()) {
-                    timeline.add(new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch()));
+                    timeline.add(new CutsceneFrame(
+                            new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch()),
+                            i
+                    ));
                 }
-                float yaw = end.yaw();
-                float pitch = end.pitch();
-                if (spinSettings != null && spinSettings.isActiveForSegment(i)) {
-                    yaw = wrapDegrees(yaw + (float) spinOffset);
-                    spinOffset += spinStep;
-                    spinStarted = true;
-                } else if (spinStarted) {
-                    yaw = wrapDegrees(yaw + (float) spinOffset);
-                }
-                timeline.add(new Location(world, end.x(), end.y(), end.z(), yaw, pitch));
+                timeline.add(new CutsceneFrame(
+                        new Location(world, end.x(), end.y(), end.z(), end.yaw(), end.pitch()),
+                        i
+                ));
                 continue;
             }
             Location startLoc = new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch());
@@ -615,10 +623,30 @@ public class CrateSession {
                 } else if (spinStarted) {
                     yaw = wrapDegrees(yaw + (float) spinOffset);
                 }
-                timeline.add(new Location(world, x, y, z, yaw, pitch));
+                timeline.add(new CutsceneFrame(new Location(world, x, y, z, yaw, pitch), i));
             }
         }
         return timeline;
+    }
+
+    private void executeSegmentCommands(
+            List<CutsceneSegmentCommand> segmentCommands,
+            int segmentIndex,
+            java.util.Set<CutsceneSegmentCommand> executedCommands
+    ) {
+        if (segmentCommands == null || segmentCommands.isEmpty()) {
+            return;
+        }
+        for (CutsceneSegmentCommand command : segmentCommands) {
+            if (executedCommands.contains(command)) {
+                continue;
+            }
+            if (!command.matchesSegment(segmentIndex)) {
+                continue;
+            }
+            executeInlineCommands(command.commands(), getCurrentReward());
+            executedCommands.add(command);
+        }
     }
 
     private String resolveSmoothing(CutscenePath path) {
@@ -778,6 +806,32 @@ public class CrateSession {
             }
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
         }
+    }
+
+    private void executeInlineCommands(List<String> commands, Reward reward) {
+        if (preview) {
+            return;
+        }
+        if (commands == null || commands.isEmpty()) {
+            return;
+        }
+        if (crate.cutsceneSettings() != null && !crate.cutsceneSettings().commandsEnabled()) {
+            return;
+        }
+        Map<String, String> placeholders = buildCommandPlaceholders(reward);
+        for (String command : commands) {
+            String parsed = applyPlaceholders(command, placeholders);
+            if (parsed == null || parsed.isBlank() || parsed.equalsIgnoreCase("none")) {
+                continue;
+            }
+            if (CommandUtil.isBroadcastMessage(parsed)) {
+                continue;
+            }
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        }
+    }
+
+    private record CutsceneFrame(Location location, int segmentIndex) {
     }
 
     private Map<String, String> buildCommandPlaceholders(Reward reward) {

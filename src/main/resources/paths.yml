@@ -27,6 +27,11 @@ paths:
       pitch: 10
     direct-points:
     - 2
+    segment-commands:
+    - start-point: 0
+      end-point: 2
+      commands:
+      - "say %player% va entre el punto 0 y 2"
     particle-preview: end_rod
   seasonal_line:
     duration-seconds: 4.0
