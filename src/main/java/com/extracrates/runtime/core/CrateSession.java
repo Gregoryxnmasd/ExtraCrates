@@ -504,6 +504,7 @@ public class CrateSession {
         }
         usingPlayerCamera = path.usesPlayerCamera(timeline.getFirst().segmentIndex());
         applyFrameLocation(timeline.getFirst());
+        executeInlineCommands(path.getStartCommands(), getCurrentReward());
         double minTeleportDistance = Math.max(0.0, configLoader.getMainConfig().getDouble("cutscene.min-teleport-distance", 0.0));
         double minTeleportDistanceSquared = minTeleportDistance * minTeleportDistance;
         task = new BukkitRunnable() {
