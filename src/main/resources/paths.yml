@@ -27,6 +27,8 @@ paths:
       pitch: 10
     direct-points:
     - 2
+    player-segments:
+    - "2-3"
     segment-commands:
     - start-point: 0
       end-point: 2
