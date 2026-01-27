@@ -65,6 +65,8 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         setupEconomy();
         EconomyService economyService = new EconomyService(this);
         sessionManager = new SessionManager(this, configLoader, economyService);
+        boolean localMode = !sessionManager.isStorageEnabled();
+        sessionManager.cleanupActiveSessions("onEnable", localMode);
         syncBridge = new SyncBridge(this, configLoader, sessionManager);
         SyncCommand syncCommand = new SyncCommand(this, configLoader, syncBridge, languageManager);
         apiService = new ExtraCratesApiService(configLoader, sessionManager);
