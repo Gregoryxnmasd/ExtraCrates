@@ -205,6 +205,55 @@ public class SessionManager {
         return true;
     }
 
+    public boolean openCrateWithRarity(Player player, CrateDefinition crate, String rarityId) {
+        if (sessions.containsKey(player.getUniqueId())) {
+            player.sendMessage(languageManager.getMessage("session.already-in-progress"));
+            return false;
+        }
+        if (!hasCratePermission(player, crate)) {
+            player.sendMessage(languageManager.getMessage("session.no-permission", player, crate, null, null));
+            return false;
+        }
+        if (isWorldBlocked(player, crate)) {
+            player.sendMessage(languageManager.getMessage("session.world-blocked"));
+            return false;
+        }
+        RewardPool rewardPool = resolveRewardPool(crate);
+        if (rewardPool == null) {
+            player.sendMessage(languageManager.getMessage("session.error.missing-reward-pool"));
+            return false;
+        }
+        Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
+        List<Reward> rewards = rollRewardsByRarity(rewardPool, rarityId, random, buildRollLogger(player));
+        if (rewards.isEmpty()) {
+            player.sendMessage(languageManager.getMessage("session.no-rewards-rarity", java.util.Map.of("rarity", rarityId)));
+            return false;
+        }
+        CutscenePath path = resolveCutscenePath(crate, rewards.getFirst(), player);
+        OpenState openState = null;
+        if (storage != null && !storage.acquireLock(player.getUniqueId(), crate.id())) {
+            player.sendMessage(Component.text("Ya tienes una apertura en progreso."));
+            return false;
+        }
+        Instant previousCooldown = getCooldownTimestamp(player, crate.id());
+        openState = new OpenState(storage != null, false, false, previousCooldown);
+        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, false, openState);
+        sessions.put(player.getUniqueId(), session);
+        Instant createdAt = Instant.now();
+        plugin.getLogger().info(() -> String.format(
+                "Sesion creada (rarity): jugador=%s crate=%s rarity=%s timestamp=%s",
+                player.getName(),
+                crate.id(),
+                rarityId,
+                createdAt
+        ));
+        if (storage != null) {
+            storage.logOpenStarted(player.getUniqueId(), crate.id(), resolveServerId(), createdAt);
+        }
+        session.start();
+        return true;
+    }
+
     public boolean hasCratePermission(Player player, CrateDefinition crate) {
         if (player == null || crate == null) {
             return false;
@@ -403,6 +452,42 @@ public class SessionManager {
                     .filter(reward -> matchesRarity(reward, rarity.id()))
                     .toList();
             List<Reward> chosenPool = rarityRewards.isEmpty() ? candidates : rarityRewards;
+            int index = random.nextInt(chosenPool.size());
+            Reward reward = chosenPool.get(index);
+            results.add(reward);
+            if (available != null) {
+                available.remove(reward);
+            }
+            if (logger != null) {
+                logger.log(reward, index + 1, chosenPool.size());
+            }
+        }
+        return results;
+    }
+
+    private List<Reward> rollRewardsByRarity(
+            RewardPool pool,
+            String rarityId,
+            Random random,
+            RewardSelector.RewardRollLogger logger
+    ) {
+        if (pool == null || pool.rewards().isEmpty() || rarityId == null || rarityId.isBlank()) {
+            return List.of();
+        }
+        List<Reward> candidates = pool.rewards().stream()
+                .filter(reward -> matchesRarity(reward, rarityId))
+                .toList();
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+        List<Reward> results = new ArrayList<>();
+        int rolls = Math.max(1, pool.rollCount());
+        List<Reward> available = pool.preventDuplicateItems() ? new ArrayList<>(candidates) : null;
+        for (int i = 0; i < rolls; i++) {
+            List<Reward> chosenPool = available != null ? available : candidates;
+            if (chosenPool.isEmpty()) {
+                break;
+            }
             int index = random.nextInt(chosenPool.size());
             Reward reward = chosenPool.get(index);
             results.add(reward);
