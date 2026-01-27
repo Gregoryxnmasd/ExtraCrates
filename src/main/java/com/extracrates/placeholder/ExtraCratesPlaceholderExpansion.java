@@ -70,26 +70,38 @@ public class ExtraCratesPlaceholderExpansion extends PlaceholderExpansion {
 
     private String resolveRerollsRemaining(CrateSession session) {
         if (session == null) {
-            return fallback("no-rerolls", "0");
+            return resolveRerollsRemainingDisplay(0);
         }
         int max = session.getMaxRerolls();
         int used = session.getRerollsUsed();
         if (max <= 0) {
             return fallback("unlimited-rerolls", "∞");
         }
-        return Integer.toString(Math.max(0, max - used));
+        int remaining = Math.max(0, max - used);
+        return resolveRerollsRemainingDisplay(remaining);
+    }
+
+    private String resolveRerollsRemainingDisplay(int remaining) {
+        if (configLoader == null || configLoader.getMainConfig() == null) {
+            return Integer.toString(remaining);
+        }
+        String configured = configLoader.getMainConfig().getString("placeholders.rerolls-left." + remaining);
+        if (configured == null || configured.isBlank()) {
+            return Integer.toString(remaining);
+        }
+        return configured;
     }
 
     private String resolveRerollsUsed(CrateSession session) {
         if (session == null) {
-            return fallback("no-rerolls", "0");
+            return "0";
         }
         return Integer.toString(Math.max(0, session.getRerollsUsed()));
     }
 
     private String resolveRerollsMax(CrateSession session) {
         if (session == null) {
-            return fallback("no-rerolls", "0");
+            return "0";
         }
         int max = session.getMaxRerolls();
         if (max <= 0) {

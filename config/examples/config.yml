@@ -79,3 +79,16 @@ permissions:
 debug:
   rolls: false
   timings: false
+placeholders:
+  none: "none"
+  no-session: "none"
+  no-crate: "none"
+  no-reward: "none"
+  unlimited-rerolls: "∞"
+  rerolls-left:
+    0: "0"
+    1: "1"
+    2: "2"
+    3: "3"
+  opening-true: "true"
+  opening-false: "false"

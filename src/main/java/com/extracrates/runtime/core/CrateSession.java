@@ -1486,9 +1486,21 @@ public class CrateSession {
 
     private String resolveRerollsLeft() {
         if (maxRerolls > 0) {
-            return Integer.toString(Math.max(0, maxRerolls - rerollsUsed));
+            int remaining = Math.max(0, maxRerolls - rerollsUsed);
+            return resolveRerollsLeftDisplay(remaining);
         }
         return configLoader.getMainConfig().getString("placeholders.unlimited-rerolls", "∞");
+    }
+
+    private String resolveRerollsLeftDisplay(int remaining) {
+        if (configLoader == null || configLoader.getMainConfig() == null) {
+            return Integer.toString(remaining);
+        }
+        String configured = configLoader.getMainConfig().getString("placeholders.rerolls-left." + remaining);
+        if (configured == null || configured.isBlank()) {
+            return Integer.toString(remaining);
+        }
+        return configured;
     }
 
     private boolean canReroll() {
