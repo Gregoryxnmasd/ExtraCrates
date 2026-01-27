@@ -10,6 +10,8 @@ paths:
       - { x: 0.5, y: 1.8, z: 0.5, yaw: 0, pitch: 0 }
       - { x: -0.5, y: 1.6, z: 2.5, yaw: -30, pitch: 10 }
     direct-points: [2]
+    start-commands:
+      - "say %player% inicio la ruta legendary_path"
     player-segments:
       - start-point: 1
         end-point: 3

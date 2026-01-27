@@ -204,6 +204,17 @@ public class ConfigValidator {
                             "Usa un valor mayor a 0."
                     ));
                 }
+                Object startCommandsRaw = pathSection.get("start-commands");
+                if (startCommandsRaw != null) {
+                    List<String> startCommands = readCommandList(startCommandsRaw);
+                    if (startCommands.isEmpty()) {
+                        warnings.add(new ValidationIssue(
+                                "paths.yml:paths." + pathId + ".start-commands",
+                                "start-commands está vacío.",
+                                "Agrega comandos para ejecutar al inicio de la ruta."
+                        ));
+                    }
+                }
                 ConfigurationSection spinSection = pathSection.getConfigurationSection("spin");
                 if (spinSection != null && spinSection.getBoolean("enabled", false)) {
                     int startPoint = spinSection.getInt("start-point", 0);
