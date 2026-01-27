@@ -1203,7 +1203,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             player.sendMessage(languageManager.getMessage("command.reward-qa-mode"));
             return false;
         }
-        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader);
         if (item.getType() != Material.AIR) {
             player.getInventory().addItem(item);
         } else {

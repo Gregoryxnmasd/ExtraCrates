@@ -21,7 +21,6 @@ import com.extracrates.runtime.core.ExtraCratesApiService;
 import com.extracrates.runtime.core.SessionManager;
 import com.extracrates.storage.PendingRewardStore;
 import com.extracrates.sync.SyncBridge;
-import com.extracrates.util.MapImageCache;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.command.PluginCommand;
@@ -36,7 +35,6 @@ public final class ExtraCratesPlugin extends JavaPlugin {
     private OpenHistoryGui openHistoryGui;
     private ExtraCratesApi apiService;
     private RouteEditorManager routeEditorManager;
-    private MapImageCache mapImageCache;
     private ProtocolEntityHider protocolEntityHider;
     private EditorMenu editorMenu;
     private Economy economy;
@@ -76,7 +74,6 @@ public final class ExtraCratesPlugin extends JavaPlugin {
         new RouteEditorListener(this, routeEditorManager);
         crateGui = new CrateGui(this, configLoader, sessionManager);
         openHistoryGui = new OpenHistoryGui(this, configLoader, sessionManager);
-        mapImageCache = new MapImageCache(this);
         protocolEntityHider = ProtocolEntityHider.createIfPresent(this);
         pendingRewardStore = new PendingRewardStore(this);
         EditorInputManager inputManager = new EditorInputManager(this);
@@ -151,10 +148,6 @@ public final class ExtraCratesPlugin extends JavaPlugin {
             return;
         }
         economy = registration.getProvider();
-    }
-
-    public MapImageCache getMapImageCache() {
-        return mapImageCache;
     }
 
     public PendingRewardStore getPendingRewardStore() {
