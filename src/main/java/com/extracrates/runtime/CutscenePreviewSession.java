@@ -146,7 +146,7 @@ public class CutscenePreviewSession {
         if (playerBlindnessApplied) {
             return;
         }
-        PotionEffect effect = new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 100, false, false, false);
+        PotionEffect effect = new PotionEffect(PotionEffectType.BLINDNESS, PotionEffect.INFINITE_DURATION, 100, false, false, false);
         player.addPotionEffect(effect, true);
         playerBlindnessApplied = true;
     }
