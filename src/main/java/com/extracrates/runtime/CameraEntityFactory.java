@@ -5,8 +5,6 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.TextDisplay;
 
@@ -35,20 +33,13 @@ public final class CameraEntityFactory {
                 stand.setGravity(false);
                 stand.setMarker(true);
                 stand.setSilent(true);
-                applyCutsceneBlindness(stand);
             });
             default -> start.getWorld().spawn(start, ArmorStand.class, stand -> {
                 stand.setInvisible(armorStandInvisible);
                 stand.setGravity(false);
                 stand.setMarker(true);
                 stand.setSilent(true);
-                applyCutsceneBlindness(stand);
             });
         };
-    }
-
-    private static void applyCutsceneBlindness(ArmorStand stand) {
-        PotionEffect effect = new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 100, false, false, false);
-        stand.addPotionEffect(effect, true);
     }
 }

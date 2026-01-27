@@ -18,6 +18,7 @@ public class CutscenePath {
     private final java.util.Set<Integer> directPoints;
     private final java.util.Set<Integer> playerSegments;
     private final List<CutsceneSegmentCommand> segmentCommands;
+    private final List<CutsceneSegmentRange> playerSegments;
     private volatile List<CutscenePoint> timelineCache;
 
     public CutscenePath(
@@ -30,8 +31,8 @@ public class CutscenePath {
             CutsceneSpinSettings spinSettings,
             List<CutscenePoint> points,
             java.util.Set<Integer> directPoints,
-            java.util.Set<Integer> playerSegments,
-            List<CutsceneSegmentCommand> segmentCommands
+            List<CutsceneSegmentCommand> segmentCommands,
+            List<CutsceneSegmentRange> playerSegments
     ) {
         this.id = id;
         this.durationSeconds = durationSeconds;
@@ -44,6 +45,7 @@ public class CutscenePath {
         this.directPoints = directPoints;
         this.playerSegments = playerSegments;
         this.segmentCommands = segmentCommands;
+        this.playerSegments = playerSegments;
     }
 
     public String getId() {
@@ -90,6 +92,18 @@ public class CutscenePath {
         return Collections.unmodifiableList(segmentCommands);
     }
 
+    public boolean usesPlayerCamera(int segmentIndex) {
+        if (playerSegments == null || playerSegments.isEmpty()) {
+            return false;
+        }
+        for (CutsceneSegmentRange range : playerSegments) {
+            if (range.matchesSegment(segmentIndex)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public List<CutscenePoint> getTimelinePoints() {
         List<CutscenePoint> cached = timelineCache;
         if (cached != null) {
@@ -126,7 +140,7 @@ public class CutscenePath {
         }
         CutsceneSpinSettings spinSettings = CutsceneSpinSettings.fromSection(section.getConfigurationSection("spin"), points.size());
         List<CutsceneSegmentCommand> segmentCommands = parseSegmentCommands(section.getList("segment-commands", List.of()), points.size());
-        java.util.Set<Integer> playerSegments = parseSegmentIndices(section.getList("player-segments", List.of()), points.size());
+        List<CutsceneSegmentRange> playerSegments = parseSegmentRanges(section.getList("player-segments", List.of()), points.size());
         return new CutscenePath(
                 id,
                 duration,
@@ -137,8 +151,8 @@ public class CutscenePath {
                 spinSettings,
                 points,
                 directPoints,
-                playerSegments,
-                segmentCommands
+                segmentCommands,
+                playerSegments
         );
     }
 
@@ -283,6 +297,26 @@ public class CutscenePath {
             commands.add(new CutsceneSegmentCommand(startPoint, endPoint, entries));
         }
         return commands;
+    }
+
+    private static List<CutsceneSegmentRange> parseSegmentRanges(List<?> rawRanges, int pointsCount) {
+        if (rawRanges == null || rawRanges.isEmpty()) {
+            return List.of();
+        }
+        int lastIndex = Math.max(0, pointsCount - 1);
+        List<CutsceneSegmentRange> ranges = new ArrayList<>();
+        for (Object raw : rawRanges) {
+            if (!(raw instanceof java.util.Map<?, ?> map)) {
+                continue;
+            }
+            int startPoint = clampIndex(getInt(map, "start-point", 0), lastIndex);
+            int endPoint = clampIndex(getInt(map, "end-point", startPoint + 1), lastIndex);
+            if (endPoint <= startPoint) {
+                continue;
+            }
+            ranges.add(new CutsceneSegmentRange(startPoint, endPoint));
+        }
+        return ranges;
     }
 
     private static int clampIndex(int value, int lastIndex) {

@@ -14,6 +14,14 @@ public final class CutsceneTimeline {
 
     public static List<Location> build(World world, CutscenePath path) {
         List<Location> timeline = new ArrayList<>();
+        for (CutsceneTimelineFrame frame : buildFrames(world, path)) {
+            timeline.add(frame.location());
+        }
+        return timeline;
+    }
+
+    public static List<CutsceneTimelineFrame> buildFrames(World world, CutscenePath path) {
+        List<CutsceneTimelineFrame> timeline = new ArrayList<>();
         List<CutscenePoint> points = path.getPoints();
         com.extracrates.cutscene.CutsceneSpinSettings spinSettings = path.getSpinSettings();
         double spinOffset = 0.0;
@@ -24,9 +32,15 @@ public final class CutsceneTimeline {
             CutscenePoint end = points.get(i + 1);
             if (path.isDirectPoint(i + 1)) {
                 if (timeline.isEmpty()) {
-                    timeline.add(new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch()));
+                    timeline.add(new CutsceneTimelineFrame(
+                            new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch()),
+                            i
+                    ));
                 }
-                timeline.add(new Location(world, end.x(), end.y(), end.z(), end.yaw(), end.pitch()));
+                timeline.add(new CutsceneTimelineFrame(
+                        new Location(world, end.x(), end.y(), end.z(), end.yaw(), end.pitch()),
+                        i
+                ));
                 continue;
             }
             Location startLoc = new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch());
@@ -47,7 +61,7 @@ public final class CutsceneTimeline {
                 } else if (spinStarted) {
                     yaw = wrapDegrees(yaw + (float) spinOffset);
                 }
-                timeline.add(new Location(world, x, y, z, yaw, pitch));
+                timeline.add(new CutsceneTimelineFrame(new Location(world, x, y, z, yaw, pitch), i));
             }
         }
         return timeline;
@@ -66,5 +80,8 @@ public final class CutsceneTimeline {
             wrapped += 360.0f;
         }
         return wrapped;
+    }
+
+    public record CutsceneTimelineFrame(Location location, int segmentIndex) {
     }
 }

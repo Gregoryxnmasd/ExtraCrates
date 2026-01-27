@@ -28,7 +28,8 @@ paths:
     direct-points:
     - 2
     player-segments:
-    - "2-3"
+    - start-point: 1
+      end-point: 3
     segment-commands:
     - start-point: 0
       end-point: 2
