@@ -29,9 +29,11 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
+import org.bukkit.util.Vector;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.joml.Vector3f;
+import org.bukkit.util.Vector;
 
 
 import java.util.*;
@@ -507,6 +509,8 @@ public class CrateSession {
                 CutsceneFrame frame = timeline.get(Math.min(lastIndex, Math.max(0, index)));
                 tick++;
                 lastTaskTickMillis = System.currentTimeMillis();
+                applyCutsceneBlindness();
+                applyMovementLock();
                 if (frame.segmentIndex() != lastSegmentIndex) {
                     executeSegmentCommands(path.getSegmentCommands(), frame.segmentIndex(), executedSegmentCommands);
                     lastSegmentIndex = frame.segmentIndex();
@@ -637,7 +641,8 @@ public class CrateSession {
             com.extracrates.cutscene.CutscenePoint point = points.getFirst();
             timeline.add(new CutsceneFrame(
                     new Location(world, point.x(), point.y(), point.z(), point.yaw(), point.pitch()),
-                    0
+                    0,
+                    path.isPlayerSegment(0)
             ));
             return timeline;
         }
@@ -648,12 +653,14 @@ public class CrateSession {
                 if (timeline.isEmpty()) {
                     timeline.add(new CutsceneFrame(
                             new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch()),
-                            i
+                            i,
+                            path.isPlayerSegment(i)
                     ));
                 }
                 timeline.add(new CutsceneFrame(
                         new Location(world, end.x(), end.y(), end.z(), end.yaw(), end.pitch()),
-                        i
+                        i,
+                        path.isPlayerSegment(i)
                 ));
                 continue;
             }
@@ -676,7 +683,7 @@ public class CrateSession {
                 } else if (spinStarted) {
                     yaw = wrapDegrees(yaw + (float) spinOffset);
                 }
-                timeline.add(new CutsceneFrame(new Location(world, x, y, z, yaw, pitch), i));
+                timeline.add(new CutsceneFrame(new Location(world, x, y, z, yaw, pitch), i, path.isPlayerSegment(i)));
             }
         }
         return timeline;
@@ -884,7 +891,7 @@ public class CrateSession {
         }
     }
 
-    private record CutsceneFrame(Location location, int segmentIndex) {
+    private record CutsceneFrame(Location location, int segmentIndex, boolean usePlayerCamera) {
     }
 
     private Map<String, String> buildCommandPlaceholders(Reward reward) {
@@ -1244,6 +1251,10 @@ public class CrateSession {
         previousInventoryContents = cloneItemStackArray(player.getInventory().getContents());
         previousArmorContents = cloneItemStackArray(player.getInventory().getArmorContents());
         previousOffHand = cloneItemStack(player.getInventory().getItemInOffHand());
+        previousWalkSpeed = player.getWalkSpeed();
+        previousFlySpeed = player.getFlySpeed();
+        previousAllowFlight = player.getAllowFlight();
+        previousFlying = player.isFlying();
     }
 
     private void restorePlayerState() {
@@ -1255,7 +1266,20 @@ public class CrateSession {
             player.setSpectatorTarget(null);
             player.setGameMode(restoreMode);
         }
+        if (previousWalkSpeed != null) {
+            player.setWalkSpeed(previousWalkSpeed);
+        }
+        if (previousFlySpeed != null) {
+            player.setFlySpeed(previousFlySpeed);
+        }
+        if (previousAllowFlight != null) {
+            player.setAllowFlight(previousAllowFlight);
+        }
+        if (previousFlying != null) {
+            player.setFlying(previousFlying);
+        }
         player.removePotionEffect(PotionEffectType.BLINDNESS);
+        restorePlayerMovementState();
     }
 
     private void restoreInventory() {
@@ -1307,6 +1331,54 @@ public class CrateSession {
         return crate.cutsceneSettings().lockMovement();
     }
 
+    private void enterPlayerCameraMode() {
+        if (playerCameraActive) {
+            return;
+        }
+        playerCameraActive = true;
+        applyCutsceneBlindness();
+        if (!isMovementLocked()) {
+            return;
+        }
+        capturePlayerMovementState();
+        player.setWalkSpeed(0.0f);
+        player.setFlySpeed(0.0f);
+        player.setVelocity(new Vector(0, 0, 0));
+    }
+
+    private void exitPlayerCameraMode() {
+        if (!playerCameraActive) {
+            player.removePotionEffect(PotionEffectType.BLINDNESS);
+            return;
+        }
+        playerCameraActive = false;
+        player.removePotionEffect(PotionEffectType.BLINDNESS);
+        restorePlayerMovementState();
+    }
+
+    private void capturePlayerMovementState() {
+        if (playerMovementStateCaptured) {
+            return;
+        }
+        playerMovementStateCaptured = true;
+        previousVelocity = player.getVelocity();
+        previousWalkSpeed = player.getWalkSpeed();
+        previousFlySpeed = player.getFlySpeed();
+    }
+
+    private void restorePlayerMovementState() {
+        if (!playerMovementStateCaptured) {
+            return;
+        }
+        playerMovementStateCaptured = false;
+        player.setWalkSpeed(previousWalkSpeed);
+        player.setFlySpeed(previousFlySpeed);
+        if (previousVelocity != null) {
+            player.setVelocity(previousVelocity);
+        }
+        previousVelocity = null;
+    }
+
     public boolean isPreview() {
         return preview;
     }
@@ -1345,6 +1417,14 @@ public class CrateSession {
 
     public CrateDefinition getCrate() {
         return crate;
+    }
+
+    private void applyMovementLock() {
+        player.setWalkSpeed(0.0f);
+        player.setFlySpeed(0.0f);
+        player.setAllowFlight(true);
+        player.setFlying(true);
+        player.setVelocity(new Vector(0, 0, 0));
     }
 
     private boolean toggleHud(boolean hidden) {
@@ -1531,9 +1611,21 @@ public class CrateSession {
 
     private String resolveRerollsLeft() {
         if (maxRerolls > 0) {
-            return Integer.toString(Math.max(0, maxRerolls - rerollsUsed));
+            int remaining = Math.max(0, maxRerolls - rerollsUsed);
+            return resolveRerollsLeftDisplay(remaining);
         }
         return configLoader.getMainConfig().getString("placeholders.unlimited-rerolls", "∞");
+    }
+
+    private String resolveRerollsLeftDisplay(int remaining) {
+        if (configLoader == null || configLoader.getMainConfig() == null) {
+            return Integer.toString(remaining);
+        }
+        String configured = configLoader.getMainConfig().getString("placeholders.rerolls-left." + remaining);
+        if (configured == null || configured.isBlank()) {
+            return Integer.toString(remaining);
+        }
+        return configured;
     }
 
     private boolean canReroll() {
