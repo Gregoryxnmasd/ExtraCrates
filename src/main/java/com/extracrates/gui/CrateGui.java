@@ -33,6 +33,7 @@ import java.util.Locale;
 public class CrateGui implements Listener {
     private static final int PAGE_SIZE = 27;
     private static final int INVENTORY_SIZE = 54;
+    private static final int CRATE_LIST_START_SLOT = 18;
     private static final int PREVIOUS_PAGE_SLOT = 47;
     private static final int NEXT_PAGE_SLOT = 51;
     private static final int ACTION_MENU_SIZE = 36;
@@ -75,7 +76,7 @@ public class CrateGui implements Listener {
         holder.setInventory(inventory);
         int startIndex = safePageIndex * PAGE_SIZE;
         int endIndex = Math.min(startIndex + PAGE_SIZE, crates.size());
-        int slot = 9;
+        int slot = CRATE_LIST_START_SLOT;
         for (int i = startIndex; i < endIndex; i++) {
             CrateDefinition crate = crates.get(i);
             ItemStack item = new ItemStack(Material.CHEST);
@@ -159,8 +160,8 @@ public class CrateGui implements Listener {
             return;
         }
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
-        int crateIndex = holder.pageIndex() * PAGE_SIZE + (slot - 9);
-        if (slot < 9 || slot > 35) {
+        int crateIndex = holder.pageIndex() * PAGE_SIZE + (slot - CRATE_LIST_START_SLOT);
+        if (slot < CRATE_LIST_START_SLOT || slot > CRATE_LIST_START_SLOT + PAGE_SIZE - 1) {
             return;
         }
         if (crateIndex < 0 || crateIndex >= crates.size()) {
