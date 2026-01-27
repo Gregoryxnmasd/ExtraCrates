@@ -37,7 +37,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -61,6 +63,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public class SessionManager {
+    public static final String REWARD_HOLOGRAM_KEY = "extracrates_reward_hologram";
     private final ExtraCratesPlugin plugin;
     private final ConfigLoader configLoader;
     private final EconomyService economyService;
@@ -70,6 +73,7 @@ public class SessionManager {
     private final boolean storageEnabled;
     private final String serverId;
     private final NamespacedKey keyMarker;
+    private final NamespacedKey rewardHologramMarker;
     // Stores both preview and normal crate sessions. Preview sessions are marked in CrateSession.
     private final Map<UUID, CrateSession> sessions = new HashMap<>();
     private final Map<UUID, Map<String, Instant>> cooldowns = new HashMap<>();
@@ -91,6 +95,7 @@ public class SessionManager {
         this.syncBridge = new SyncBridge(plugin, configLoader, this);
         this.serverId = SyncSettings.fromConfig(configLoader.getMainConfig()).getServerId();
         this.keyMarker = new NamespacedKey(plugin, "crate_key_id");
+        this.rewardHologramMarker = new NamespacedKey(plugin, REWARD_HOLOGRAM_KEY);
     }
 
     public void shutdown() {
@@ -681,6 +686,21 @@ public class SessionManager {
         if (player.getGameMode() == GameMode.SPECTATOR) {
             player.setGameMode(GameMode.SURVIVAL);
         }
+    }
+
+    public void clearRewardHolograms() {
+        for (World world : Bukkit.getWorlds()) {
+            for (TextDisplay display : world.getEntitiesByClass(TextDisplay.class)) {
+                if (isRewardHologram(display)) {
+                    display.remove();
+                }
+            }
+        }
+    }
+
+    private boolean isRewardHologram(TextDisplay display) {
+        PersistentDataContainer container = display.getPersistentDataContainer();
+        return container.has(rewardHologramMarker, PersistentDataType.BYTE);
     }
 
     private void toggleHud(Player player, boolean hidden) {

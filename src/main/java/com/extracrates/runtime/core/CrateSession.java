@@ -26,6 +26,7 @@ import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
@@ -1020,6 +1021,11 @@ public class CrateSession {
             String name = resolveHologramText(reward);
             display.text(configLoader.getSettings().applyHologramFont(TextUtil.color(name)));
             display.setBillboard(Display.Billboard.CENTER);
+            display.getPersistentDataContainer().set(
+                    new NamespacedKey(plugin, SessionManager.REWARD_HOLOGRAM_KEY),
+                    PersistentDataType.BYTE,
+                    (byte) 1
+            );
         });
     }
 
