@@ -20,6 +20,7 @@ import java.util.Map;
 public class LanguageManager {
     private final ExtraCratesPlugin plugin;
     private FileConfiguration messages;
+    private FileConfiguration fallbackMessages;
 
     public LanguageManager(ExtraCratesPlugin plugin) {
         this.plugin = plugin;
@@ -27,9 +28,11 @@ public class LanguageManager {
 
     public void load() {
         String language = plugin.getConfig().getString("language", "en_us");
+        File fallbackFile = new File(plugin.getDataFolder(), "lang/en_us.yml");
+        fallbackMessages = YamlConfiguration.loadConfiguration(fallbackFile);
         File file = new File(plugin.getDataFolder(), "lang/" + language + ".yml");
         if (!file.exists()) {
-            file = new File(plugin.getDataFolder(), "lang/en_us.yml");
+            file = fallbackFile;
         }
         messages = YamlConfiguration.loadConfiguration(file);
     }
@@ -86,28 +89,28 @@ public class LanguageManager {
         if (messages == null) {
             return key;
         }
-        if (!messages.contains(key)) {
-            return "";
-        }
-        String value = messages.getString(key, key);
-        if (isSuppressed(value)) {
-            return "";
-        }
-        return applyPlaceholders(value, placeholders);
+        return resolveValue(key, placeholders, null, null, null, null);
     }
 
     public List<String> getRawList(String key, Map<String, String> placeholders) {
         if (messages == null) {
             return List.of(key);
         }
-        if (!messages.contains(key)) {
-            return List.of();
+        if (messages.isList(key)) {
+            return resolveList(messages.getStringList(key), placeholders);
         }
-        if (!messages.isList(key)) {
+        if (fallbackMessages != null && fallbackMessages.isList(key)) {
+            return resolveList(fallbackMessages.getStringList(key), placeholders);
+        }
+        if (messages.contains(key) || (fallbackMessages != null && fallbackMessages.contains(key))) {
             return List.of(getRaw(key, placeholders));
         }
+        return List.of();
+    }
+
+    private List<String> resolveList(List<String> lines, Map<String, String> placeholders) {
         List<String> result = new ArrayList<>();
-        for (String line : messages.getStringList(key)) {
+        for (String line : lines) {
             if (isSuppressed(line)) {
                 continue;
             }
@@ -127,14 +130,38 @@ public class LanguageManager {
         if (messages == null) {
             return key;
         }
-        if (!messages.contains(key)) {
+        return resolveValue(key, placeholders, player, crate, reward, cooldownSeconds);
+    }
+
+    private String resolveValue(
+            String key,
+            Map<String, String> placeholders,
+            Player player,
+            CrateDefinition crate,
+            Reward reward,
+            Long cooldownSeconds
+    ) {
+        String value = resolveRawValue(key);
+        if (value == null) {
             return "";
         }
-        String value = messages.getString(key, key);
         if (isSuppressed(value)) {
             return "";
         }
+        if (player == null && crate == null && reward == null && cooldownSeconds == null) {
+            return applyPlaceholders(value, placeholders);
+        }
         return applyPlaceholders(value, buildPlaceholders(player, crate, reward, cooldownSeconds, placeholders));
+    }
+
+    private String resolveRawValue(String key) {
+        if (messages != null && messages.contains(key)) {
+            return messages.getString(key, key);
+        }
+        if (fallbackMessages != null && fallbackMessages.contains(key)) {
+            return fallbackMessages.getString(key, key);
+        }
+        return null;
     }
 
     private Map<String, String> buildPlaceholders(
