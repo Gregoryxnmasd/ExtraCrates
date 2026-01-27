@@ -17,6 +17,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -185,6 +186,15 @@ public class PathEditorMenu implements Listener {
         if (pathId != null && viewTitle.equals(particleTitle(pathId))) {
             event.setCancelled(true);
             handleParticleSelection(player, pathId, event.getSlot());
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        UUID playerId = event.getPlayer().getUniqueId();
+        CutscenePreviewSession preview = previewSessions.remove(playerId);
+        if (preview != null) {
+            preview.end();
         }
     }
 

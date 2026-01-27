@@ -97,6 +97,7 @@ public class CutscenePreviewSession {
         if (cameraEntity != null && cameraEntity.isValid()) {
             cameraEntity.remove();
         }
+        player.setSpectatorTarget(null);
         if (originalGameMode != null) {
             player.setGameMode(originalGameMode);
         }
