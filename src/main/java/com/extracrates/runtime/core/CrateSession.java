@@ -29,6 +29,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.joml.Vector3f;
 
 
@@ -204,6 +206,7 @@ public class CrateSession {
         FileConfiguration config = configLoader.getMainConfig();
         sessionManager.applySpectator(player);
         player.setSpectatorTarget(cameraEntity);
+        applyCutsceneBlindness();
 
         if (config.getBoolean("cutscene.fake-equip", true)) {
             previousHelmet = player.getInventory().getHelmet();
@@ -215,6 +218,11 @@ public class CrateSession {
             hudHiddenApplied = toggleHud(true);
         }
         logVerbose("Spectator aplicado: hud=%s lockMovement=%s", crate.cutsceneSettings().hideHud(), crate.cutsceneSettings().lockMovement());
+    }
+
+    private void applyCutsceneBlindness() {
+        PotionEffect effect = new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 100, false, false, false);
+        player.addPotionEffect(effect, true);
     }
 
     private ItemStack buildFakePumpkin(FileConfiguration config) {
@@ -1201,6 +1209,7 @@ public class CrateSession {
             player.setSpectatorTarget(null);
             player.setGameMode(restoreMode);
         }
+        player.removePotionEffect(PotionEffectType.BLINDNESS);
     }
 
     private void restoreInventory() {
