@@ -341,7 +341,8 @@ public class SessionManager {
             }
             return false;
         }
-        session.reroll(rewards);
+        CutscenePath path = resolveCutscenePath(crate, rewards.getFirst(), player);
+        session.reroll(rewards, path);
         return true;
     }
 
