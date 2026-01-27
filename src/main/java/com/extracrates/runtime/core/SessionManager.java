@@ -280,7 +280,8 @@ public class SessionManager {
             player.sendMessage(languageManager.getMessage("session.no-rewards"));
             return false;
         }
-        session.reroll(rewards);
+        CutscenePath path = resolveCutscenePath(crate, rewards.getFirst(), player);
+        session.reroll(rewards, path);
         return true;
     }
 

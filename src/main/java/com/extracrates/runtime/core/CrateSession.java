@@ -58,7 +58,7 @@ public class CrateSession {
     private final Player player;
     private final CrateDefinition crate;
     private List<Reward> rewards;
-    private final CutscenePath path;
+    private CutscenePath path;
     private final SessionManager sessionManager;
     private final boolean preview;
     private final OpenState openState;
@@ -185,9 +185,12 @@ public class CrateSession {
         startWatchdog();
     }
 
-    public void reroll(List<Reward> rewards) {
+    public void reroll(List<Reward> rewards, CutscenePath path) {
         if (rewards == null || rewards.isEmpty()) {
             return;
+        }
+        if (path != null) {
+            this.path = path;
         }
         this.rewards = rewards;
         resetCutsceneForReroll();
