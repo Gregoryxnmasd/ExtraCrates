@@ -98,6 +98,13 @@ public class SyncBridge {
         store.recordEvent(playerId, crateId, SyncEventType.COOLDOWN_SET, null, event.timestamp(), settings.getServerId());
     }
 
+    public void clearPlayerHistory(UUID playerId) {
+        if (!settings.isEnabled() || store == null) {
+            return;
+        }
+        store.clearPlayerHistory(playerId);
+    }
+
     public void flush() {
         store.flush();
         sessionManager.flushSyncCaches();
@@ -223,6 +230,10 @@ public class SyncBridge {
         @Override
         public List<CrateHistoryEntry> getHistory(UUID playerId, String crateId, int limit, int offset) {
             return List.of();
+        }
+
+        @Override
+        public void clearPlayerHistory(UUID playerId) {
         }
 
         @Override

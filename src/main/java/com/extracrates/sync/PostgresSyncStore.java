@@ -177,6 +177,31 @@ public class PostgresSyncStore implements SyncStore {
     }
 
     @Override
+    public void clearPlayerHistory(UUID playerId) {
+        if (!healthy) {
+            return;
+        }
+        String schema = settings.getPostgres().getSchema();
+        String openHistory = "DELETE FROM " + schema + ".crate_open_history WHERE player_id = ?";
+        String rewardHistory = "DELETE FROM " + schema + ".crate_reward_history WHERE player_id = ?";
+        String eventHistory = "DELETE FROM " + schema + ".crate_event_history WHERE player_id = ?";
+        try (Connection connection = openConnection();
+             PreparedStatement openStmt = connection.prepareStatement(openHistory);
+             PreparedStatement rewardStmt = connection.prepareStatement(rewardHistory);
+             PreparedStatement eventStmt = connection.prepareStatement(eventHistory)) {
+            openStmt.setObject(1, playerId);
+            rewardStmt.setObject(1, playerId);
+            eventStmt.setObject(1, playerId);
+            openStmt.executeUpdate();
+            rewardStmt.executeUpdate();
+            eventStmt.executeUpdate();
+        } catch (SQLException ex) {
+            healthy = false;
+            plugin.getLogger().log(Level.WARNING, "[Sync] No se pudo limpiar el historial en Postgres", ex);
+        }
+    }
+
+    @Override
     public void flush() {
         if (!healthy) {
             return;
