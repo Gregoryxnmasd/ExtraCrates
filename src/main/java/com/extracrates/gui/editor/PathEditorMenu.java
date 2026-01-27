@@ -93,13 +93,14 @@ public class PathEditorMenu implements Listener {
         List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
         paths.sort(Comparator.comparing((CutscenePath path) -> resolveCreatedAt(path.getId()))
                 .thenComparing(CutscenePath::getId, String.CASE_INSENSITIVE_ORDER));
-        int slot = 9;
+        List<ItemStack> pathItems = new ArrayList<>();
         for (CutscenePath path : paths) {
-            if (slot > 35) {
+            if (pathItems.size() >= 27) {
                 break;
             }
-            inventory.setItem(slot++, buildPathItem(path));
+            pathItems.add(buildPathItem(path));
         }
+        MenuSpacer.applyCenteredItems(inventory, 9, 35, pathItems);
         fillListNavigation(inventory);
         inventory.setItem(SLOT_LIST_CREATE, buildItem(Material.LIME_CONCRETE,
                 text("editor.paths.list.create.name"),
@@ -210,11 +211,12 @@ public class PathEditorMenu implements Listener {
         List<CutscenePath> paths = new ArrayList<>(configLoader.getPaths().values());
         paths.sort(Comparator.comparing((CutscenePath path) -> resolveCreatedAt(path.getId()))
                 .thenComparing(CutscenePath::getId, String.CASE_INSENSITIVE_ORDER));
-        int index = slot - 9;
-        if (slot < 9 || slot > 35 || index < 0 || index >= paths.size()) {
+        int visibleCount = Math.min(paths.size(), 27);
+        int centeredIndex = MenuSpacer.centeredIndex(9, 35, visibleCount, slot);
+        if (centeredIndex < 0 || centeredIndex >= visibleCount) {
             return;
         }
-        CutscenePath path = paths.get(index);
+        CutscenePath path = paths.get(centeredIndex);
         if (rightClick && shiftClick) {
             confirmationMenu.open(
                     player,
@@ -327,13 +329,14 @@ public class PathEditorMenu implements Listener {
 
     private void openSmoothingSelector(Player player, String pathId) {
         Inventory inventory = Bukkit.createInventory(player, 36, smoothingTitle(pathId));
-        int slot = SLOT_SELECTOR_START;
+        List<ItemStack> smoothingItems = new ArrayList<>();
         for (String option : SMOOTHING_OPTIONS) {
-            inventory.setItem(slot++, buildItem(Material.PAPER, text("editor.paths.smoothing.option.name", Map.of("mode", option)), List.of(
+            smoothingItems.add(buildItem(Material.PAPER, text("editor.paths.smoothing.option.name", Map.of("mode", option)), List.of(
                     text("editor.paths.smoothing.option.desc." + option),
                     text("editor.common.click-select")
             )));
         }
+        MenuSpacer.applyCenteredItems(inventory, 9, 17, smoothingItems);
         fillSelectorNavigation(inventory);
         inventory.setItem(SLOT_SELECTOR_BACK, buildItem(Material.ARROW,
                 text("editor.paths.detail.back.name"),
@@ -356,13 +359,14 @@ public class PathEditorMenu implements Listener {
         Inventory inventory = Bukkit.createInventory(player, 54, particleTitle(pathId));
         int startIndex = safePage * PARTICLES_PER_PAGE;
         int endIndex = Math.min(startIndex + PARTICLES_PER_PAGE, particles.length);
-        int slot = 9;
+        List<ItemStack> particleItems = new ArrayList<>();
         for (int i = startIndex; i < endIndex; i++) {
             String particleName = particles[i].name().toLowerCase(Locale.ROOT);
-            inventory.setItem(slot++, buildItem(Material.FIREWORK_STAR, "&f" + particleName, List.of(
+            particleItems.add(buildItem(Material.FIREWORK_STAR, "&f" + particleName, List.of(
                     text("editor.common.click-select")
             )));
         }
+        MenuSpacer.applyCenteredItems(inventory, 9, 35, particleItems);
         fillParticleNavigation(inventory, safePage, totalPages);
         inventory.setItem(SLOT_PARTICLE_BACK, buildItem(Material.ARROW,
                 text("editor.paths.detail.back.name"),
@@ -376,11 +380,11 @@ public class PathEditorMenu implements Listener {
             openDetail(player, pathId);
             return;
         }
-        int optionIndex = slot - SLOT_SELECTOR_START;
-        if (optionIndex < 0 || optionIndex >= SMOOTHING_OPTIONS.size()) {
+        int centeredIndex = MenuSpacer.centeredIndex(9, 17, SMOOTHING_OPTIONS.size(), slot);
+        if (centeredIndex < 0 || centeredIndex >= SMOOTHING_OPTIONS.size()) {
             return;
         }
-        updatePathField(pathId, "smoothing", SMOOTHING_OPTIONS.get(optionIndex));
+        updatePathField(pathId, "smoothing", SMOOTHING_OPTIONS.get(centeredIndex));
         player.sendMessage(languageManager.getMessage("editor.path.success.updated"));
         openDetail(player, pathId);
     }
@@ -399,8 +403,10 @@ public class PathEditorMenu implements Listener {
         Particle[] particles = Particle.values();
         Arrays.sort(particles, Comparator.comparing(particle -> particle.name().toLowerCase(Locale.ROOT)));
         int currentPage = particlePages.getOrDefault(player.getUniqueId(), 0);
-        int index = currentPage * PARTICLES_PER_PAGE + (slot - 9);
-        if (slot < 9 || slot > 35 || index < 0 || index >= particles.length) {
+        int pageItems = Math.min(PARTICLES_PER_PAGE, particles.length - (currentPage * PARTICLES_PER_PAGE));
+        int centeredIndex = MenuSpacer.centeredIndex(9, 35, pageItems, slot);
+        int index = currentPage * PARTICLES_PER_PAGE + centeredIndex;
+        if (centeredIndex < 0 || index < 0 || index >= particles.length) {
             return;
         }
         Particle selected = particles[index];

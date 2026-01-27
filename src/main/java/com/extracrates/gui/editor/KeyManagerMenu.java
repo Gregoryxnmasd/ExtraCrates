@@ -119,13 +119,14 @@ public class KeyManagerMenu implements Listener {
         Inventory inventory = Bukkit.createInventory(player, LIST_SIZE, listTitle(target));
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
         crates.sort(Comparator.comparing(CrateDefinition::id));
-        int slot = 9;
+        List<ItemStack> crateItems = new ArrayList<>();
         for (CrateDefinition crate : crates) {
-            if (slot > 35) {
+            if (crateItems.size() >= 27) {
                 break;
             }
-            inventory.setItem(slot++, buildCrateItem(target, crate));
+            crateItems.add(buildCrateItem(target, crate));
         }
+        MenuSpacer.applyCenteredItems(inventory, 9, 35, crateItems);
         fillListNavigation(inventory);
         inventory.setItem(SLOT_LIST_DELETE, buildItem(Material.RED_CONCRETE,
                 text("editor.keys.nav.clear.name"),
@@ -223,11 +224,12 @@ public class KeyManagerMenu implements Listener {
         }
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
         crates.sort(Comparator.comparing(CrateDefinition::id));
-        int index = slot - 9;
-        if (slot < 9 || slot > 35 || index < 0 || index >= crates.size()) {
+        int visibleCount = Math.min(crates.size(), 27);
+        int centeredIndex = MenuSpacer.centeredIndex(9, 35, visibleCount, slot);
+        if (centeredIndex < 0 || centeredIndex >= visibleCount) {
             return;
         }
-        openCrateDetail(player, target, crates.get(index).id());
+        openCrateDetail(player, target, crates.get(centeredIndex).id());
     }
 
     private void handleDetailClick(Player player, TargetSelection target, String crateId, int slot) {
