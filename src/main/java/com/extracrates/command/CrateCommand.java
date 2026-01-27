@@ -285,6 +285,9 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             case "forceclear" -> {
                 return handleForceClear(sender, args);
             }
+            case "hardreset" -> {
+                return handleHardReset(sender, args);
+            }
             case "cutscene" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage(languageManager.getMessage("command.only-players"));
@@ -393,7 +396,7 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         List<String> options = new ArrayList<>();
         String current = args.length > 0 ? args[args.length - 1] : "";
         if (args.length == 1) {
-            options.addAll(List.of("gui", "history", "editor", "open", "preview", "cutscene", "reroll", "reload", "debug", "sync", "route", "migrate", "clear", "forceclear", "crates", "pools", "rewards"));
+            options.addAll(List.of("gui", "history", "editor", "open", "preview", "cutscene", "reroll", "reload", "debug", "sync", "route", "migrate", "clear", "forceclear", "hardreset", "crates", "pools", "rewards"));
             return filterByPrefix(options, current);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("crates")) {
@@ -521,6 +524,10 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
             Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
             return filterByPrefix(options, current);
         }
+        if (args.length == 2 && args[0].equalsIgnoreCase("hardreset")) {
+            Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
+            return filterByPrefix(options, current);
+        }
         return List.of();
     }
 
@@ -584,6 +591,30 @@ public class CrateCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(Component.text("Sesión de crates limpiada a la fuerza para " + target.getName() + "."));
         if (!sender.equals(target)) {
             target.sendMessage(Component.text("Tu sesión de crates fue limpiada por un administrador."));
+        }
+        return true;
+    }
+
+    private boolean handleHardReset(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("extracrates.clear")) {
+            sender.sendMessage(languageManager.getMessage("command.no-permission"));
+            return true;
+        }
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Uso: /crates hardreset <player>"));
+            return true;
+        }
+        Player target = Bukkit.getPlayerExact(args[1]);
+        if (target == null) {
+            sender.sendMessage(languageManager.getMessage("command.player-not-found"));
+            return true;
+        }
+        sessionManager.clearCrateEffects(target);
+        sessionManager.removeSession(target.getUniqueId());
+        sessionManager.clearLocalState(target.getUniqueId());
+        sender.sendMessage(Component.text("Hard reset aplicado para " + target.getName() + "."));
+        if (!sender.equals(target)) {
+            target.sendMessage(Component.text("Tu sesión de crates fue reiniciada por un administrador."));
         }
         return true;
     }

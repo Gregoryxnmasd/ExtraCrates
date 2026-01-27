@@ -297,6 +297,17 @@ public class SessionManager {
         sessionRandoms.remove(playerId);
     }
 
+    public void clearLocalState(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        cooldowns.remove(playerId);
+        pendingRewards.remove(playerId);
+        history.remove(playerId);
+        sessionRandoms.remove(playerId);
+        clearCooldownDisplay(playerId);
+    }
+
     public void handleSessionQuit(Player player, CrateSession session) {
         if (session == null || session.isPreview()) {
             return;
