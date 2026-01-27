@@ -372,6 +372,29 @@ public class SqlStorage implements CrateStorage {
     }
 
     @Override
+    public void clearPlayerData(UUID playerId) {
+        withConnection(connection -> {
+            String[] tables = {
+                    "crate_cooldowns",
+                    "crate_keys",
+                    "crate_locks",
+                    "crate_deliveries",
+                    "crate_opens",
+                    "crate_open_starts",
+                    "crate_pending_rewards"
+            };
+            for (String table : tables) {
+                String deleteSql = "DELETE FROM " + table + " WHERE player_uuid=?";
+                try (PreparedStatement delete = connection.prepareStatement(deleteSql)) {
+                    delete.setString(1, playerId.toString());
+                    delete.executeUpdate();
+                }
+            }
+            return null;
+        });
+    }
+
+    @Override
     public void close() {
         pool.close();
     }

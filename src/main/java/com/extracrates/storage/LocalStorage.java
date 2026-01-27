@@ -151,6 +151,20 @@ public class LocalStorage implements CrateStorage {
     }
 
     @Override
+    public void clearPlayerData(UUID playerId) {
+        if (playerId == null) {
+            return;
+        }
+        cooldowns.remove(playerId);
+        keys.remove(playerId);
+        locks.remove(playerId);
+        deliveries.remove(playerId);
+        openHistory.remove(playerId);
+        openStarts.remove(playerId);
+        pendingRewards.remove(playerId);
+    }
+
+    @Override
     public void recordDelivery(UUID playerId, String crateId, String rewardId, DeliveryStatus status, int attempt, Instant timestamp) {
         deliveries
                 .computeIfAbsent(playerId, key -> new HashMap<>())

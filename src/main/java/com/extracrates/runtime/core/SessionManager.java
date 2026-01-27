@@ -308,6 +308,13 @@ public class SessionManager {
         clearCooldownDisplay(playerId);
     }
 
+    public void clearStoredPlayerData(UUID playerId) {
+        if (storage == null || playerId == null) {
+            return;
+        }
+        storage.clearPlayerData(playerId);
+    }
+
     public void handleSessionQuit(Player player, CrateSession session) {
         if (session == null || session.isPreview()) {
             return;

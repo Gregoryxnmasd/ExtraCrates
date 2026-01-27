@@ -171,6 +171,14 @@ public class StorageFallback implements CrateStorage {
     }
 
     @Override
+    public void clearPlayerData(UUID playerId) {
+        runWithFallback(
+                () -> primary.clearPlayerData(playerId),
+                () -> fallback.clearPlayerData(playerId)
+        );
+    }
+
+    @Override
     public void close() {
         primary.close();
         fallback.close();
