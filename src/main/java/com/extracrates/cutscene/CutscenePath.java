@@ -16,7 +16,6 @@ public class CutscenePath {
     private final CutsceneSpinSettings spinSettings;
     private final List<CutscenePoint> points;
     private final java.util.Set<Integer> directPoints;
-    private final java.util.Set<Integer> playerSegments;
     private final List<CutsceneSegmentCommand> segmentCommands;
     private final List<CutsceneSegmentRange> playerSegments;
     private volatile List<CutscenePoint> timelineCache;
@@ -43,7 +42,6 @@ public class CutscenePath {
         this.spinSettings = spinSettings;
         this.points = points;
         this.directPoints = directPoints;
-        this.playerSegments = playerSegments;
         this.segmentCommands = segmentCommands;
         this.playerSegments = playerSegments;
     }
@@ -81,7 +79,15 @@ public class CutscenePath {
     }
 
     public boolean isPlayerSegment(int index) {
-        return playerSegments.contains(index);
+        if (playerSegments == null || playerSegments.isEmpty()) {
+            return false;
+        }
+        for (CutsceneSegmentRange range : playerSegments) {
+            if (range.matchesSegment(index)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public List<CutscenePoint> getPoints() {
@@ -93,15 +99,7 @@ public class CutscenePath {
     }
 
     public boolean usesPlayerCamera(int segmentIndex) {
-        if (playerSegments == null || playerSegments.isEmpty()) {
-            return false;
-        }
-        for (CutsceneSegmentRange range : playerSegments) {
-            if (range.matchesSegment(segmentIndex)) {
-                return true;
-            }
-        }
-        return false;
+        return isPlayerSegment(segmentIndex);
     }
 
     public List<CutscenePoint> getTimelinePoints() {
