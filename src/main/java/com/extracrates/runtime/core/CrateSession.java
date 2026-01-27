@@ -64,6 +64,7 @@ public class CrateSession {
     private final SessionManager sessionManager;
     private final boolean preview;
     private final OpenState openState;
+    private final String forcedRarityId;
     private final com.extracrates.runtime.RewardAnimationService rewardAnimationService = new com.extracrates.runtime.RewardAnimationService();
 
     private Entity cameraEntity;
@@ -129,6 +130,7 @@ public class CrateSession {
             Player player,
             CrateDefinition crate,
             List<Reward> rewards,
+            String forcedRarityId,
             CutscenePath path,
             SessionManager sessionManager,
             boolean preview,
@@ -140,6 +142,7 @@ public class CrateSession {
         this.player = player;
         this.crate = crate;
         this.rewards = rewards;
+        this.forcedRarityId = forcedRarityId;
         this.path = path;
         this.sessionManager = sessionManager;
         this.preview = preview;
@@ -1440,6 +1443,10 @@ public class CrateSession {
 
     public CrateDefinition getCrate() {
         return crate;
+    }
+
+    public String getForcedRarityId() {
+        return forcedRarityId;
     }
 
     private void applyMovementLock() {

@@ -194,7 +194,7 @@ public class SessionManager {
             Instant previousCooldown = getCooldownTimestamp(player, crate.id());
             openState = new OpenState(storage != null, false, false, previousCooldown);
         }
-        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, preview, openState);
+        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, null, path, this, preview, openState);
         sessions.put(player.getUniqueId(), session);
         Instant createdAt = Instant.now();
         plugin.getLogger().info(() -> String.format(
@@ -242,7 +242,7 @@ public class SessionManager {
         }
         Instant previousCooldown = getCooldownTimestamp(player, crate.id());
         openState = new OpenState(storage != null, false, false, previousCooldown);
-        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, path, this, false, openState);
+        CrateSession session = new CrateSession(plugin, configLoader, languageManager, player, crate, rewards, rarityId, path, this, false, openState);
         sessions.put(player.getUniqueId(), session);
         Instant createdAt = Instant.now();
         plugin.getLogger().info(() -> String.format(
@@ -329,9 +329,16 @@ public class SessionManager {
             return false;
         }
         Random random = sessionRandoms.computeIfAbsent(player.getUniqueId(), key -> new Random());
-        List<Reward> rewards = rollRewards(rewardPool, random, buildRollLogger(player));
+        String forcedRarityId = session.getForcedRarityId();
+        List<Reward> rewards = forcedRarityId == null || forcedRarityId.isBlank()
+                ? rollRewards(rewardPool, random, buildRollLogger(player))
+                : rollRewardsByRarity(rewardPool, forcedRarityId, random, buildRollLogger(player));
         if (rewards.isEmpty()) {
-            player.sendMessage(languageManager.getMessage("session.no-rewards"));
+            if (forcedRarityId == null || forcedRarityId.isBlank()) {
+                player.sendMessage(languageManager.getMessage("session.no-rewards"));
+            } else {
+                player.sendMessage(languageManager.getMessage("session.no-rewards-rarity", java.util.Map.of("rarity", forcedRarityId)));
+            }
             return false;
         }
         session.reroll(rewards);
