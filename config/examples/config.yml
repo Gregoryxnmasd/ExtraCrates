@@ -58,6 +58,8 @@ cutscene:
   speed-modifier-uuid: "c0c0a1f2-7a89-4a2c-88a7-9f53b0d6f8b1"
   on-start:
     - "say %player% inició la cutscene de %crate_id%"
+  on-reroll:
+    - "say %player% usó un reroll en %crate_id%"
   on-end:
     - "say %player% terminó la cutscene de %crate_id% y obtuvo %reward_name%"
   locks:
@@ -77,3 +79,16 @@ permissions:
 debug:
   rolls: false
   timings: false
+placeholders:
+  none: "none"
+  no-session: "none"
+  no-crate: "none"
+  no-reward: "none"
+  unlimited-rerolls: "∞"
+  rerolls-left:
+    0: "0"
+    1: "1"
+    2: "2"
+    3: "3"
+  opening-true: "true"
+  opening-false: "false"

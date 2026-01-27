@@ -29,7 +29,11 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Transformation;
+import org.bukkit.util.Vector;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.joml.Vector3f;
+import org.bukkit.util.Vector;
 
 
 import java.util.*;
@@ -101,6 +105,10 @@ public class CrateSession {
     private BossBar rerollHintBossBar;
     private long lastRerollInputMillis;
     private boolean endCommandsExecuted;
+    private Float previousWalkSpeed;
+    private Float previousFlySpeed;
+    private Boolean previousAllowFlight;
+    private Boolean previousFlying;
 
     public CrateSession(
             ExtraCratesPlugin plugin,
@@ -214,6 +222,11 @@ public class CrateSession {
             hudHiddenApplied = toggleHud(true);
         }
         logVerbose("Spectator aplicado: hud=%s lockMovement=%s", crate.cutsceneSettings().hideHud(), crate.cutsceneSettings().lockMovement());
+    }
+
+    private void applyCutsceneBlindness() {
+        PotionEffect effect = new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 100, false, false, false);
+        player.addPotionEffect(effect, true);
     }
 
     private ItemStack buildFakePumpkin(FileConfiguration config) {
@@ -455,12 +468,15 @@ public class CrateSession {
                 Location point = frame.location();
                 tick++;
                 lastTaskTickMillis = System.currentTimeMillis();
+                applyCutsceneBlindness();
+                applyMovementLock();
                 if (frame.segmentIndex() != lastSegmentIndex) {
                     executeSegmentCommands(path.getSegmentCommands(), frame.segmentIndex(), executedSegmentCommands);
                     lastSegmentIndex = frame.segmentIndex();
                 }
                 cameraEntity.teleport(point);
                 player.setSpectatorTarget(cameraEntity);
+                player.teleport(point);
                 elapsedTicks++;
                 if (!rerollLocked && rewards.size() > 1 && rewardSwitchTicks > 0) {
                     while (elapsedTicks >= nextRewardSwitchTick && rewardIndex < rewards.size() - 1) {
@@ -500,6 +516,7 @@ public class CrateSession {
             cameraEntity.teleport(start);
             player.setSpectatorTarget(cameraEntity);
         }
+        exitPlayerCameraMode();
         scheduleTimeout();
     }
 
@@ -583,7 +600,8 @@ public class CrateSession {
             com.extracrates.cutscene.CutscenePoint point = points.getFirst();
             timeline.add(new CutsceneFrame(
                     new Location(world, point.x(), point.y(), point.z(), point.yaw(), point.pitch()),
-                    0
+                    0,
+                    path.isPlayerSegment(0)
             ));
             return timeline;
         }
@@ -594,12 +612,14 @@ public class CrateSession {
                 if (timeline.isEmpty()) {
                     timeline.add(new CutsceneFrame(
                             new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch()),
-                            i
+                            i,
+                            path.isPlayerSegment(i)
                     ));
                 }
                 timeline.add(new CutsceneFrame(
                         new Location(world, end.x(), end.y(), end.z(), end.yaw(), end.pitch()),
-                        i
+                        i,
+                        path.isPlayerSegment(i)
                 ));
                 continue;
             }
@@ -622,7 +642,7 @@ public class CrateSession {
                 } else if (spinStarted) {
                     yaw = wrapDegrees(yaw + (float) spinOffset);
                 }
-                timeline.add(new CutsceneFrame(new Location(world, x, y, z, yaw, pitch), i));
+                timeline.add(new CutsceneFrame(new Location(world, x, y, z, yaw, pitch), i, path.isPlayerSegment(i)));
             }
         }
         return timeline;
@@ -753,7 +773,7 @@ public class CrateSession {
             return;
         }
         player.sendMessage(languageManager.getMessage("session.reward-received", Map.of("reward", reward.displayName())));
-        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader, plugin.getMapImageCache());
+        ItemStack item = ItemUtil.buildItem(reward, player.getWorld(), configLoader);
         if (item.getType() != Material.AIR) {
             player.getInventory().addItem(item);
         } else {
@@ -830,7 +850,7 @@ public class CrateSession {
         }
     }
 
-    private record CutsceneFrame(Location location, int segmentIndex) {
+    private record CutsceneFrame(Location location, int segmentIndex, boolean usePlayerCamera) {
     }
 
     private Map<String, String> buildCommandPlaceholders(Reward reward) {
@@ -988,7 +1008,7 @@ public class CrateSession {
         }
         ItemStack item = reward.displayItemStack() != null
                 ? reward.displayItemStack().clone()
-                : ItemUtil.buildItem(reward, world, configLoader, plugin.getMapImageCache());
+                : ItemUtil.buildItem(reward, world, configLoader);
         String rewardModel = crate.animation().rewardModel();
         if (reward.displayItemStack() != null || rewardModel == null || rewardModel.isEmpty()) {
             REWARD_DISPLAY_CACHE.put(cacheKey, item.clone());
@@ -1140,6 +1160,7 @@ public class CrateSession {
         if (reward != null) {
             sendRerollMessage("reroll.advance", reward, Map.of("reward", reward.displayName()));
         }
+        executeConfiguredCommands("cutscene.on-reroll", reward);
     }
 
     private void confirmReward(boolean notify) {
@@ -1189,6 +1210,10 @@ public class CrateSession {
         previousInventoryContents = cloneItemStackArray(player.getInventory().getContents());
         previousArmorContents = cloneItemStackArray(player.getInventory().getArmorContents());
         previousOffHand = cloneItemStack(player.getInventory().getItemInOffHand());
+        previousWalkSpeed = player.getWalkSpeed();
+        previousFlySpeed = player.getFlySpeed();
+        previousAllowFlight = player.getAllowFlight();
+        previousFlying = player.isFlying();
     }
 
     private void restorePlayerState() {
@@ -1200,6 +1225,20 @@ public class CrateSession {
             player.setSpectatorTarget(null);
             player.setGameMode(restoreMode);
         }
+        if (previousWalkSpeed != null) {
+            player.setWalkSpeed(previousWalkSpeed);
+        }
+        if (previousFlySpeed != null) {
+            player.setFlySpeed(previousFlySpeed);
+        }
+        if (previousAllowFlight != null) {
+            player.setAllowFlight(previousAllowFlight);
+        }
+        if (previousFlying != null) {
+            player.setFlying(previousFlying);
+        }
+        player.removePotionEffect(PotionEffectType.BLINDNESS);
+        restorePlayerMovementState();
     }
 
     private void restoreInventory() {
@@ -1251,6 +1290,54 @@ public class CrateSession {
         return crate.cutsceneSettings().lockMovement();
     }
 
+    private void enterPlayerCameraMode() {
+        if (playerCameraActive) {
+            return;
+        }
+        playerCameraActive = true;
+        applyCutsceneBlindness();
+        if (!isMovementLocked()) {
+            return;
+        }
+        capturePlayerMovementState();
+        player.setWalkSpeed(0.0f);
+        player.setFlySpeed(0.0f);
+        player.setVelocity(new Vector(0, 0, 0));
+    }
+
+    private void exitPlayerCameraMode() {
+        if (!playerCameraActive) {
+            player.removePotionEffect(PotionEffectType.BLINDNESS);
+            return;
+        }
+        playerCameraActive = false;
+        player.removePotionEffect(PotionEffectType.BLINDNESS);
+        restorePlayerMovementState();
+    }
+
+    private void capturePlayerMovementState() {
+        if (playerMovementStateCaptured) {
+            return;
+        }
+        playerMovementStateCaptured = true;
+        previousVelocity = player.getVelocity();
+        previousWalkSpeed = player.getWalkSpeed();
+        previousFlySpeed = player.getFlySpeed();
+    }
+
+    private void restorePlayerMovementState() {
+        if (!playerMovementStateCaptured) {
+            return;
+        }
+        playerMovementStateCaptured = false;
+        player.setWalkSpeed(previousWalkSpeed);
+        player.setFlySpeed(previousFlySpeed);
+        if (previousVelocity != null) {
+            player.setVelocity(previousVelocity);
+        }
+        previousVelocity = null;
+    }
+
     public boolean isPreview() {
         return preview;
     }
@@ -1289,6 +1376,14 @@ public class CrateSession {
 
     public CrateDefinition getCrate() {
         return crate;
+    }
+
+    private void applyMovementLock() {
+        player.setWalkSpeed(0.0f);
+        player.setFlySpeed(0.0f);
+        player.setAllowFlight(true);
+        player.setFlying(true);
+        player.setVelocity(new Vector(0, 0, 0));
     }
 
     private boolean toggleHud(boolean hidden) {
@@ -1475,9 +1570,21 @@ public class CrateSession {
 
     private String resolveRerollsLeft() {
         if (maxRerolls > 0) {
-            return Integer.toString(Math.max(0, maxRerolls - rerollsUsed));
+            int remaining = Math.max(0, maxRerolls - rerollsUsed);
+            return resolveRerollsLeftDisplay(remaining);
         }
         return configLoader.getMainConfig().getString("placeholders.unlimited-rerolls", "∞");
+    }
+
+    private String resolveRerollsLeftDisplay(int remaining) {
+        if (configLoader == null || configLoader.getMainConfig() == null) {
+            return Integer.toString(remaining);
+        }
+        String configured = configLoader.getMainConfig().getString("placeholders.rerolls-left." + remaining);
+        if (configured == null || configured.isBlank()) {
+            return Integer.toString(remaining);
+        }
+        return configured;
     }
 
     private boolean canReroll() {

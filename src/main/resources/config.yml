@@ -70,6 +70,8 @@ cutscene:
   on-start:
     - "hud hud remove %player% main"
     - "hud compass remove %player% all"
+  on-reroll:
+    - "say %player% used a reroll in %crate_id%"
   on-end:
     - "hud hud add %player% main"
     - "hud compass add %player% all"
@@ -96,8 +98,12 @@ placeholders:
   no-session: "none"
   no-crate: "none"
   no-reward: "none"
-  no-rerolls: "0"
   unlimited-rerolls: "∞"
+  rerolls-left:
+    0: "0"
+    1: "1"
+    2: "2"
+    3: "3"
   opening-true: "true"
   opening-false: "false"
 storage:

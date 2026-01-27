@@ -80,8 +80,7 @@ public class RewardDisplayRenderer {
                 ItemStack item = ItemUtil.buildItem(
                         reward,
                         world,
-                        plugin.getConfigLoader(),
-                        plugin.getMapImageCache()
+                        plugin.getConfigLoader()
                 );
                 entity.setItemStack(applyRewardModel(item));
                 if (animations.contains("glow")) {
