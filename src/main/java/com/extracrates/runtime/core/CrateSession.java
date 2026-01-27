@@ -33,6 +33,7 @@ import org.bukkit.util.Vector;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.joml.Vector3f;
+import org.bukkit.util.Vector;
 
 
 import java.util.*;
@@ -518,6 +519,7 @@ public class CrateSession {
             cameraEntity.teleport(start);
             player.setSpectatorTarget(cameraEntity);
         }
+        exitPlayerCameraMode();
         scheduleTimeout();
     }
 
@@ -601,7 +603,8 @@ public class CrateSession {
             com.extracrates.cutscene.CutscenePoint point = points.getFirst();
             timeline.add(new CutsceneFrame(
                     new Location(world, point.x(), point.y(), point.z(), point.yaw(), point.pitch()),
-                    0
+                    0,
+                    path.isPlayerSegment(0)
             ));
             return timeline;
         }
@@ -612,12 +615,14 @@ public class CrateSession {
                 if (timeline.isEmpty()) {
                     timeline.add(new CutsceneFrame(
                             new Location(world, start.x(), start.y(), start.z(), start.yaw(), start.pitch()),
-                            i
+                            i,
+                            path.isPlayerSegment(i)
                     ));
                 }
                 timeline.add(new CutsceneFrame(
                         new Location(world, end.x(), end.y(), end.z(), end.yaw(), end.pitch()),
-                        i
+                        i,
+                        path.isPlayerSegment(i)
                 ));
                 continue;
             }
@@ -640,7 +645,7 @@ public class CrateSession {
                 } else if (spinStarted) {
                     yaw = wrapDegrees(yaw + (float) spinOffset);
                 }
-                timeline.add(new CutsceneFrame(new Location(world, x, y, z, yaw, pitch), i));
+                timeline.add(new CutsceneFrame(new Location(world, x, y, z, yaw, pitch), i, path.isPlayerSegment(i)));
             }
         }
         return timeline;
@@ -848,7 +853,7 @@ public class CrateSession {
         }
     }
 
-    private record CutsceneFrame(Location location, int segmentIndex) {
+    private record CutsceneFrame(Location location, int segmentIndex, boolean usePlayerCamera) {
     }
 
     private Map<String, String> buildCommandPlaceholders(Reward reward) {
@@ -1236,6 +1241,7 @@ public class CrateSession {
             player.setFlying(previousFlying);
         }
         player.removePotionEffect(PotionEffectType.BLINDNESS);
+        restorePlayerMovementState();
     }
 
     private void restoreInventory() {
@@ -1285,6 +1291,54 @@ public class CrateSession {
 
     public boolean isMovementLocked() {
         return crate.cutsceneSettings().lockMovement();
+    }
+
+    private void enterPlayerCameraMode() {
+        if (playerCameraActive) {
+            return;
+        }
+        playerCameraActive = true;
+        applyCutsceneBlindness();
+        if (!isMovementLocked()) {
+            return;
+        }
+        capturePlayerMovementState();
+        player.setWalkSpeed(0.0f);
+        player.setFlySpeed(0.0f);
+        player.setVelocity(new Vector(0, 0, 0));
+    }
+
+    private void exitPlayerCameraMode() {
+        if (!playerCameraActive) {
+            player.removePotionEffect(PotionEffectType.BLINDNESS);
+            return;
+        }
+        playerCameraActive = false;
+        player.removePotionEffect(PotionEffectType.BLINDNESS);
+        restorePlayerMovementState();
+    }
+
+    private void capturePlayerMovementState() {
+        if (playerMovementStateCaptured) {
+            return;
+        }
+        playerMovementStateCaptured = true;
+        previousVelocity = player.getVelocity();
+        previousWalkSpeed = player.getWalkSpeed();
+        previousFlySpeed = player.getFlySpeed();
+    }
+
+    private void restorePlayerMovementState() {
+        if (!playerMovementStateCaptured) {
+            return;
+        }
+        playerMovementStateCaptured = false;
+        player.setWalkSpeed(previousWalkSpeed);
+        player.setFlySpeed(previousFlySpeed);
+        if (previousVelocity != null) {
+            player.setVelocity(previousVelocity);
+        }
+        previousVelocity = null;
     }
 
     public boolean isPreview() {
