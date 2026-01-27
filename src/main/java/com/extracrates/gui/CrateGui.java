@@ -76,7 +76,7 @@ public class CrateGui implements Listener {
         holder.setInventory(inventory);
         int startIndex = safePageIndex * PAGE_SIZE;
         int endIndex = Math.min(startIndex + PAGE_SIZE, crates.size());
-        int slot = CRATE_LIST_START_SLOT;
+        List<ItemStack> crateItems = new ArrayList<>();
         for (int i = startIndex; i < endIndex; i++) {
             CrateDefinition crate = crates.get(i);
             ItemStack item = new ItemStack(Material.CHEST);
@@ -99,8 +99,9 @@ public class CrateGui implements Listener {
                 meta.lore(lore);
                 item.setItemMeta(meta);
             }
-            inventory.setItem(slot++, item);
+            crateItems.add(item);
         }
+        MenuSpacer.applyCenteredItems(inventory, CRATE_LIST_START_SLOT, CRATE_LIST_START_SLOT + PAGE_SIZE - 1, crateItems);
         if (safePageIndex > 0) {
             inventory.setItem(PREVIOUS_PAGE_SLOT, buildNavItem(Material.ARROW, languageManager.getRaw(
                     "gui.crate.list.nav.previous",
@@ -160,14 +161,22 @@ public class CrateGui implements Listener {
             return;
         }
         List<CrateDefinition> crates = new ArrayList<>(configLoader.getCrates().values());
-        int crateIndex = holder.pageIndex() * PAGE_SIZE + (slot - CRATE_LIST_START_SLOT);
-        if (slot < CRATE_LIST_START_SLOT || slot > CRATE_LIST_START_SLOT + PAGE_SIZE - 1) {
+        crates.removeIf(crate -> !sessionManager.hasCratePermission(player, crate));
+        crates.sort(Comparator.comparing((CrateDefinition crate) -> resolveCreatedAt(crate.id()))
+                .thenComparing(CrateDefinition::id, String.CASE_INSENSITIVE_ORDER));
+        int pageStartIndex = holder.pageIndex() * PAGE_SIZE;
+        int pageEndIndex = Math.min(pageStartIndex + PAGE_SIZE, crates.size());
+        List<CrateDefinition> pageCrates = crates.subList(pageStartIndex, pageEndIndex);
+        int centeredIndex = MenuSpacer.centeredIndex(
+                CRATE_LIST_START_SLOT,
+                CRATE_LIST_START_SLOT + PAGE_SIZE - 1,
+                pageCrates.size(),
+                slot
+        );
+        if (centeredIndex < 0) {
             return;
         }
-        if (crateIndex < 0 || crateIndex >= crates.size()) {
-            return;
-        }
-        CrateDefinition crate = crates.get(crateIndex);
+        CrateDefinition crate = pageCrates.get(centeredIndex);
         if (rightClick) {
             openActionMenu(player, crate, holder.pageIndex());
             return;
@@ -287,11 +296,12 @@ public class CrateGui implements Listener {
         holder.setInventory(inventory);
         int startIndex = safeRewardPage * REWARD_PAGE_SIZE;
         int endIndex = Math.min(startIndex + REWARD_PAGE_SIZE, filtered.size());
-        int slot = 9;
+        List<ItemStack> rewardItems = new ArrayList<>();
         for (int i = startIndex; i < endIndex; i++) {
             Reward reward = filtered.get(i);
-            inventory.setItem(slot++, buildRewardItem(reward, rewards));
+            rewardItems.add(buildRewardItem(reward, rewards));
         }
+        MenuSpacer.applyCenteredItems(inventory, 9, 9 + REWARD_PAGE_SIZE - 1, rewardItems);
         inventory.setItem(REWARD_BACK_SLOT, buildItem(
                 Material.ARROW,
                 languageManager.getRaw("gui.crate.rewards.back.name", java.util.Collections.emptyMap()),

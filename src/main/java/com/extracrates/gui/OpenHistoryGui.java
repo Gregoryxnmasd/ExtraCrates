@@ -81,19 +81,15 @@ public class OpenHistoryGui implements Listener {
         HistoryGuiHolder holder = new HistoryGuiHolder(player.getUniqueId());
         Inventory inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, TextUtil.colorNoItalic(title));
         holder.setInventory(inventory);
-        int slot = 9;
-        int count = 0;
+        List<ItemStack> entryItems = new ArrayList<>();
         if (entries.isEmpty()) {
             inventory.setItem(22, buildStaticItem(Material.BARRIER, "&cSin aperturas", List.of("&7No hay registros para los filtros actuales.")));
         } else {
             for (CrateOpenEntry entry : entries) {
-                if (count >= PAGE_SIZE) {
-                    break;
-                }
-                inventory.setItem(slot++, buildEntryItem(entry));
-                count++;
+                entryItems.add(buildEntryItem(entry));
             }
         }
+        MenuSpacer.applyCenteredItems(inventory, 9, 9 + PAGE_SIZE - 1, entryItems);
 
         if (state.pageIndex > 0) {
             inventory.setItem(PREVIOUS_PAGE_SLOT, buildNavItem(Material.ARROW, "&ePágina anterior"));
