@@ -46,7 +46,6 @@ public class RewardEditorMenu implements Listener {
     private static final int SLOT_DETAIL_REWARD_ITEM = 10;
     private static final int SLOT_DETAIL_DISPLAY_ITEM = 11;
     private static final int SLOT_DETAIL_COMMANDS = 12;
-    private static final int SLOT_DETAIL_MAP_IMAGE = 13;
     private static final int SLOT_DETAIL_RARITY = 14;
 
     private static final int RARITY_MENU_SIZE = 45;
@@ -180,10 +179,6 @@ public class RewardEditorMenu implements Listener {
         )));
         inventory.setItem(SLOT_DETAIL_COMMANDS, buildItem(Material.COMMAND_BLOCK, text("editor.rewards.reward.detail.commands.name"), List.of(
                 text("editor.common.current", Map.of("value", String.valueOf(reward != null ? reward.commands().size() : 0))),
-                text("editor.common.click-edit")
-        )));
-        inventory.setItem(SLOT_DETAIL_MAP_IMAGE, buildItem(Material.FILLED_MAP, text("editor.rewards.reward.detail.map-image.name"), List.of(
-                text("editor.common.current", Map.of("value", reward != null ? emptyFallback(reward.mapImage()) : "")),
                 text("editor.common.click-edit")
         )));
         inventory.setItem(SLOT_DETAIL_RARITY, buildItem(resolveRarityMaterial(reward != null ? reward.rarity() : ""), text("editor.rewards.reward.detail.rarity.name"), List.of(
@@ -333,7 +328,6 @@ public class RewardEditorMenu implements Listener {
             case SLOT_DETAIL_REWARD_ITEM -> setRewardItemFromHand(player, poolId, rewardId);
             case SLOT_DETAIL_DISPLAY_ITEM -> setDisplayItemFromHand(player, poolId, rewardId);
             case SLOT_DETAIL_COMMANDS -> promptRewardField(player, poolId, rewardId, "commands", "editor.reward.prompt.commands");
-            case SLOT_DETAIL_MAP_IMAGE -> promptRewardField(player, poolId, rewardId, "map-image", "editor.reward.prompt.map-image");
             case SLOT_DETAIL_RARITY -> openRaritySelector(player, poolId, rewardId);
             case SLOT_DETAIL_DELETE -> confirmDeleteReward(player, poolId, rewardId);
             case SLOT_DETAIL_BACK -> openPoolDetail(player, poolId);
