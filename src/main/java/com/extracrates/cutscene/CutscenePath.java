@@ -16,6 +16,7 @@ public class CutscenePath {
     private final CutsceneSpinSettings spinSettings;
     private final List<CutscenePoint> points;
     private final java.util.Set<Integer> directPoints;
+    private final java.util.Set<Integer> playerSegments;
     private final List<CutsceneSegmentCommand> segmentCommands;
     private volatile List<CutscenePoint> timelineCache;
 
@@ -29,6 +30,7 @@ public class CutscenePath {
             CutsceneSpinSettings spinSettings,
             List<CutscenePoint> points,
             java.util.Set<Integer> directPoints,
+            java.util.Set<Integer> playerSegments,
             List<CutsceneSegmentCommand> segmentCommands
     ) {
         this.id = id;
@@ -40,6 +42,7 @@ public class CutscenePath {
         this.spinSettings = spinSettings;
         this.points = points;
         this.directPoints = directPoints;
+        this.playerSegments = playerSegments;
         this.segmentCommands = segmentCommands;
     }
 
@@ -73,6 +76,10 @@ public class CutscenePath {
 
     public boolean isDirectPoint(int index) {
         return directPoints.contains(index);
+    }
+
+    public boolean isPlayerSegment(int index) {
+        return playerSegments.contains(index);
     }
 
     public List<CutscenePoint> getPoints() {
@@ -119,6 +126,7 @@ public class CutscenePath {
         }
         CutsceneSpinSettings spinSettings = CutsceneSpinSettings.fromSection(section.getConfigurationSection("spin"), points.size());
         List<CutsceneSegmentCommand> segmentCommands = parseSegmentCommands(section.getList("segment-commands", List.of()), points.size());
+        java.util.Set<Integer> playerSegments = parseSegmentIndices(section.getList("player-segments", List.of()), points.size());
         return new CutscenePath(
                 id,
                 duration,
@@ -129,6 +137,7 @@ public class CutscenePath {
                 spinSettings,
                 points,
                 directPoints,
+                playerSegments,
                 segmentCommands
         );
     }
@@ -196,6 +205,60 @@ public class CutscenePath {
             }
         }
         return indices;
+    }
+
+    private static java.util.Set<Integer> parseSegmentIndices(List<?> rawSegments, int pointsCount) {
+        java.util.Set<Integer> indices = new java.util.HashSet<>();
+        if (rawSegments == null || rawSegments.isEmpty()) {
+            return indices;
+        }
+        int lastIndex = Math.max(0, pointsCount - 2);
+        if (pointsCount < 2) {
+            return indices;
+        }
+        for (Object raw : rawSegments) {
+            if (raw instanceof Number number) {
+                indices.add(clampIndex(number.intValue(), lastIndex));
+                continue;
+            }
+            if (raw instanceof String text) {
+                String trimmed = text.trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                if (trimmed.contains("-")) {
+                    String[] parts = trimmed.split("-", 2);
+                    Integer start = parseSegmentIndex(parts[0]);
+                    Integer end = parseSegmentIndex(parts[1]);
+                    if (start == null || end == null) {
+                        continue;
+                    }
+                    int rangeStart = clampIndex(Math.min(start, end), lastIndex);
+                    int rangeEnd = clampIndex(Math.max(start, end), lastIndex);
+                    for (int i = rangeStart; i <= rangeEnd; i++) {
+                        indices.add(i);
+                    }
+                } else {
+                    Integer index = parseSegmentIndex(trimmed);
+                    if (index != null) {
+                        indices.add(clampIndex(index, lastIndex));
+                    }
+                }
+            }
+        }
+        return indices;
+    }
+
+    private static Integer parseSegmentIndex(String raw) {
+        String trimmed = raw == null ? "" : raw.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(trimmed);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     private static List<CutsceneSegmentCommand> parseSegmentCommands(List<?> rawCommands, int pointsCount) {
