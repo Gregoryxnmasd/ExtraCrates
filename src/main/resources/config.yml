@@ -1,33 +1,14 @@
 # Opciones globales
 language: en_us
-accessibility-mode: true
 particles-default: "crit"
 hologram-font: ""
-ui-mode: "bossbar"
+
 gui:
   title: "&8ExtraCrates"
-  editor-title: "&0Crate Editor"
   history-title: "&8Crate History"
   preview-enabled: true
-  click-sounds: true
   editor-confirmations: true
-  crates:
-    legendary:
-      slot: 10
-      material: "CHEST"
-      icon: 12001
-      lore:
-        - "&7Name: &f%crate_name%"
-        - "&7Cooldown: &f%cooldown%"
-        - "&7Permission: &f%permission%"
-    seasonal:
-      slot: 12
-      material: "ENDER_CHEST"
-      icon: 12002
-      lore:
-        - "&7Name: &f%crate_name%"
-        - "&7Cooldown: &f%cooldown%"
-        - "&7Permission: &f%permission%"
+
 sounds:
   reroll:
     sound: "ui.button.click"
@@ -45,54 +26,53 @@ sounds:
     sound: "block.note_block.pling"
     volume: 0.8
     pitch: 1.2
+
 resourcepack:
-  use-custom-model-data: true
   allow-animated-items: true
   allow-map-images: true
+  use-custom-model-data: true
   model-data:
     cutscene_mask: 1001
+
 cutscene:
-  default-speed: 0.35
-  constant-speed: true
-  smooth-tick: 2
-  reroll-enable-ticks: 0
-  auto-confirm-ticks: 0
-  fake-helmet-movement-speed: 10.0
-  reroll-bossbar:
-    main-text: "&eYou have %extracrates_rerolls_remained% rerolls remained."
-    hint-text: "&fPunch to reroll &7| &fSneak to claim"
-  min-teleport-distance: 0.05
-  hide-others: true
-  spectator-lock: true
-  fake-equip: true
   armorstand-invisible: true
+  auto-confirm-ticks: 0
   camera-entity: "armor_stand"
-  on-start:
-    - "hud hud remove %player% main"
-    - "hud compass remove %player% all"
-  on-reroll:
-    - "say %player% used a reroll in %crate_id%"
-  on-end:
-    - "hud hud add %player% main"
-    - "hud compass add %player% all"
+  fake-equip: true
+  fake-helmet-movement-speed: 10.0
+  hide-others: true
   locks:
     movement: true
     hud: true
+  min-teleport-distance: 0.05
+  on-end:
+    - "hud hud add %player% main"
+    - "hud compass add %player% all"
+  on-reroll:
+    - "say %player% used a reroll in %crate_id%"
+  on-start:
+    - "hud hud remove %player% main"
+    - "hud compass remove %player% all"
+  reroll-bossbar:
+    main-text: "&eYou have %extracrates_rerolls_remained% rerolls remained."
+    hint-text: "&fPunch to reroll &7| &fSneak to claim"
+  reroll-enable-ticks: 0
+
 sessions:
-  max-duration-ticks: 600
   cleanup-on-quit: true
+  max-duration-ticks: 600
+
 guide:
-  enabled: true
   step-duration-ticks: 60
+
 holograms:
   provider: "display"
   name-format: "&e%reward_name%"
   height-offset: 0.8
+
 permissions:
   use-per-crate: true
-rewards:
-  normalize-chances: false
-  warning-threshold: 0
+
 placeholders:
   none: "none"
   no-session: "none"
@@ -106,6 +86,7 @@ placeholders:
     3: "3"
   opening-true: "true"
   opening-false: "false"
+
 storage:
   enabled: false
   type: "mysql"
