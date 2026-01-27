@@ -266,6 +266,9 @@ public class CrateSession {
             return;
         }
         if (usingPlayerCamera) {
+            if (player.getSpectatorTarget() != null) {
+                player.setSpectatorTarget(null);
+            }
             player.teleport(point);
             if (!playerBlindnessApplied) {
                 applyCutsceneBlindness();
