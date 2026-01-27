@@ -1141,6 +1141,7 @@ public class CrateSession {
         if (reward != null) {
             sendRerollMessage("reroll.advance", reward, Map.of("reward", reward.displayName()));
         }
+        executeConfiguredCommands("cutscene.on-reroll", reward);
     }
 
     private void confirmReward(boolean notify) {

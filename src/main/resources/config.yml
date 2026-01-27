@@ -70,6 +70,8 @@ cutscene:
   on-start:
     - "hud hud remove %player% main"
     - "hud compass remove %player% all"
+  on-reroll:
+    - "say %player% used a reroll in %crate_id%"
   on-end:
     - "hud hud add %player% main"
     - "hud compass add %player% all"
