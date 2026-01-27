@@ -3,6 +3,7 @@ package com.extracrates.runtime;
 import com.extracrates.ExtraCratesPlugin;
 import com.extracrates.runtime.core.CrateSession;
 import com.extracrates.runtime.core.SessionManager;
+import java.util.UUID;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -50,7 +51,7 @@ public class SessionListener implements Listener {
             return;
         }
         for (CrateSession session : sessionManager.getSessions()) {
-            session.hideEntitiesFrom(event.getPlayer());
+            session.hideEntitiesFrom(player);
         }
     }
 
