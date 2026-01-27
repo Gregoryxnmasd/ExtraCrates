@@ -410,6 +410,7 @@ public class SessionManager {
                 points,
                 java.util.Set.of(),
                 List.of(),
+                List.of(),
                 List.of()
         );
     }

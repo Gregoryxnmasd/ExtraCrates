@@ -241,7 +241,7 @@ public class CrateSession {
         if (playerBlindnessApplied) {
             return;
         }
-        PotionEffect effect = new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 100, false, false, false);
+        PotionEffect effect = new PotionEffect(PotionEffectType.BLINDNESS, PotionEffect.INFINITE_DURATION, 100, false, false, false);
         player.addPotionEffect(effect, true);
         playerBlindnessApplied = true;
     }
@@ -505,6 +505,7 @@ public class CrateSession {
         }
         usingPlayerCamera = path.usesPlayerCamera(timeline.getFirst().segmentIndex());
         applyFrameLocation(timeline.getFirst());
+        executeInlineCommands(path.getStartCommands(), getCurrentReward());
         double minTeleportDistance = Math.max(0.0, configLoader.getMainConfig().getDouble("cutscene.min-teleport-distance", 0.0));
         double minTeleportDistanceSquared = minTeleportDistance * minTeleportDistance;
         task = new BukkitRunnable() {

@@ -17,6 +17,7 @@ public class CutscenePath {
     private final List<CutscenePoint> points;
     private final java.util.Set<Integer> directPoints;
     private final List<CutsceneSegmentCommand> segmentCommands;
+    private final List<String> startCommands;
     private final List<CutsceneSegmentRange> playerSegments;
     private volatile List<CutscenePoint> timelineCache;
 
@@ -31,6 +32,7 @@ public class CutscenePath {
             List<CutscenePoint> points,
             java.util.Set<Integer> directPoints,
             List<CutsceneSegmentCommand> segmentCommands,
+            List<String> startCommands,
             List<CutsceneSegmentRange> playerSegments
     ) {
         this.id = id;
@@ -43,6 +45,7 @@ public class CutscenePath {
         this.points = points;
         this.directPoints = directPoints;
         this.segmentCommands = segmentCommands;
+        this.startCommands = startCommands;
         this.playerSegments = playerSegments;
     }
 
@@ -98,6 +101,10 @@ public class CutscenePath {
         return Collections.unmodifiableList(segmentCommands);
     }
 
+    public List<String> getStartCommands() {
+        return Collections.unmodifiableList(startCommands);
+    }
+
     public boolean usesPlayerCamera(int segmentIndex) {
         return isPlayerSegment(segmentIndex);
     }
@@ -138,6 +145,7 @@ public class CutscenePath {
         }
         CutsceneSpinSettings spinSettings = CutsceneSpinSettings.fromSection(section.getConfigurationSection("spin"), points.size());
         List<CutsceneSegmentCommand> segmentCommands = parseSegmentCommands(section.getList("segment-commands", List.of()), points.size());
+        List<String> startCommands = readStringList(section.get("start-commands"));
         List<CutsceneSegmentRange> playerSegments = parseSegmentRanges(section.getList("player-segments", List.of()), points.size());
         return new CutscenePath(
                 id,
@@ -150,6 +158,7 @@ public class CutscenePath {
                 points,
                 directPoints,
                 segmentCommands,
+                startCommands,
                 playerSegments
         );
     }
