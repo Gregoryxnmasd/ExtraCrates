@@ -713,8 +713,7 @@ public class RewardEditorMenu implements Listener {
         if (meta != null) {
             meta.displayName(TextUtil.colorNoItalic("&e" + reward.displayName()));
             meta.lore(lore.stream().map(TextUtil::colorNoItalic).toList());
-            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_UNBREAKABLE,
-                    ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_POTION_EFFECTS);
+            addCommonItemFlags(meta);
             item.setItemMeta(meta);
         }
         return item;
@@ -750,11 +749,28 @@ public class RewardEditorMenu implements Listener {
             if (loreLines != null && !loreLines.isEmpty()) {
                 meta.lore(loreLines.stream().map(TextUtil::colorNoItalic).toList());
             }
-            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_UNBREAKABLE,
-                    ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_POTION_EFFECTS);
+            addCommonItemFlags(meta);
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    private void addCommonItemFlags(ItemMeta meta) {
+        List<ItemFlag> flags = new ArrayList<>();
+        flags.add(ItemFlag.HIDE_ATTRIBUTES);
+        flags.add(ItemFlag.HIDE_ENCHANTS);
+        flags.add(ItemFlag.HIDE_UNBREAKABLE);
+        flags.add(ItemFlag.HIDE_DESTROYS);
+        flags.add(ItemFlag.HIDE_PLACED_ON);
+        addOptionalItemFlag(flags, "HIDE_POTION_EFFECTS");
+        meta.addItemFlags(flags.toArray(new ItemFlag[0]));
+    }
+
+    private void addOptionalItemFlag(List<ItemFlag> flags, String name) {
+        try {
+            flags.add(ItemFlag.valueOf(name));
+        } catch (IllegalArgumentException ignored) {
+        }
     }
 
     private ValidationResult validateRewardField(String field, String input) {
