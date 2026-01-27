@@ -74,6 +74,7 @@ public class CrateSession {
     private long lastTaskTickMillis;
     private boolean ending;
     private boolean ended;
+    private boolean active;
     private Location rewardBaseLocation;
     private Location hologramBaseLocation;
     private Transformation rewardBaseTransform;
@@ -131,6 +132,7 @@ public class CrateSession {
             finish();
             return;
         }
+        active = true;
         if (preview && shouldSendCutsceneChat()) {
             player.sendMessage(Component.text("Modo vista previa: solo vista previa."));
         }
@@ -176,6 +178,10 @@ public class CrateSession {
 
     public Reward getActiveReward() {
         return getCurrentReward();
+    }
+
+    public boolean isActive() {
+        return active && !ending && !ended;
     }
 
     public int getRemainingTicks() {
@@ -987,6 +993,7 @@ public class CrateSession {
         }
         ended = true;
         ending = true;
+        active = false;
         waitingForClaim = false;
         clearRerollDisplay();
         if (task != null) {
