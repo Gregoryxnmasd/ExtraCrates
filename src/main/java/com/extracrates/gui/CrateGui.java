@@ -329,9 +329,19 @@ public class CrateGui implements Listener {
     }
 
     private @NotNull ItemStack buildRewardItem(@NotNull Reward reward, @NotNull List<Reward> allRewards) {
-        Material material = parseMaterial(reward.item());
         int amount = Math.max(1, Math.min(64, reward.amount()));
-        ItemStack item = new ItemStack(material, amount);
+        ItemStack baseItem = reward.displayItemStack();
+        if (baseItem == null) {
+            baseItem = reward.itemStack();
+        }
+        ItemStack item;
+        if (baseItem != null) {
+            item = baseItem.clone();
+            item.setAmount(amount);
+        } else {
+            Material material = parseMaterial(reward.item());
+            item = new ItemStack(material, amount);
+        }
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(TextUtil.colorNoItalic("&e" + reward.displayName()));
