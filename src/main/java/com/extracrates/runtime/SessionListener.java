@@ -41,11 +41,17 @@ public class SessionListener implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        CrateSession activeSession = sessionManager.getSession(player.getUniqueId());
+        if (activeSession != null && !activeSession.isActive()) {
+            sessionManager.clearCrateEffects(player);
+            sessionManager.removeSession(player.getUniqueId());
+        }
         if (plugin.getProtocolEntityHider() != null) {
             return;
         }
         for (CrateSession session : sessionManager.getSessions()) {
-            session.hideEntitiesFrom(event.getPlayer());
+            session.hideEntitiesFrom(player);
         }
     }
 
@@ -101,7 +107,11 @@ public class SessionListener implements Listener {
             return;
         }
         CrateSession session = sessionManager.getSession(player.getUniqueId());
-        if (session == null || !session.isActive()) {
+        if (session == null) {
+            return;
+        }
+        if (!session.isActive()) {
+            sessionManager.removeSession(player.getUniqueId());
             return;
         }
         event.setCancelled(true);
@@ -113,7 +123,11 @@ public class SessionListener implements Listener {
             return;
         }
         CrateSession session = sessionManager.getSession(player.getUniqueId());
-        if (session == null || !session.isActive()) {
+        if (session == null) {
+            return;
+        }
+        if (!session.isActive()) {
+            sessionManager.removeSession(player.getUniqueId());
             return;
         }
         event.setCancelled(true);
