@@ -186,7 +186,8 @@ public class RewardEditorMenu implements Listener {
         )));
         inventory.setItem(SLOT_DETAIL_RARITY, buildItem(resolveRarityMaterial(reward != null ? reward.rarity() : ""), text("editor.rewards.reward.detail.rarity.name"), List.of(
                 text("editor.common.current", Map.of("value", resolveRarityLabel(reward))),
-                text("editor.rewards.reward.detail.rarity.desc")
+                text("editor.rewards.reward.detail.rarity.desc"),
+                text("editor.common.click-select")
         )));
         fillDetailNavigation(inventory);
         inventory.setItem(SLOT_DETAIL_DELETE, buildItem(Material.RED_CONCRETE,
@@ -407,7 +408,7 @@ public class RewardEditorMenu implements Listener {
                 inventory.setItem(slot, buildRarityItem(rarity, material));
             }
         };
-        task.runTaskTimer(plugin, 0L, 6L);
+        task.runTaskTimer(plugin, 0L, 3L);
         rarityAnimations.put(player.getUniqueId(), task);
     }
 

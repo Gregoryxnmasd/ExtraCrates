@@ -122,21 +122,6 @@ editor:
     pending: "&cYou already have a pending input. Type &fcancel&c to abort."
     cancelled: "&eInput cancelled."
     invalid-id: "&cPlease provide a valid ID."
-  rewards:
-    reward:
-      detail:
-        rarity:
-          name: "&eRarity"
-          desc: "&7Choose the rarity."
-    rarity:
-      title: "&8Rarities: %reward%"
-      back:
-        name: "&eBack"
-        lore: "&7Return to reward."
-      item-lore:
-        chance: "&7Chance: &f%chance%%"
-        path: "&7Path: &f%path%"
-        select: "&fClick to choose."
   confirmation:
     title:
       create: "&8Confirm creation"
@@ -416,12 +401,24 @@ editor:
           name: "&eCommands"
         map-image:
           name: "&eMap image"
+        rarity:
+          name: "&eRarity"
+          desc: "&7Choose the rarity."
       item-lore:
         id: "&7ID: &f%id%"
         display-name: "&7Display name: &f%name%"
         chance: "&7Chance: &f%chance%"
         item: "&7Item: &f%item%"
         hint: "&7Left click to edit. Right click to clone. Shift+right click to delete."
+    rarity:
+      title: "&8Rarities: %reward%"
+      back:
+        name: "&eBack"
+        lore: "&7Return to reward."
+      item-lore:
+        chance: "&7Chance: &f%chance%%"
+        path: "&7Path: &f%path%"
+        select: "&fClick to choose."
   reward:
     prompt:
       new-pool-id: "Enter a new pool ID"
